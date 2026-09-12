@@ -1,0 +1,270 @@
+import { useEffect, useState, type CSSProperties } from 'react';
+import {
+  rankOf,
+  suitOf,
+  type CardId,
+  type Command,
+  type Seat,
+  type SeatProjection,
+} from '../core/index.js';
+
+const SUIT_SYMBOL = { spades: '♠', clubs: '♣', diamonds: '♦', hearts: '♥' } as const;
+const ALL_SEATS: readonly Seat[] = [0, 1, 2];
+
+export interface GameTableProps {
+  projection: SeatProjection;
+  seatNames: readonly [string, string, string];
+  message?: string;
+  onCommand: (command: Command) => void | Promise<void>;
+  onNewGame?: () => void;
+}
+
+function Card({ card, disabled, selected, onClick }: { card: CardId; disabled?: boolean; selected?: boolean; onClick?: () => void }) {
+  const suit = suitOf(card);
+  const red = suit === 'hearts' || suit === 'diamonds';
+  return (
+    <button
+      className={`card ${red ? 'red' : ''} ${selected ? 'selected' : ''}`}
+      disabled={disabled}
+      onClick={onClick}
+      aria-label={`${rankOf(card)} ${suit}`}
+    >
+      <span className="rank">{rankOf(card)}</span>
+      <span className="suit">{SUIT_SYMBOL[suit]}</span>
+    </button>
+  );
+}
+
+export function GameTable({ projection, seatNames, message = '', onCommand, onNewGame }: GameTableProps) {
+  const view = projection.observation;
+  const humanSeat = view.seat;
+  const humanCommands = projection.legalCommands;
+  const [selectedTransfer, setSelectedTransfer] = useState<CardId[]>([]);
+
+  useEffect(() => {
+    setSelectedTransfer([]);
+  }, [view.revision]);
+
+  const seatName = (seat: Seat) => seatNames[seat];
+  const opponentSeats = ALL_SEATS.filter((seat) => seat !== humanSeat);
+  const humanCards = view.ownHand;
+  const playable = new Set(
+    humanCommands.filter((command): command is Extract<Command, { type: 'play' }> => command.type === 'play').map((command) => command.card),
+  );
+  const marriageCards = new Set(
+    humanCommands
+      .filter((command): command is Extract<Command, { type: 'play' }> => command.type === 'play' && Boolean(command.declareMarriage))
+      .map((command) => command.card),
+  );
+  const bids = humanCommands.filter((command): command is Extract<Command, { type: 'bid' }> => command.type === 'bid');
+  const pass = humanCommands.find((command): command is Extract<Command, { type: 'pass' }> => command.type === 'pass');
+  const exchanges = humanCommands.filter((command): command is Extract<Command, { type: 'exchange' }> => command.type === 'exchange');
+  const contracts = humanCommands.filter((command): command is Extract<Command, { type: 'contract' }> => command.type === 'contract');
+  const nextHand = humanCommands.find((command): command is Extract<Command, { type: 'next-hand' }> => command.type === 'next-hand');
+
+  function toggleTransfer(card: CardId) {
+    setSelectedTransfer((current) => {
+      if (current.includes(card)) return current.filter((value) => value !== card);
+      if (current.length >= 2) return [current[1], card];
+      return [...current, card];
+    });
+  }
+
+  function confirmTransfer() {
+    if (view.declarer !== humanSeat || selectedTransfer.length !== 2) return;
+    const command = exchanges.find(
+      (candidate) =>
+        candidate.give[0].card === selectedTransfer[0] &&
+        candidate.give[1].card === selectedTransfer[1],
+    );
+    if (command) void onCommand(command);
+  }
+
+  function playCard(card: CardId, marriage = false) {
+    const command = humanCommands.find(
+      (candidate): candidate is Extract<Command, { type: 'play' }> =>
+        candidate.type === 'play' && candidate.card === card && Boolean(candidate.declareMarriage) === marriage,
+    );
+    if (command) void onCommand(command);
+  }
+
+  const phaseLabel = {
+    auction: 'Licytacja',
+    exchange: 'Wymiana po musiku',
+    contract: 'Deklaracja gry',
+    trick: `Lewa ${Math.min(8, view.trickIndex + 1)}/8`,
+    complete: 'Rozdanie zakończone',
+  }[view.phase];
+
+  const visibleTrick = view.trick.length > 0 ? view.trick : view.lastCompletedTrick?.plays ?? [];
+  const showingCompletedTrick = view.trick.length === 0 && view.lastCompletedTrick !== null;
+  const handStyle = {
+    '--hand-spread-count': Math.max(0, humanCards.length - 1),
+  } as CSSProperties;
+
+  return (
+    <main className="app-shell">
+      <header className="topbar">
+        <div>
+          <div className="eyebrow">Tysiąc The Game · foundation slice</div>
+          <h1>{phaseLabel}</h1>
+        </div>
+        {onNewGame && <button className="ghost" onClick={onNewGame}>Nowa gra</button>}
+      </header>
+
+      <section className="scoreboard" aria-label="Wynik meczu">
+        {view.scores.map((score, seat) => (
+          <div className={`score ${seat === humanSeat ? 'human' : ''}`} key={seat}>
+            <span>{seatName(seat as Seat)}</span>
+            <strong>{score}</strong>
+            <small>{view.dealer === seat ? 'rozdaje' : view.declarer === seat ? 'gra' : ''}</small>
+          </div>
+        ))}
+      </section>
+
+      <section className="table">
+        <div className="opponents">
+          {opponentSeats.map((seat) => (
+            <div className="opponent" key={seat}>
+              <strong>{seatName(seat)}</strong>
+              <span>{view.opponentCardCounts[seat]} kart</span>
+              <div className="card-backs" aria-hidden="true">
+                {Array.from({ length: Math.min(view.opponentCardCounts[seat], 8) }, (_, index) => <i key={index} />)}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="center">
+          <div className="status-strip">
+            <span>Stawka <strong>{view.auction.currentBid}</strong></span>
+            <span>Kontrakt <strong>{view.contract ?? '—'}</strong></span>
+            <span>Atut <strong>{view.trump ? SUIT_SYMBOL[view.trump] : '—'}</strong></span>
+          </div>
+
+          {view.revealedTalon && view.phase !== 'trick' && view.phase !== 'complete' && (
+            <div className="talon">
+              <span>Musik</span>
+              <div className="mini-cards">
+                {view.revealedTalon.map((card) => <Card key={card} card={card} disabled />)}
+              </div>
+            </div>
+          )}
+
+          <div className={`trick ${showingCompletedTrick ? 'completed' : ''}`} aria-label="Aktualna lewa">
+            {visibleTrick.length === 0 ? (
+              <span className="muted">Stół czeka na zagranie</span>
+            ) : (
+              visibleTrick.map((play) => (
+                <div className="played" key={`${play.seat}-${play.card}`}>
+                  <small>{seatName(play.seat)}</small>
+                  <Card card={play.card} disabled />
+                </div>
+              ))
+            )}
+          </div>
+          {showingCompletedTrick && view.lastCompletedTrick && (
+            <div className="trick-result">
+              Lewa {view.lastCompletedTrick.index}: {seatName(view.lastCompletedTrick.winner)} · {view.lastCompletedTrick.points} pkt
+            </div>
+          )}
+        </div>
+
+        <section className="decision" aria-live="polite">
+          {view.status === 'complete' && (
+            <div className="decision-card">
+              <h2>{view.draw ? 'Remis' : `${seatName(view.winner ?? humanSeat)} wygrywa`}</h2>
+              <p>Pełny mecz doszedł do końca na tym samym reducerze co testy headless.</p>
+              {onNewGame && <button className="primary" onClick={onNewGame}>Zagraj ponownie</button>}
+            </div>
+          )}
+
+          {view.status === 'playing' && view.phase === 'auction' && pass && (
+            <div className="decision-card">
+              <h2>Twoja licytacja</h2>
+              <div className="actions bid-actions">
+                <button onClick={() => void onCommand(pass)}>Pas</button>
+                {bids.map((bid) => (
+                  <button className="primary" key={bid.value} onClick={() => void onCommand(bid)}>{bid.value}</button>
+                ))}
+              </div>
+              <small>Wszystkie wartości pokazane tutaj są legalne dla aktualnej ręki.</small>
+            </div>
+          )}
+
+          {view.status === 'playing' && view.phase === 'exchange' && exchanges.length > 0 && (
+            <div className="decision-card">
+              <h2>Oddaj po jednej karcie</h2>
+              <p>1. wybrana → {seatName(exchanges[0].give[0].to)}, 2. wybrana → {seatName(exchanges[0].give[1].to)}. Widoczność transferu jest na razie jawnym pinem profilu.</p>
+              <button className="primary" disabled={selectedTransfer.length !== 2} onClick={confirmTransfer}>Potwierdź wymianę</button>
+            </div>
+          )}
+
+          {view.status === 'playing' && view.phase === 'contract' && contracts.length > 0 && (
+            <div className="decision-card">
+              <h2>Ile ostatecznie grasz?</h2>
+              <div className="actions contract-actions">
+                {contracts.map((contract) => (
+                  <button key={contract.value} onClick={() => void onCommand(contract)}>{contract.value}</button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {view.status === 'playing' && view.phase === 'trick' && playable.size > 0 && (
+            <div className="decision-card compact">
+              <h2>Twój ruch</h2>
+              {marriageCards.size > 0 && (
+                <div className="actions">
+                  {[...marriageCards].map((card) => (
+                    <button className="primary" key={card} onClick={() => playCard(card, true)}>
+                      Melduj {rankOf(card)}{SUIT_SYMBOL[suitOf(card)]}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {view.status === 'playing' && view.phase === 'complete' && nextHand && (
+            <div className="decision-card">
+              <h2>Rozdanie {view.handNumber} zakończone</h2>
+              <p>
+                Zmiana: {view.handScoreDelta?.map((value, seat) => `${seatName(seat as Seat)} ${value >= 0 ? '+' : ''}${value}`).join(' · ')}
+              </p>
+              <button className="primary" onClick={() => void onCommand(nextHand)}>Następne rozdanie</button>
+            </div>
+          )}
+        </section>
+      </section>
+
+      <section className="hand-area">
+        <div className="hand-heading">
+          <strong>Twoje karty</strong>
+          <span>{humanCards.length}</span>
+        </div>
+        <div className="hand" style={handStyle}>
+          {humanCards.map((card) => {
+            const exchangeMode = view.phase === 'exchange' && exchanges.length > 0;
+            const canPlay = view.phase === 'trick' && playable.has(card);
+            return (
+              <Card
+                key={card}
+                card={card}
+                selected={selectedTransfer.includes(card)}
+                disabled={!exchangeMode && !canPlay}
+                onClick={exchangeMode ? () => toggleTransfer(card) : canPlay ? () => playCard(card) : undefined}
+              />
+            );
+          })}
+        </div>
+      </section>
+
+      <footer className="footer">
+        <span>Profil: {projection.profile.id} v{projection.profile.version}</span>
+        <span>rev {view.revision}</span>
+        {message && <span className="message">{message}</span>}
+      </footer>
+    </main>
+  );
+}
