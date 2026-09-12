@@ -22,6 +22,21 @@ interface RemoteRoomProps {
 
 type ConnectionState = 'loading' | 'lobby' | 'connected' | 'reconnecting' | 'error';
 
+interface PlaybackFrame {
+  projection: SeatProjection;
+  events: GameEvent[];
+}
+
+const NORMAL_PLAYBACK_MS = 480;
+const MARRIAGE_PLAYBACK_MS = 680;
+const TRICK_COMPLETE_PLAYBACK_MS = 900;
+
+function playbackDelay(events: readonly GameEvent[]): number {
+  if (events.some((event) => event.type === 'trick-completed')) return TRICK_COMPLETE_PLAYBACK_MS;
+  if (events.some((event) => event.type === 'marriage-declared')) return MARRIAGE_PLAYBACK_MS;
+  return NORMAL_PLAYBACK_MS;
+}
+
 function namesForRoom(state: RoomSnapshot, ownSeat: Seat | null): readonly [string, string, string] {
   return state.seats.map((role, index) => {
     if (index === ownSeat) return 'Ty';
@@ -42,12 +57,20 @@ export function RemoteRoom({ room, onLeave }: RemoteRoomProps) {
   const [projection, setProjection] = useState<SeatProjection | null>(null);
   const [message, setMessage] = useState('Łączenie z pokojem…');
   const [connection, setConnection] = useState<ConnectionState>('loading');
+  const [inputLocked, setInputLocked] = useState(false);
   const socketRef = useRef<WebSocket | null>(null);
   const reconnectTimerRef = useRef<number | null>(null);
   const roomStateRef = useRef<RoomSnapshot | null>(null);
+  const playbackQueueRef = useRef<PlaybackFrame[]>([]);
+  const playbackTimerRef = useRef<number | null>(null);
+  const playbackActiveRef = useRef(false);
   const names = useMemo(
     () => roomState ? namesForRoom(roomState, seat) : ['Ty', 'Gracz 2', 'Gracz 3'] as const,
     [roomState, seat],
+  );
+  const presentedProjection = useMemo(
+    () => projection && inputLocked ? { ...projection, legalCommands: [] } : projection,
+    [projection, inputLocked],
   );
 
   function replaceRoomState(next: RoomSnapshot | null) {
@@ -64,11 +87,61 @@ export function RemoteRoom({ room, onLeave }: RemoteRoomProps) {
     });
   }
 
+  function cancelPlayback(unlock: boolean) {
+    if (playbackTimerRef.current !== null) window.clearTimeout(playbackTimerRef.current);
+    playbackTimerRef.current = null;
+    playbackQueueRef.current = [];
+    playbackActiveRef.current = false;
+    setInputLocked(!unlock);
+  }
+
+  function applyPlaybackFrame(frame: PlaybackFrame) {
+    setProjection(frame.projection);
+    setSeat(frame.projection.observation.seat);
+    patchRoomState((current) => ({
+      ...current,
+      status: frame.projection.observation.status === 'complete' ? 'complete' : 'playing',
+      revision: frame.projection.observation.revision,
+    }));
+    setConnection('connected');
+    const currentRoom = roomStateRef.current;
+    const eventNames = currentRoom
+      ? namesForRoom(currentRoom, frame.projection.observation.seat)
+      : ['Ty', 'Gracz 2', 'Gracz 3'] as const;
+    const text = feedback(frame.events, eventNames);
+    if (text) setMessage(text);
+  }
+
+  function pumpPlayback() {
+    if (playbackTimerRef.current !== null) return;
+    const frame = playbackQueueRef.current.shift();
+    if (!frame) {
+      playbackActiveRef.current = false;
+      setInputLocked(false);
+      return;
+    }
+
+    playbackActiveRef.current = true;
+    setInputLocked(true);
+    applyPlaybackFrame(frame);
+    playbackTimerRef.current = window.setTimeout(() => {
+      playbackTimerRef.current = null;
+      pumpPlayback();
+    }, playbackDelay(frame.events));
+  }
+
+  function enqueuePlayback(frame: PlaybackFrame) {
+    playbackQueueRef.current.push(frame);
+    setInputLocked(true);
+    if (!playbackActiveRef.current && playbackTimerRef.current === null) pumpPlayback();
+  }
+
   useEffect(() => {
     let cancelled = false;
     socketRef.current?.close(1000, 'room changed');
     socketRef.current = null;
     if (reconnectTimerRef.current !== null) window.clearTimeout(reconnectTimerRef.current);
+    cancelPlayback(false);
 
     async function load() {
       setConnection('loading');
@@ -83,10 +156,12 @@ export function RemoteRoom({ room, onLeave }: RemoteRoomProps) {
           if (cancelled) return;
           replaceRoomState(state);
           setConnection('lobby');
+          setInputLocked(false);
           setMessage(state.status === 'lobby' ? 'Pokój czeka na graczy.' : 'Ten pokój już wystartował.');
         } catch (error) {
           if (cancelled) return;
           setConnection('error');
+          setInputLocked(false);
           setMessage(error instanceof Error ? error.message : String(error));
         }
         return;
@@ -104,6 +179,7 @@ export function RemoteRoom({ room, onLeave }: RemoteRoomProps) {
         forgetSeatToken(room);
         setToken(null);
         setConnection('error');
+        setInputLocked(false);
         setMessage(`Nie udało się odzyskać miejsca: ${error instanceof Error ? error.message : String(error)}`);
         return;
       }
@@ -126,6 +202,7 @@ export function RemoteRoom({ room, onLeave }: RemoteRoomProps) {
           catch { setMessage('Serwer wysłał nieczytelną wiadomość.'); return; }
 
           if (packet.type === 'lobby') {
+            cancelPlayback(true);
             setSeat(packet.seat);
             replaceRoomState(packet.room);
             setConnection('lobby');
@@ -133,12 +210,19 @@ export function RemoteRoom({ room, onLeave }: RemoteRoomProps) {
             return;
           }
           if (packet.type === 'snapshot') {
+            cancelPlayback(true);
             setProjection(packet.projection);
             setSeat(packet.projection.observation.seat);
+            patchRoomState((current) => ({
+              ...current,
+              status: packet.projection.observation.status === 'complete' ? 'complete' : 'playing',
+              revision: packet.projection.observation.revision,
+            }));
             setConnection('connected');
             return;
           }
           if (packet.type === 'started') {
+            cancelPlayback(true);
             setProjection(packet.projection);
             setSeat(packet.projection.observation.seat);
             setConnection('connected');
@@ -154,7 +238,12 @@ export function RemoteRoom({ room, onLeave }: RemoteRoomProps) {
             if (text) setMessage(text);
             return;
           }
-          if (packet.type === 'update' || packet.type === 'duplicate') {
+          if (packet.type === 'update') {
+            enqueuePlayback({ projection: packet.projection, events: packet.events });
+            return;
+          }
+          if (packet.type === 'duplicate') {
+            cancelPlayback(true);
             setProjection(packet.projection);
             setSeat(packet.projection.observation.seat);
             patchRoomState((current) => ({
@@ -163,25 +252,32 @@ export function RemoteRoom({ room, onLeave }: RemoteRoomProps) {
               revision: packet.projection.observation.revision,
             }));
             setConnection('connected');
-            const currentRoom = roomStateRef.current;
-            const eventNames = currentRoom
-              ? namesForRoom(currentRoom, packet.projection.observation.seat)
-              : ['Ty', 'Gracz 2', 'Gracz 3'] as const;
-            const text = feedback(packet.events, eventNames);
-            if (text) setMessage(text);
             return;
           }
           if (packet.type === 'rejected') {
-            if (packet.projection) setProjection(packet.projection);
+            cancelPlayback(true);
+            if (packet.projection) {
+              setProjection(packet.projection);
+              setSeat(packet.projection.observation.seat);
+              patchRoomState((current) => ({
+                ...current,
+                status: packet.projection!.observation.status === 'complete' ? 'complete' : 'playing',
+                revision: packet.projection!.observation.revision,
+              }));
+            }
             setMessage(`Odrzucone: ${packet.reason}`);
             return;
           }
-          if (packet.type === 'error') setMessage(`Błąd pokoju: ${packet.reason}`);
+          if (packet.type === 'error') {
+            cancelPlayback(true);
+            setMessage(`Błąd pokoju: ${packet.reason}`);
+          }
         });
 
         socket.addEventListener('close', () => {
           if (cancelled || socketRef.current !== socket) return;
           socketRef.current = null;
+          cancelPlayback(false);
           setConnection('reconnecting');
           setMessage('Połączenie przerwane — ponawiam…');
           reconnectTimerRef.current = window.setTimeout(connect, 900);
@@ -200,6 +296,10 @@ export function RemoteRoom({ room, onLeave }: RemoteRoomProps) {
       cancelled = true;
       if (reconnectTimerRef.current !== null) window.clearTimeout(reconnectTimerRef.current);
       reconnectTimerRef.current = null;
+      if (playbackTimerRef.current !== null) window.clearTimeout(playbackTimerRef.current);
+      playbackTimerRef.current = null;
+      playbackQueueRef.current = [];
+      playbackActiveRef.current = false;
       socketRef.current?.close(1000, 'component unmounted');
       socketRef.current = null;
     };
@@ -230,21 +330,24 @@ export function RemoteRoom({ room, onLeave }: RemoteRoomProps) {
   }
 
   function sendCommand(command: Command) {
-    if (!projection) return;
+    if (!projection || inputLocked) return;
     const socket = socketRef.current;
     if (!socket || socket.readyState !== WebSocket.OPEN) {
       setMessage('Brak połączenia — poczekaj na reconnect.');
       return;
     }
+    setInputLocked(true);
     socket.send(JSON.stringify(commandEnvelope(projection, command)));
   }
 
-  if (projection) {
+  if (presentedProjection) {
     return (
       <div className="remote-room-active">
         <button className="room-exit ghost" onClick={onLeave}>Wróć do startu</button>
-        <div className={`connection-banner ${connection}`}>Pokój {room} · {connection === 'connected' ? 'online' : 'łączenie…'}</div>
-        <GameTable projection={projection} seatNames={names} message={message} onCommand={sendCommand} />
+        <div className={`connection-banner ${connection}`}>
+          Pokój {room} · {connection === 'connected' ? 'online' : 'łączenie…'}{inputLocked && connection === 'connected' ? ' · ruchy przy stole…' : ''}
+        </div>
+        <GameTable projection={presentedProjection} seatNames={names} message={message} onCommand={sendCommand} />
       </div>
     );
   }
