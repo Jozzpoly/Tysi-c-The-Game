@@ -28,6 +28,8 @@ export type Command =
   | { type: 'pass'; seat: Seat }
   | { type: 'bomb'; seat: Seat }
   | { type: 'exchange'; seat: Seat; give: readonly [{ to: Seat; card: CardId }, { to: Seat; card: CardId }] }
+  | { type: 'request-redeal'; seat: Seat }
+  | { type: 'continue-after-four-nines'; seat: Seat }
   | { type: 'contract'; seat: Seat; value: number }
   | { type: 'play'; seat: Seat; card: CardId; declareMarriage?: boolean }
   | { type: 'next-hand'; seat: Seat };
@@ -45,6 +47,8 @@ export type GameEvent =
   | { type: 'hand-bombed'; audience: 'public'; seat: Seat; bombNumber: number; delta: Scores; scores: Scores }
   | { type: 'exchange-completed'; audience: 'public'; from: Seat; recipients: [Seat, Seat] }
   | { type: 'card-received'; audience: Seat; from: Seat; to: Seat; card: CardId }
+  | { type: 'four-nines-option'; audience: Seat; seat: Seat }
+  | { type: 'four-nines-redeal'; audience: 'public'; seat: Seat; handNumber: number; dealer: Seat }
   | { type: 'contract-set'; audience: 'public'; seat: Seat; value: number }
   | { type: 'marriage-declared'; audience: 'public'; seat: Seat; suit: Suit; points: number }
   | { type: 'card-played'; audience: 'public'; seat: Seat; card: CardId }
@@ -73,10 +77,11 @@ export interface HandState {
   hands: Hands;
   talon: CardId[];
   revealedTalon: CardId[] | null;
-  phase: 'auction' | 'exchange' | 'contract' | 'trick' | 'complete';
+  phase: 'auction' | 'exchange' | 'redeal-option' | 'contract' | 'trick' | 'complete';
   auction: AuctionState;
   declarer: Seat | null;
   contract: number | null;
+  fourNinesSeat: Seat | null;
   trump: Suit | null;
   trickIndex: number;
   trickLeader: Seat | null;
@@ -127,6 +132,7 @@ export interface SeatObservation {
   auction: AuctionState;
   declarer: Seat | null;
   contract: number | null;
+  fourNinesOption: boolean;
   trump: Suit | null;
   trickIndex: number;
   trickLeader: Seat | null;
@@ -168,6 +174,7 @@ export function createHand(dealer: Seat, deck: readonly CardId[], rules: ThreePl
     auction: { currentBid: rules.auction.openingBid, highBidder: forehand, active: [true, true, true], turn: nextSeat(forehand) },
     declarer: null,
     contract: null,
+    fourNinesSeat: null,
     trump: null,
     trickIndex: 0,
     trickLeader: null,
