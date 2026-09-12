@@ -61,6 +61,8 @@ interface TransactionAccepted {
 
 interface TransactionRejected {
   response: CommandRejected;
+  broadcastState?: undefined;
+  broadcastEvents?: undefined;
 }
 
 type TransactionOutcome = TransactionAccepted | TransactionRejected;
