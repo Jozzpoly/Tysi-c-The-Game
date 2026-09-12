@@ -1,7 +1,7 @@
 # Execution state — live truth
 
 Date: 2026-09-12
-Status: **Foundation Run 01 complete; local and public MatchRoom/browser boundaries are proven. Run 02 is gameplay/rules/product hardening.**
+Status: **Foundation Run 01 complete. Run 02 is active: rules truth + Owner-playable gameplay.**
 
 This is the compact execution truth. Earlier plans/history are not authority where they conflict with executable evidence here.
 
@@ -20,11 +20,45 @@ Visuals are still foundation quality. Architecture must remain friendly to later
 
 ## Rules — candidate, not canonical
 
-First target: **`PLAYOK_3P_800_CANDIDATE`**. See `docs/rules/PLAYOK_3P_800_CANDIDATE.md`.
+First target: **`PLAYOK_3P_800_CANDIDATE` v3**. See `docs/rules/PLAYOK_3P_800_CANDIDATE.md`.
 
-Material PlayOK-sensitive questions remain explicit: transfer visibility, four-nines timing, post-musik contract ceiling, bomb semantics, strict trump/overtrump interpretation, zero-trick marriage scoring and Kurnik's unified musik wording.
+Executable behavior proves our candidate implementation, not exact PlayOK identity. Evidence labels remain: `documented` / `reference-observed` / `pinned` / `executable`.
 
-Executable behavior proves our candidate implementation, not exact PlayOK identity.
+### Run 02 slices already defended
+
+**Bomb — PASS as candidate implementation**
+
+- declarer may bomb in the pinned post-talon / pre-exchange window;
+- first bomb per player is free; later bombs award +60 to eligible opponents;
+- ordinary 800-lock currently applies to those awards;
+- bomb count persists across hands;
+- causal completion/event/UI path exists;
+- desktop and 390 px mobile Chrome coverage is mandatory.
+
+Kurnik documents bomb existence and first-free/later-60 scoring. Exact timing, counter scope and 800 interaction remain PlayOK-reference-sensitive pins.
+
+**Four nines — PASS as candidate implementation**
+
+- evaluated after exchange and before final contract;
+- a fourth nine received from the declarer counts;
+- eligible seat privately chooses redeal or continue;
+- continuing does not explicitly reveal the four nines or choice to other seats;
+- redeal preserves score, bomb counters, hand number and same dealer;
+- bots take the neutral redeal when eligible;
+- desktop and 390 px mobile privacy/interaction coverage is mandatory.
+
+Kurnik documents the optional four-nines redeal. Post-exchange timing, received-fourth-nine eligibility and same-dealer behavior are corroborated by Pagat and remain PlayOK-reference-sensitive until directly observed.
+
+### Material rules still open
+
+- strict trick obligation reference check: follow / beat / trump / overtrump;
+- post-musik final-contract ceiling (current conservative pin remains `120 + marriages still held`);
+- transfer visibility;
+- marriage scoring when the declarer melds but captures no trick;
+- Kurnik's unified musik/last-trick wording in 3P;
+- remaining bomb/four-nines reference validation.
+
+Current priority is **strict trick legality**, because it affects normal play continuously rather than only rare edge cases.
 
 ## Foundation Run 01 — COMPLETE
 
@@ -48,7 +82,7 @@ Canonical client game-state boundary:
 
 `MatchState -> projectSeat(seat) -> SeatProjection { profile, observation, legalCommands }`
 
-Executable privacy tests serialize projections/legal commands and prove hidden opponent/talon identities do not leak.
+Executable privacy tests serialize projections/legal commands and prove hidden opponent/talon identities do not leak. Four-nines adds an asymmetric private decision without exposing the reason through another seat's projection/legal commands.
 
 Accepted commands emit transient typed `GameEvent[]`, audience-filtered through `eventsForSeat()`. These are presentation/protocol facts, not event sourcing.
 
@@ -56,15 +90,7 @@ Accepted commands emit transient typed `GameEvent[]`, audience-filtered through 
 
 One `GameTable` consumes a `SeatProjection` and emits commands. It does not know whether authority is local or remote and does not assume human seat 0.
 
-Mandatory Chrome CI covers:
-
-- desktop **1440 x 1000**;
-- mobile **390 x 844**;
-- defender/declarer/non-zero-seat paths;
-- forced auction;
-- musik/exchange/contract/trick phases;
-- 7/8/10-card hands without horizontal overflow;
-- Back/Forward navigation and explicit leave/reconnect path.
+Mandatory Chrome CI covers desktop **1440 x 1000** and mobile **390 x 844**, including defender/declarer/non-zero-seat paths, forced auction, musik/exchange/contract/trick, bomb, four-nines private decision/waiting/redeal, 7/8/10-card hands, navigation and reconnect without horizontal overflow.
 
 Current visual design remains intentionally provisional.
 
@@ -72,7 +98,7 @@ Current visual design remains intentionally provisional.
 
 The product bot only sees its seat observation, legal commands and public rules.
 
-Fixed 40-match survey:
+Fixed 40-match survey baseline:
 
 - average 32.4 hands;
 - maximum 49;
@@ -86,90 +112,68 @@ Further tuning should be driven primarily by human gameplay evidence.
 
 One SQLite-backed Durable Object `MatchRoom` is authoritative online state.
 
-It:
-
-- persists canonical `MatchState` and bounded idempotency receipts;
-- invokes the same reducer/invariants as local play;
-- uses `{ clientCommandId, expectedRevision, command }`;
-- rejects stale revisions, command-id misuse and seat mismatches;
-- sends only seat projections + audience-filtered events;
-- survives Durable Object eviction with hibernating WebSockets;
-- runs bot-owned seats server-side until the next human decision.
+It persists canonical state + bounded idempotency receipts, invokes the same reducer/invariants, rejects stale/misbound commands, sends only seat projections + audience-filtered events, survives eviction with hibernating WebSockets and settles bot-owned seats server-side.
 
 Accountless room lifecycle:
 
 - `solo`: human + 2 bots;
 - `duo`: 2 humans + bot;
 - `trio`: 3 humans;
-- 12-character room code is shareable but is not seat authority;
-- each human seat receives an opaque ~256-bit reconnect token;
+- shareable 12-character room code is not seat authority;
+- each human seat receives an opaque reconnect capability;
 - only SHA-256 token hashes are persisted;
-- HTTP uses Bearer capability;
-- browser WS uses `tysiac.v1` plus a credential subprotocol; server echoes only `tysiac.v1`;
 - share URLs contain only `?room=CODE`;
 - same-origin WebSocket origin is enforced.
 
-Worker/workerd suite: **14/14 PASS** across lifecycle, privacy, concurrency, idempotency, bots, eviction/hibernation and HTTP/WS routing.
+### Persisted historical matches — PASS compatibility boundary
+
+Profile snapshots remain pinned to the rules version with which a match started.
+
+Executable legacy-snapshot coverage verifies:
+
+- a v1-style persisted state lacking bomb-era structural fields can still project/reconnect and accept a normal command;
+- a v1 match does not retroactively gain bomb behavior;
+- a v2 match does not retroactively gain four-nines behavior;
+- missing later structural fields are normalized to neutral defaults without changing the historical profile version.
+
+This is structural compatibility, **not** migration of old matches to current rules.
 
 ### Real browser -> MatchRoom — LOCAL PASS
 
 Normal `/` uses the real room flow; deterministic local authority remains QA-only.
 
-Mandatory remote Chrome smoke proves:
-
-- solo desktop and mobile create/command/reconnect;
-- server bot settling;
-- duo desktop host + mobile joiner with independent credentials and disjoint private hands;
-- synchronized revision stream;
-- tokens remain out of ordinary URLs/DOM;
-- mobile/desktop presentation remains within layout contracts.
+Mandatory remote Chrome smoke proves solo desktop/mobile command/reconnect and duo desktop host + mobile joiner with independent credentials, hidden hands and synchronized revisions.
 
 ### Cloudflare public edge — PASS
 
-**Temporary Foundation Preview run #1**
+Temporary Foundation Preview run:
 
-- GitHub Actions run: `34701391964`
-- tested commit: `6420423870e2905b63673c656a755ee3363f8cee`
-- temporary public endpoint used for the proof: `https://tysiac-the-game.intriguing-popcorn.workers.dev`
-- deployment itself: PASS
-- public Chrome smoke: PASS
-- evidence artifact: `temporary-public-smoke-34701391964`
+- GitHub Actions run: `34701391964`;
+- tested commit: `6420423870e2905b63673c656a755ee3363f8cee`;
+- deployment + public desktop/mobile Chrome MatchRoom smoke: PASS;
+- refresh/reconnect restored the same room/revision.
 
-The public test used two real Chrome sessions against the Cloudflare `workers.dev` edge:
-
-- desktop host created a real `duo` room;
-- 390 x 844 mobile joiner entered through the share URL and received a distinct private credential;
-- both hands remained private/disjoint;
-- one legal auction command crossed the public WebSocket path and both sessions converged on revision **2**;
-- refresh/reconnect restored revision **2** with the same room/credential;
-- public desktop/mobile screenshots were captured.
-
-The deployment was deliberately **temporary and unclaimed**. Its URL is ephemeral and is not the permanent product deployment.
-
-This is sufficient evidence that the actual Cloudflare Worker + Durable Object + assets + WebSocket/browser boundary works outside local workerd. It does **not** prove long-duration production reliability or real physical mobile-network behavior.
+The temporary deployment was deliberately unclaimed. This proves the Worker + Durable Object + assets + WebSocket/browser boundary outside local workerd, not long-duration production reliability.
 
 ## CI / deployment gates — PASS
 
-Normal Foundation CI gates:
+Normal Foundation CI now gates:
 
-`core -> worker -> local browser -> remote browser -> navigation browser -> deploy-helper security smoke -> production build -> wrangler deploy --dry-run`
-
-Deployment helpers also include:
-
-- manual credentialed permanent deploy workflow;
-- manual temporary-preview workflow;
-- post-deploy public Chrome verifier;
-- executable redaction test proving Cloudflare claim credentials are not emitted by the temporary helper.
+`core (including bomb/four-nines/legacy snapshots) -> worker -> local browser -> remote browser -> navigation browser -> bomb/four-nines desktop+mobile browser -> deploy-helper security smoke -> production build -> wrangler deploy --dry-run`
 
 No automatic push-to-production path exists.
 
+Latest defended `main` after four-nines merge:
+
+- squash commit: `9a06567468efc0f9d70ec6d2e8d66e42e6142eb7`;
+- post-merge Foundation run: `34711285197` / run #159;
+- result: **PASS**.
+
 ## Still NOT proven
 
-These move into Run 02+ rather than keeping Foundation Run 01 open:
-
-- exact PlayOK identity for unresolved rule probes;
-- bomb / four-nines behavior and other not-yet-implemented rule-sensitive paths;
+- exact PlayOK identity for remaining reference-sensitive rule probes;
 - real Owner/target-player gameplay quality;
+- whether the current bot is enjoyable/credible enough under human play;
 - long-duration room soak;
 - actual phone suspension/backgrounding and weak/mobile-network transitions;
 - permanent Cloudflare account deployment/operational lifecycle;
@@ -186,6 +190,7 @@ Keep:
 - one `GameTable` for local and remote authority;
 - server-authoritative hidden state;
 - one Durable Object per table;
+- pinned rules snapshots + backward structural compatibility;
 - snapshot/revision reconnect model;
 - accountless capability identity until product need justifies accounts;
 - desktop and mobile as equal product targets.
@@ -201,14 +206,11 @@ Avoid for now:
 
 ## Run 02 — immediate direction
 
-Move from infrastructure proof to **game/product truth**:
+1. attack strict trick legality first: independently research and try to reference-probe the PlayOK/Kurnik behavior before changing the current pin;
+2. keep unresolved source ambiguity explicit rather than silently averaging Polish variants;
+3. once high-frequency rule truth is sufficiently bounded, shift quickly toward complete solo Owner gameplay on desktop and mobile;
+4. fix causal-feedback/interaction blockers found by play, not by premature visual redesign;
+5. use real-human duo/trio once the rules/gameplay loop is coherent enough for useful feedback;
+6. test physical phone suspension/background/network resilience before permanent deployment is treated as operationally ready.
 
-1. perform a broader critical rules audit and resolve the highest-risk PlayOK-sensitive probes with evidence;
-2. implement missing rule paths only when the target profile actually requires them;
-3. make complete solo matches comfortable enough for Owner gameplay, without premature visual finalization;
-4. deepen feedback/history/explanation where it materially helps understand what happened;
-5. run real Owner gameplay on desktop and mobile and treat findings as the primary product signal;
-6. use duo/trio with real humans once the rules/gameplay loop is coherent enough to make their feedback meaningful;
-7. test reconnect/background/network resilience on real devices before permanent deployment is treated as operationally ready.
-
-Foundation architecture is no longer the main research question. The next question is whether the game is **correct enough, understandable enough and enjoyable enough** to deserve deeper polish.
+Foundation architecture is no longer the main research question. The current question is whether the game is **correct enough, understandable enough and enjoyable enough** for serious play.
