@@ -51,14 +51,22 @@ function bidCommand(projection: SeatProjection): Command {
   return command;
 }
 
-async function openSocket(stub: DurableObjectStub<import('../worker/index.js').MatchRoom>, seat: Seat): Promise<WebSocket> {
+async function openSocket(
+  stub: DurableObjectStub<import('../worker/index.js').MatchRoom>,
+  seat: Seat,
+): Promise<{ socket: WebSocket; snapshot: any }> {
   const response = await stub.fetch(`https://example.com/ws?seat=${seat}`, {
     headers: { Upgrade: 'websocket' },
   });
   const socket = response.webSocket;
   if (!socket) throw new Error('Expected WebSocket response');
+
+  // Cloudflare may already have queued the server snapshot by the time the
+  // client endpoint is accepted. Register the listener first so the harness
+  // cannot manufacture a lost-message failure.
+  const snapshotPromise = nextMessage(socket);
   socket.accept();
-  return socket;
+  return { socket, snapshot: await snapshotPromise };
 }
 
 describe('MatchRoom Durable Object', () => {
@@ -165,10 +173,12 @@ describe('MatchRoom Durable Object', () => {
     const initial = await actorProjection(stub);
     expect(initial.seat).toBe(2);
 
-    const socket2 = await openSocket(stub, 2);
-    const socket0 = await openSocket(stub, 0);
-    const snapshot2 = await nextMessage(socket2);
-    const snapshot0 = await nextMessage(socket0);
+    const opened2 = await openSocket(stub, 2);
+    const opened0 = await openSocket(stub, 0);
+    const socket2 = opened2.socket;
+    const socket0 = opened0.socket;
+    const snapshot2 = opened2.snapshot;
+    const snapshot0 = opened0.snapshot;
     expect(snapshot2.type).toBe('snapshot');
     expect(snapshot2.projection.observation.seat).toBe(2);
     expect(snapshot0.projection.observation.seat).toBe(0);
