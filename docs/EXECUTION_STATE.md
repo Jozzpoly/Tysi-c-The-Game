@@ -1,7 +1,7 @@
 # Execution state — live truth
 
 Date: 2026-09-12
-Status: **Foundation Run 01 complete. Run 02 has crossed from foundation hardening into full Owner-play readiness.**
+Status: **Foundation Run 01 complete. Run 02 is now at human Owner-play readiness.**
 
 This is the compact execution truth. Earlier plans/history are not authority where they conflict with executable evidence here.
 
@@ -16,7 +16,7 @@ Build a small, high-quality browser Tysiąc table that is frictionless to open a
 - Refresh/reconnect/mobile suspension are normal lifecycle requirements.
 - Later support several real Tysiąc rule families without becoming a generic rules DSL.
 
-Current visuals remain deliberately provisional. The immediate product question is now whether the game is understandable and enjoyable through complete real matches, not whether the foundation can support them.
+Current visuals remain deliberately provisional. The main product question is now whether the game is understandable and enjoyable to a real human through complete matches.
 
 ## Rules — candidate, not canonical
 
@@ -35,7 +35,7 @@ Executable behavior proves our candidate implementation, not exact PlayOK identi
 - causal completion/event/UI path exists;
 - desktop and 390 px mobile Chrome coverage is mandatory.
 
-Kurnik documents bomb existence and first-free/later-60 scoring. Exact timing, counter scope and 800 interaction remain PlayOK-reference-sensitive pins.
+Exact PlayOK timing, counter scope and 800 interaction remain reference-sensitive pins.
 
 **Four nines — PASS as candidate implementation**
 
@@ -47,26 +47,26 @@ Kurnik documents bomb existence and first-free/later-60 scoring. Exact timing, c
 - desktop/mobile privacy and interaction coverage is mandatory;
 - persisted pre-four-nines snapshots do not retroactively gain the rule.
 
-Kurnik documents the optional four-nines redeal. Timing/received-card/same-dealer details are corroborated by Pagat and remain PlayOK-reference-sensitive until directly observed.
+Timing/received-card/same-dealer details remain PlayOK-reference-sensitive until directly observed.
 
 **Trick legality — PASS as reversible candidate behavior**
 
-Current PlayOK candidate remains strict:
+Current candidate remains strict:
 
 `follow suit -> beat in led suit when possible -> trump when void -> overtrump when required and possible`.
 
-This is still a project pin, not PlayOK black-box confirmation. The important Run 02 hardening is that these obligations are now genuine executable rule fields rather than hard-coded assumptions. Mandatory falsification coverage proves documented Polish variants such as no-compulsory-trump can be expressed without rewriting the legality engine.
+This is still a project pin, not PlayOK black-box confirmation. These obligations are explicit executable rule fields; falsification coverage proves looser documented variants can be represented without rewriting the legality engine.
 
 ### Material rule probes still open
 
 - exact PlayOK confirmation of strict trump / overtrump behavior;
-- post-musik final-contract ceiling (current conservative pin remains `120 + marriages still held`);
+- post-musik final-contract ceiling (current pin: `120 + marriages still held`);
 - transfer visibility;
 - marriage scoring when a meld is declared but no trick is captured;
 - Kurnik's unified musik/last-trick wording in 3P;
 - remaining bomb/four-nines reference validation.
 
-These remain explicit, but they no longer justify postponing real Owner gameplay. New evidence may change a pin; the architecture is now ready for that change without broad redesign.
+These no longer justify postponing human gameplay. New evidence may change a pin; the architecture is ready for that without broad redesign.
 
 ## Core / authority foundation — PASS
 
@@ -81,13 +81,7 @@ Proven:
 - humans, local bots and server bots use the same command model;
 - bot policy sees only its seat observation, legal commands and public rules.
 
-Latest mandatory 40-match product-bot survey remains terminating:
-
-- average 32.5 hands;
-- maximum 55;
-- voluntary contract success 61.6%;
-- forced-100 success 39.9%;
-- no non-terminating match.
+Mandatory 40-match bot survey remains terminating: average 32.5 hands, maximum 55, voluntary contract success 61.6%, forced-100 success 39.9%, no non-terminating match.
 
 Bot quality is **ADEQUATE for Owner testing**, not declared final or fun.
 
@@ -101,71 +95,31 @@ Executable privacy tests prove hidden opponent/talon identities do not leak. Acc
 
 ### Causal scoring — PASS
 
-Completed normal hands now expose a derived public `scoreSummary` through `SeatProjection` rather than duplicating persisted scoring state.
+Completed normal hands expose a derived public `scoreSummary` through `SeatProjection` rather than duplicating persisted scoring state.
 
-It explains, per player:
-
-- card points;
-- marriage points;
-- raw hand points;
-- score delta;
-- defender rounding;
-- defender 800-lock;
-- declarer contract and whether it was made.
-
-Reconnect reconstructs the same explanation from canonical state. Bombs retain their separate bomb-specific semantics. Desktop and true 390 x 844 mobile Chrome evidence is mandatory; mobile presents one readable player row at a time rather than squeezing three explanations side-by-side.
+It explains card/marriage points, raw hand points, score delta, defender rounding, 800-lock, declarer contract and success/failure. Reconnect reconstructs the same explanation. Bombs retain separate bomb-specific semantics. Desktop and true 390 x 844 mobile Chrome coverage is mandatory.
 
 ## Remote MatchRoom / identity — PASS
 
 One SQLite-backed Durable Object `MatchRoom` is authoritative online state.
 
-It:
+It persists canonical state + bounded idempotency receipts, invokes the same reducer/invariants, rejects stale/misbound commands, sends only seat projections + scoped events, survives eviction with hibernating WebSockets and settles bot-owned seats server-side.
 
-- persists canonical `MatchState` + bounded idempotency receipts;
-- invokes the same reducer/invariants as local play;
-- rejects stale revisions, command-id misuse and seat mismatch;
-- sends only seat projections + audience-filtered events;
-- survives eviction with hibernating WebSockets;
-- settles bot-owned seats server-side until the next human decision.
-
-Accountless room lifecycle:
-
-- solo / duo / trio as described above;
-- shareable 12-character room code is not seat authority;
-- each human seat gets an opaque reconnect capability;
-- only SHA-256 token hashes are persisted;
-- share URLs contain only `?room=CODE`;
-- same-origin WebSocket origin is enforced.
+Accountless room lifecycle is defended for solo / duo / trio. Room code is not seat authority; human seats use opaque reconnect capabilities whose hashes are persisted. Share URLs contain only the room code and same-origin WebSocket origin is enforced.
 
 ### Remote transition playback — PASS
 
-Server bot settling remains immediate and authoritative. `MatchRoom` already emits every real transition separately; `RemoteRoom` now queues those received projection/event frames for human-readable playback instead of collapsing several bot moves into milliseconds.
+Server bot settling remains immediate. The client queues already-authoritative projection/event frames so bot moves remain visible at human speed.
 
-Current first-pass pacing:
+Current first-pass pacing: ordinary transition ~480 ms, marriage ~680 ms, completed trick ~900 ms. Input is locked while rendered state trails authority. Reconnect/snapshot cancels historical playback and snaps to current authority.
 
-- ordinary transition: about 480 ms;
-- marriage: about 680 ms;
-- completed trick: about 900 ms.
-
-Input is locked while the rendered client is behind authority, preventing stale-revision double input. Reconnect/snapshot cancels historical playback and jumps directly to current authority rather than replaying stale history.
-
-Mandatory Chrome timing evidence on the defended PR observed:
-
-- first visible post-command revisions `2 -> 3`: **479.2 ms** apart;
-- successive authoritative revisions remained separately visible through revision 6;
-- `enabledActions = 0` throughout playback;
-- after the queue drained at revision 6, `Twój ruch` returned with legal controls;
-- existing reconnect smoke refreshed during playback and restored server revision 6 directly.
-
-No server-side sleeps, client prediction or state reconstruction were introduced.
+Chrome timing evidence proves separately visible revisions and no stale-input window. No server-side sleeps, client prediction or reconstructed state diffs were introduced.
 
 ## Persisted historical matches — PASS compatibility boundary
 
-Profile snapshots remain pinned to the rules version with which a match started.
+Profile snapshots remain pinned to the rules version with which a match started. Pre-bomb / pre-four-nines states can still project, reconnect and accept normal commands without retroactively gaining newer rules. Missing later structural fields normalize to neutral defaults.
 
-Executable legacy coverage verifies pre-bomb / pre-four-nines persisted states can still project, reconnect and accept normal commands without retroactively gaining newer rules. Missing later structural fields normalize to neutral defaults.
-
-This is structural compatibility, **not** migration of old matches to current rules.
+This is structural compatibility, not migration of old matches to current rules.
 
 ## Browser / Cloudflare evidence
 
@@ -173,18 +127,20 @@ This is structural compatibility, **not** migration of old matches to current ru
 
 Normal `/` uses the real remote room flow; deterministic local authority remains QA-only.
 
-Mandatory browser CI covers:
+Mandatory browser CI covers desktop 1440 x 1000 and true mobile 390 x 844, solo/duo identity paths, hidden hands, authoritative revisions, auction/exchange/contract/trick, bomb, four nines, causal scoring, transition pacing, navigation/reconnect and guarded horizontal layout safety.
 
-- desktop 1440 x 1000;
-- true mobile 390 x 844;
-- solo command/reconnect;
-- duo desktop host + mobile joiner;
-- independent credentials and hidden hands;
-- synchronized authoritative revisions;
-- auction / exchange / contract / trick / bomb / four-nines / scoring paths;
-- remote transition pacing;
-- navigation and reconnect;
-- no horizontal overflow in guarded layouts.
+### Complete remote solo rehearsal — PASS
+
+PR #8 added a production-shaped long-path browser gate using only currently enabled human UI actions. It does not call the core directly or inspect hidden state. Presentation timers are accelerated only inside this harness; real pacing remains independently tested.
+
+Defending Foundation #180 (`34717657974`) completed both full matches:
+
+- **desktop 1440 x 1000:** revision 1061, 35 completed hands, 369 human decisions, 288 card plays, 6 marriages, 1 mid-match reconnect, final `480 / 1060 / 810`;
+- **mobile 390 x 844:** revision 1120, 37 completed hands, 384 human decisions, 304 card plays, 5 marriages, 1 mid-match reconnect, final `870 / 840 / 1020`.
+
+Both reached genuine match-complete UI at >=1000, preserved monotonic visible authority, survived reconnect and stayed within guarded horizontal layout bounds.
+
+This proves **long-path executable play**, not human comprehension, strategy quality or fun.
 
 ### Cloudflare public edge — PASS as feasibility proof
 
@@ -196,22 +152,24 @@ The deployment was intentionally temporary/unclaimed. This proves the Worker + D
 
 Normal Foundation gate now includes:
 
-`core -> worker -> local browser -> remote browser -> remote playback timing -> navigation -> bomb/four-nines/scoring desktop+mobile browser -> deploy-helper security smoke -> production build -> wrangler deploy --dry-run`.
+`core -> worker -> local browser -> remote browser -> real playback timing -> full remote solo desktop+mobile rehearsal -> navigation -> bomb/four-nines/scoring browser -> deploy-helper smoke -> production build -> wrangler deploy --dry-run`.
+
+The long-path rehearsal currently adds about 70 seconds for two complete matches. Keep it mandatory while regression value exceeds iteration cost; split it deliberately later if it becomes a material drag.
 
 No automatic push-to-production path exists.
 
 Latest defended `main`:
 
-- squash commit: **`7f17a8adc53e3acdaba9a5b90eaae6adf1612534`**;
-- post-merge Foundation run: **`34715872223` / #175**;
+- squash commit: **`43d1de17b8af0fe6f143ee63d6ef281c732d42c1`**;
+- post-merge Foundation run: **`34717851621` / #181**;
 - result: **PASS**.
 
 ## Still NOT proven
 
-- real Owner gameplay quality through complete matches;
-- whether current transition delays actually *feel* right rather than merely being observable;
+- real Owner/human gameplay quality through complete matches;
+- whether current transition delays feel right rather than merely being observable;
 - whether current bot is enjoyable/credible under human play;
-- whether a player unfamiliar with Tysiąc has enough in-product explanation to learn what decisions mean;
+- whether a player unfamiliar with Tysiąc has enough in-product explanation to understand decisions;
 - exact PlayOK identity for remaining reference-sensitive pins;
 - real-human full duo/trio gameplay quality;
 - long-duration room soak;
@@ -221,40 +179,19 @@ Latest defended `main`:
 
 ## Architecture to preserve
 
-Keep:
+Keep the pure deterministic core, one legality/reducer, `SeatProjection` human boundary, scoped feedback events, one `GameTable` for local/remote authority, server-authoritative hidden state, one Durable Object per table, pinned rule snapshots, snapshot/revision reconnect, accountless capability identity, equal desktop/mobile targets and fast server authority with client-side presentation pacing.
 
-- pure deterministic domain core;
-- one legality/reducer implementation;
-- `SeatProjection` as human client boundary;
-- typed scoped feedback events;
-- one `GameTable` for local and remote authority;
-- server-authoritative hidden state;
-- one Durable Object per table;
-- pinned rules snapshots + backward structural compatibility;
-- snapshot/revision reconnect;
-- accountless capability identity until product need justifies accounts;
-- desktop and mobile as equal product targets;
-- fast server authority with client-side presentation pacing.
-
-Avoid for now:
-
-- generic rules DSL/policy framework;
-- event sourcing;
-- D1/accounts/rankings without product need;
-- client prediction;
-- server sleeps for visual pacing;
-- separate mobile game-state model;
-- duplicated server rules.
+Avoid generic rules DSL, event sourcing, accounts/rankings without need, client prediction, server sleeps for visuals, separate mobile state and duplicated server rules.
 
 ## Run 02 — immediate direction
 
-The next bounded stage is **complete remote solo gameplay rehearsal and Owner-play preparation**.
+**Automated full-match readiness is defended. The next bounded stage is first human Owner play.**
 
-1. Drive real remote solo matches through the production-shaped browser/MatchRoom path rather than isolated phase fixtures.
-2. Verify that complete matches terminate, scoring/next-hand transitions survive many hands, playback does not backlog or deadlock, and reconnect remains safe during long play.
-3. Record interaction/pacing findings instead of prematurely redesigning visuals.
-4. Fix only material blockers that would make Owner feedback noisy or misleading.
-5. Then put the game in front of the Owner on desktop and mobile; treat that play as the primary signal for bot tuning, pacing, explanations and UX.
-6. Use real-human duo/trio once solo play is coherent enough that multiplayer feedback is about the game rather than obvious foundation defects.
+1. Remove only obvious comprehension blockers for a player who does not already know Tysiąc: compact always-available rules help plus minimal context at the moment of a decision.
+2. Do not redesign the table; current desktop/mobile composition is adequate for the first serious play pass.
+3. Put the same remote product path in front of the Owner on desktop and mobile and play complete matches.
+4. Treat observed confusion, pacing, bot behavior and scoring comprehension as primary evidence; tune from that rather than from additional speculative architecture work.
+5. Preserve unresolved rule pins explicitly and change them only from stronger reference or gameplay evidence.
+6. Move to real-human duo/trio once solo feedback is about the game rather than missing explanation/basic UX.
 
-Foundation architecture is no longer the main research question. The project now needs evidence that the game is **actually understandable, playable and worth continuing to polish**.
+The project no longer needs proof that a full match can run. It needs proof that a human can **understand it, make intentional decisions and want to keep playing**.
