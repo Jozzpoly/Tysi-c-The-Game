@@ -13,6 +13,7 @@ import {
   type RoomSnapshot,
   type RoomSocketMessage,
 } from './room-client.js';
+import './remote.css';
 
 interface RemoteRoomProps {
   room: string;
