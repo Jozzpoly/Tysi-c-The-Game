@@ -61,9 +61,15 @@ function estimateContract(hand: readonly CardId[], rules: ThreePlayerRules): num
     (suit) => hand.some((card) => suitOf(card) === suit && rankOf(card) === 'A') && hand.some((card) => suitOf(card) === suit && rankOf(card) === '10'),
   ).length;
 
-  // Deliberately transparent first heuristic, not a claim about optimal play.
-  // Card strength drives the base; marriages add most (but not all) of their nominal value.
-  const estimate = 75 + rawPoints + Math.floor(marriage * 0.75) + aces * 4 + protectedTens * 5;
+  // Calibrated to the capabilities of this deliberately shallow player.
+  // A marriage is potential rather than guaranteed score, so only part of its nominal
+  // value is trusted at auction time. This is bot policy, not a game-rule claim.
+  const estimate =
+    70 +
+    Math.floor(rawPoints * 0.75) +
+    Math.floor(marriage * 0.45) +
+    aces * 5 +
+    protectedTens * 5;
   return Math.max(100, Math.floor(estimate / 10) * 10);
 }
 
@@ -116,8 +122,9 @@ export function heuristicCommand(
       .filter((command): command is Extract<Command, { type: 'contract' }> => command.type === 'contract')
       .sort((a, b) => a.value - b.value);
     if (contracts.length === 0) return commands[0];
-    const target = estimateContract(observation.ownHand, rules);
-    return contracts.filter((contract) => contract.value <= target).at(-1) ?? contracts[0];
+    // The auction already expressed the bot's risk appetite. Do not increase the
+    // obligation merely because the musik made a larger legal declaration possible.
+    return contracts[0];
   }
 
   if (observation.phase === 'trick') {
