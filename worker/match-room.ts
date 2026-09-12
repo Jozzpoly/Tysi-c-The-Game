@@ -75,10 +75,6 @@ function isSeat(value: unknown): value is Seat {
   return value === 0 || value === 1 || value === 2;
 }
 
-function commandSeat(command: Command): Seat | null {
-  return command.type === 'next-hand' ? null : command.seat;
-}
-
 function commandFingerprint(command: Command): string {
   return JSON.stringify(command);
 }
@@ -171,14 +167,15 @@ export class MatchRoom extends DurableObject<Env> {
         return { response: this.reject(room, seat, 'REVISION_MISMATCH') };
       }
 
-      const actor = commandSeat(envelope.command);
-      if (actor !== null && actor !== seat) {
+      // Every client-originating domain command carries its actor, including the
+      // explicit next-hand action. No anonymous/system command bypass exists.
+      if (envelope.command.seat !== seat) {
         return { response: this.reject(room, seat, 'SEAT_COMMAND_MISMATCH') };
       }
 
-      // Explicit Foundation policy: a seat-bound participant may advance an
-      // already-complete hand. This is intentionally provisional; a later
-      // ready/auto-advance policy can replace it without changing game rules.
+      // Foundation pacing policy: once a hand is complete, any connected seat may
+      // explicitly initiate the next hand. A later ready/auto-advance policy can
+      // change transport behavior without reintroducing actor-less core commands.
       const applied = applyCommand(room.state, envelope.command);
       if (!applied.ok) {
         return { response: this.reject(room, seat, applied.reason ?? 'COMMAND_REJECTED') };
