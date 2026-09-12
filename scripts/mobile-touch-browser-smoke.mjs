@@ -108,6 +108,32 @@ async function touchAt(session, x, y) {
   await cdp(session, 'Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
 }
 
+async function revision(session) {
+  return execute(session, `
+    const text = [...document.querySelectorAll('.footer span')]
+      .map((node) => node.textContent?.trim() ?? '')
+      .find((value) => /^rev \\d+$/.test(value));
+    return text ? Number(text.slice(4)) : null;
+  `);
+}
+
+async function decisionState(session) {
+  return execute(session, `
+    return {
+      heading: document.querySelector('.decision-card h2')?.textContent?.trim() ?? '',
+      revision: (() => {
+        const text = [...document.querySelectorAll('.footer span')]
+          .map((node) => node.textContent?.trim() ?? '')
+          .find((value) => /^rev \\d+$/.test(value));
+        return text ? Number(text.slice(4)) : null;
+      })(),
+      buttons: [...document.querySelectorAll('.decision-card button:not(:disabled)')]
+        .map((node) => node.textContent?.trim() ?? ''),
+      message: document.querySelector('.message')?.textContent?.trim() ?? '',
+    };
+  `);
+}
+
 async function buttonGeometry(session) {
   return execute(session, `
     return [...document.querySelectorAll('.decision-card button:not(:disabled), .topbar-actions button:not(:disabled)')].map((node) => {
@@ -169,18 +195,39 @@ async function touchHighestNumericDecision(session) {
 }
 
 async function driveToExchange(session) {
-  for (let i = 0; i < 8; i += 1) {
-    const heading = await waitFor('auction/exchange decision', () => execute(session, `return document.querySelector('.decision-card h2')?.textContent?.trim() ?? '';`));
-    if (heading === 'Oddaj po jednej karcie') return;
-    if (heading !== 'Twoja licytacja') {
-      await sleep(100);
-      continue;
-    }
+  const trace = [];
+  for (let action = 0; action < 16; action += 1) {
+    const state = await waitFor('auction/exchange decision', async () => {
+      const value = await decisionState(session);
+      if (value.heading === 'Twoja licytacja' || value.heading === 'Oddaj po jednej karcie') return value;
+      return false;
+    }, 8_000);
+    trace.push({ stage: 'decision', ...state });
+    if (state.heading === 'Oddaj po jednej karcie') return trace;
+
     assertTouchControls('auction', await buttonGeometry(session));
-    await touchHighestNumericDecision(session);
-    await sleep(120);
+    if (state.revision === null) throw new Error(`auction revision missing: ${JSON.stringify(state)}`);
+    const bid = await touchHighestNumericDecision(session);
+    trace.push({ stage: 'touch', bid, revision: state.revision });
+
+    const advanced = await waitFor(`auction touch ${bid} accepted`, async () => {
+      const next = await decisionState(session);
+      if (next.heading === 'Oddaj po jednej karcie') return next;
+      if (next.revision !== null && next.revision > state.revision) return next;
+      return false;
+    }, 5_000).catch(async (error) => {
+      const current = await decisionState(session);
+      throw new Error(`${error}; before=${JSON.stringify(state)} after=${JSON.stringify(current)} trace=${JSON.stringify(trace)}`);
+    });
+    trace.push({ stage: 'accepted', bid, ...advanced });
+
+    if (advanced.heading === 'Oddaj po jednej karcie') return trace;
+    await waitFor('next human auction decision or exchange', async () => {
+      const next = await decisionState(session);
+      return next.heading === 'Twoja licytacja' || next.heading === 'Oddaj po jednej karcie' ? next : false;
+    }, 8_000);
   }
-  throw new Error('did not reach exchange');
+  throw new Error(`did not reach exchange; final=${JSON.stringify(await decisionState(session))} trace=${JSON.stringify(trace)}`);
 }
 
 async function cardGeometry(session) {
@@ -217,7 +264,7 @@ async function run() {
     await emulateMobile(session);
     await navigate(session, `${BASE_URL}?seed=2&seat=0`);
     await waitFor('first human auction', () => execute(session, `return document.querySelector('.decision-card h2')?.textContent?.trim() === 'Twoja licytacja';`));
-    await driveToExchange(session);
+    const auctionTrace = await driveToExchange(session);
 
     assertTouchControls('exchange actions', await buttonGeometry(session));
     const cards = await cardGeometry(session);
@@ -237,8 +284,12 @@ async function run() {
     if (selection) throw new Error(`touch selected text instead of remaining action-only: ${JSON.stringify(selection)}`);
 
     assertTouchControls('exchange confirm', await buttonGeometry(session));
+    const beforeExchangeRevision = await revision(session);
     await touchButton(session, 'Potwierdź wymianę');
-    await waitFor('contract decision', () => execute(session, `return document.querySelector('.decision-card h2')?.textContent?.trim() === 'Ile ostatecznie grasz?';`));
+    await waitFor('contract decision', async () => {
+      const state = await decisionState(session);
+      return state.heading === 'Ile ostatecznie grasz?' && state.revision !== null && state.revision > (beforeExchangeRevision ?? -1) ? state : false;
+    });
     assertTouchControls('contract', await buttonGeometry(session));
 
     const lowest = await execute(session, `
@@ -251,19 +302,29 @@ async function run() {
       return { value: buttons[0].value, x: r.left + r.width / 2, y: r.top + r.height / 2 };
     `);
     if (!lowest) throw new Error('contract target missing');
+    const beforeContractRevision = await revision(session);
     await touchAt(session, lowest.x, lowest.y);
 
-    await waitFor('touch-playable hand', () => execute(session, `return document.querySelectorAll('.hand .card:not(:disabled)').length > 0;`));
+    await waitFor('touch-playable hand', async () => {
+      const currentRevision = await revision(session);
+      const playable = await execute(session, `return document.querySelectorAll('.hand .card:not(:disabled)').length;`);
+      return currentRevision !== null && currentRevision > (beforeContractRevision ?? -1) && playable > 0 ? playable : false;
+    });
     const playable = await cardGeometry(session);
     if (!playable.length) throw new Error('no touch-playable card');
+    const beforePlayRevision = await revision(session);
     await touchAt(session, playable[0].x, playable[0].y);
-    await waitFor('card touch accepted', () => execute(session, `return Boolean(document.querySelector('.trick-result')) || document.querySelectorAll('.hand .card').length < 8;`), 8_000);
+    await waitFor('card touch accepted', async () => {
+      const currentRevision = await revision(session);
+      return currentRevision !== null && currentRevision > (beforePlayRevision ?? -1) ? currentRevision : false;
+    }, 8_000);
 
     const finalSelection = await execute(session, `return window.getSelection()?.toString() ?? '';`);
     if (finalSelection) throw new Error(`gameplay touch left selected text: ${JSON.stringify(finalSelection)}`);
     await screenshot(session, 'mobile-touch-contract');
 
     return {
+      auctionTrace,
       exchangeCards: cards.length,
       minCardWidth: Math.min(...cards.map((card) => card.width)),
       minCardHeight: Math.min(...cards.map((card) => card.height)),
