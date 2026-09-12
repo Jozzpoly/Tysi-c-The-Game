@@ -1,7 +1,7 @@
 # Execution state — live truth
 
 Date: 2026-09-12
-Status: **Foundation Run 01 is strongly proven end-to-end locally; real Cloudflare deployment remains the main unproven boundary**
+Status: **Foundation Run 01 complete; local and public MatchRoom/browser boundaries are proven. Run 02 is gameplay/rules/product hardening.**
 
 This is the compact execution truth. Earlier plans/history are not authority where they conflict with executable evidence here.
 
@@ -26,7 +26,9 @@ Material PlayOK-sensitive questions remain explicit: transfer visibility, four-n
 
 Executable behavior proves our candidate implementation, not exact PlayOK identity.
 
-## Core — PASS
+## Foundation Run 01 — COMPLETE
+
+### Core — PASS
 
 Pure TypeScript domain core is independent of React and Cloudflare.
 
@@ -37,37 +39,38 @@ Proven:
 - one canonical legality path and rejection reasons;
 - candidate rule scenarios and invariants;
 - card identity/conservation and score accounting;
-- explicit seat actor on every client command, including `next-hand`;
+- explicit seat actor on every client command;
 - humans, local bots and server bots use the same command model.
 
-## Projection / feedback boundary — PASS
+### Projection / feedback — PASS
 
-Canonical human client boundary:
+Canonical client game-state boundary:
 
 `MatchState -> projectSeat(seat) -> SeatProjection { profile, observation, legalCommands }`
 
-Executable privacy tests prove that hidden opponent/talon identities do not leak through the projection, including legal commands.
+Executable privacy tests serialize projections/legal commands and prove hidden opponent/talon identities do not leak.
 
-Accepted commands emit transient typed `GameEvent[]`, filtered through `eventsForSeat()`. These events are presentation/protocol feedback, **not event sourcing**. Canonical authority remains `MatchState`; reconnect uses a fresh projection.
+Accepted commands emit transient typed `GameEvent[]`, audience-filtered through `eventsForSeat()`. These are presentation/protocol facts, not event sourcing.
 
-## GameTable / responsive presentation — PASS as foundation
+### Desktop/mobile presentation — PASS as foundation
 
-`GameTable` consumes only a seat projection + presentation labels/message and emits commands. It does not know whether authority is local or remote and does not assume human seat 0.
+One `GameTable` consumes a `SeatProjection` and emits commands. It does not know whether authority is local or remote and does not assume human seat 0.
 
-Chrome CI enforces:
+Mandatory Chrome CI covers:
 
 - desktop **1440 x 1000**;
 - mobile **390 x 844**;
-- defender, declarer and non-zero-seat local paths;
-- 7/8/10-card hands without page or hand horizontal overflow;
-- distinct marriage actions such as `Melduj Q♦` and `Melduj K♦`;
-- forced-auction UI even when `Pas` is unavailable.
+- defender/declarer/non-zero-seat paths;
+- forced auction;
+- musik/exchange/contract/trick phases;
+- 7/8/10-card hands without horizontal overflow;
+- Back/Forward navigation and explicit leave/reconnect path.
 
-Current art/layout is intentionally provisional.
+Current visual design remains intentionally provisional.
 
-## Bot — ADEQUATE foundation
+### Bot — ADEQUATE foundation
 
-Product bot sees only its seat observation, legal commands and public rules.
+The product bot only sees its seat observation, legal commands and public rules.
 
 Fixed 40-match survey:
 
@@ -77,11 +80,11 @@ Fixed 40-match survey:
 - forced-100 success 39.4%;
 - no non-terminating match.
 
-Further tuning should be driven by human gameplay, not self-play overfitting.
+Further tuning should be driven primarily by human gameplay evidence.
 
-## MatchRoom authority / identity — PASS locally
+### MatchRoom authority / identity — PASS
 
-There is one room authority: **`MatchRoom`** backed by a SQLite Durable Object.
+One SQLite-backed Durable Object `MatchRoom` is authoritative online state.
 
 It:
 
@@ -93,117 +96,119 @@ It:
 - survives Durable Object eviction with hibernating WebSockets;
 - runs bot-owned seats server-side until the next human decision.
 
-Accountless room lifecycle is implemented:
+Accountless room lifecycle:
 
-- `solo`: human + 2 server bots, immediate start;
-- `duo`: 2 humans + server bot;
+- `solo`: human + 2 bots;
+- `duo`: 2 humans + bot;
 - `trio`: 3 humans;
-- 12-character shareable room code is **not** seat authority;
-- each human receives an opaque ~256-bit reconnect token;
+- 12-character room code is shareable but is not seat authority;
+- each human seat receives an opaque ~256-bit reconnect token;
 - only SHA-256 token hashes are persisted;
 - HTTP uses Bearer capability;
-- browser WebSocket uses `tysiac.v1` plus a credential subprotocol and the server echoes only `tysiac.v1`;
+- browser WS uses `tysiac.v1` plus a credential subprotocol; server echoes only `tysiac.v1`;
 - share URLs contain only `?room=CODE`;
-- old `?seat=` authority is removed;
 - same-origin WebSocket origin is enforced.
 
-Worker/workerd suite: **14/14 PASS** across lifecycle, privacy, server bots, concurrency, idempotency, eviction/hibernation and router HTTP/WS behavior.
+Worker/workerd suite: **14/14 PASS** across lifecycle, privacy, concurrency, idempotency, bots, eviction/hibernation and HTTP/WS routing.
 
-## Real browser -> MatchRoom path — PASS locally
+### Real browser -> MatchRoom — LOCAL PASS
 
-Normal `/` enters the real room flow. Deterministic `?seed=`, `?seat=` or `?local=1` remain QA-only local paths.
+Normal `/` uses the real room flow; deterministic local authority remains QA-only.
 
-`RemoteRoom` recovers the seat from its locally stored room credential, obtains an authenticated snapshot, opens the hibernating WebSocket and feeds the same `GameTable` used locally.
+Mandatory remote Chrome smoke proves:
 
-Mandatory Chrome remote smoke proves:
+- solo desktop and mobile create/command/reconnect;
+- server bot settling;
+- duo desktop host + mobile joiner with independent credentials and disjoint private hands;
+- synchronized revision stream;
+- tokens remain out of ordinary URLs/DOM;
+- mobile/desktop presentation remains within layout contracts.
 
-### Solo desktop
+### Cloudflare public edge — PASS
 
-- create room through UI;
-- token exists only in browser local storage, not URL/DOM;
-- real WebSocket command advances revision **1 -> 6** after server bot settling;
-- refresh restores the same room/credential at revision **6**.
+**Temporary Foundation Preview run #1**
 
-### Solo mobile
+- GitHub Actions run: `34701391964`
+- tested commit: `6420423870e2905b63673c656a755ee3363f8cee`
+- temporary public endpoint used for the proof: `https://tysiac-the-game.intriguing-popcorn.workers.dev`
+- deployment itself: PASS
+- public Chrome smoke: PASS
+- evidence artifact: `temporary-public-smoke-34701391964`
 
-Same path at 390 x 844: revision **1 -> 6 -> reconnect 6**, no horizontal overflow.
+The public test used two real Chrome sessions against the Cloudflare `workers.dev` edge:
 
-### Duo cross-device
+- desktop host created a real `duo` room;
+- 390 x 844 mobile joiner entered through the share URL and received a distinct private credential;
+- both hands remained private/disjoint;
+- one legal auction command crossed the public WebSocket path and both sessions converged on revision **2**;
+- refresh/reconnect restored revision **2** with the same room/credential;
+- public desktop/mobile screenshots were captured.
 
-- desktop host creates duo room;
-- mobile 390 x 844 browser opens the share URL and initially owns no credential;
-- join issues an independent seat credential;
-- host sees `Ty / Gracz 2 / Bot 3`, joiner sees `Gracz 1 / Ty / Bot 3`;
-- own hands are disjoint/private;
-- one human UI command is received by both browser sessions on the shared revision stream.
+The deployment was deliberately **temporary and unclaimed**. Its URL is ephemeral and is not the permanent product deployment.
 
-### Navigation / remote chrome
+This is sufficient evidence that the actual Cloudflare Worker + Durable Object + assets + WebSocket/browser boundary works outside local workerd. It does **not** prove long-duration production reliability or real physical mobile-network behavior.
 
-A separate mobile Chrome gate proves:
+## CI / deployment gates — PASS
 
-- in-match `Wróć do startu` cleanly leaves the room view without deleting its reconnect credential;
-- browser Back restores the same room and reconnects the same seat;
-- another Back restores the root screen through `popstate` synchronization;
-- fixed remote status/exit controls do not geometrically overlap the mobile phase heading;
-- the page remains free of horizontal overflow.
+Normal Foundation CI gates:
 
-Long-lived feedback naming reads the current room-seat snapshot rather than a stale React closure.
+`core -> worker -> local browser -> remote browser -> navigation browser -> deploy-helper security smoke -> production build -> wrangler deploy --dry-run`
 
-This is local Vite/workerd + real Chrome evidence, not a production-network claim.
+Deployment helpers also include:
 
-## Build/deployability — PASS / remote execution NOT PROVEN
+- manual credentialed permanent deploy workflow;
+- manual temporary-preview workflow;
+- post-deploy public Chrome verifier;
+- executable redaction test proving Cloudflare claim credentials are not emitted by the temporary helper.
 
-Full Foundation CI gates:
+No automatic push-to-production path exists.
 
-`core -> worker -> local browser -> remote browser -> navigation browser -> production build -> wrangler deploy --dry-run`
+## Still NOT proven
 
-All are green on main.
+These move into Run 02+ rather than keeping Foundation Run 01 open:
 
-`wrangler deploy --dry-run` packages client assets, Worker and only the `MATCH_ROOM` Durable Object binding successfully.
-
-### NOT YET PROVEN
-
-- actual Cloudflare account deployment / public `workers.dev` execution;
-- WAN/mobile-network behavior outside local workerd;
-- real mobile suspension duration and reconnect under production networking;
-- gameplay quality with Owner/real humans;
-- unresolved PlayOK-specific reference probes.
-
-## Remaining product debt
-
-No currently known local networking/navigation blocker remains. The important open evidence is production-shaped rather than architectural:
-
-- real Cloudflare deploy + public create/join/reconnect verification;
-- production soak/reconnect under actual WAN/mobile conditions;
-- Owner/real-human gameplay and UX feedback;
-- further visual/product polish only after that evidence warrants it.
+- exact PlayOK identity for unresolved rule probes;
+- bomb / four-nines behavior and other not-yet-implemented rule-sensitive paths;
+- real Owner/target-player gameplay quality;
+- long-duration room soak;
+- actual phone suspension/backgrounding and weak/mobile-network transitions;
+- permanent Cloudflare account deployment/operational lifecycle;
+- final visual quality, animation, audio/haptics and accessibility polish.
 
 ## Architecture to preserve
 
 Keep:
 
-- pure domain core;
+- pure deterministic domain core;
 - one legality/reducer implementation;
-- `SeatProjection` as human client game-state boundary;
+- `SeatProjection` as the human client state boundary;
 - typed scoped feedback events;
 - one `GameTable` for local and remote authority;
 - server-authoritative hidden state;
 - one Durable Object per table;
 - snapshot/revision reconnect model;
-- accountless capability identity unless product needs force accounts later.
+- accountless capability identity until product need justifies accounts;
+- desktop and mobile as equal product targets.
 
 Avoid for now:
 
 - generic rules DSL/policy framework;
 - event sourcing;
-- D1/accounts/ranking without product need;
+- D1/accounts/rankings without product need;
 - client prediction;
 - separate mobile game-state model;
 - duplicated server rules.
 
-## Immediate next work
+## Run 02 — immediate direction
 
-1. Prepare the smallest safe real Cloudflare deployment path without weakening current CI gates.
-2. Perform a real deployment only when an authorized Cloudflare credential/tool is available.
-3. Verify the public deployment with separate desktop/mobile browser sessions before calling Foundation remotely proven.
-4. Keep rule research demand-driven by concrete unresolved scenarios or failing gameplay/reference evidence.
+Move from infrastructure proof to **game/product truth**:
+
+1. perform a broader critical rules audit and resolve the highest-risk PlayOK-sensitive probes with evidence;
+2. implement missing rule paths only when the target profile actually requires them;
+3. make complete solo matches comfortable enough for Owner gameplay, without premature visual finalization;
+4. deepen feedback/history/explanation where it materially helps understand what happened;
+5. run real Owner gameplay on desktop and mobile and treat findings as the primary product signal;
+6. use duo/trio with real humans once the rules/gameplay loop is coherent enough to make their feedback meaningful;
+7. test reconnect/background/network resilience on real devices before permanent deployment is treated as operationally ready.
+
+Foundation architecture is no longer the main research question. The next question is whether the game is **correct enough, understandable enough and enjoyable enough** to deserve deeper polish.
