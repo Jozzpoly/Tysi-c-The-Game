@@ -180,7 +180,9 @@ export function playAutomatedMatch(state: MatchState, maxHands = 500): MatchStat
   for (let hand = 0; hand < maxHands; hand += 1) {
     current = playAutomatedHand(current);
     if (current.status === 'complete') return current;
-    const next = applyCommand(current, { type: 'next-hand' });
+    // The simulator acts as seat 0 for the explicit hand-advance action. Hand
+    // advancement itself is not preferential to a seat; the actor is provenance.
+    const next = applyCommand(current, { type: 'next-hand', seat: 0 });
     if (!next.ok) throw new Error(`cannot advance hand: ${next.reason}`);
     current = next.state;
   }
