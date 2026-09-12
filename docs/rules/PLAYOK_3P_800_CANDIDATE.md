@@ -68,7 +68,9 @@ The first-free/later-60 behavior is therefore **documented** target-family evide
 
 Kurnik does **not** state a maximum number of bombs. Pagat's separate Polish variant describes a two-bomb maximum at some tables; this project does not import that limit into the PlayOK candidate without target evidence.
 
-Exact PlayOK bomb timing and the interaction between bomb-awarded points and the 800 lock are not explicitly specified by the Kurnik text. They are pinned below and remain reference-sensitive.
+Kurnik also does not explicitly define whether "first bomb" is counted globally or per player. The current executable candidate counts bombs **per player for the duration of the match**. That scope is a project pin pending reference observation, not a documented PlayOK fact.
+
+Exact PlayOK bomb timing and the interaction between bomb-awarded points and the 800 lock are likewise not explicitly specified by the Kurnik text. They are pinned below and remain reference-sensitive.
 
 ## Provisional pins required for the executable candidate
 
@@ -98,16 +100,17 @@ The declarer may bomb after the auction has finished and the musik has been reve
 
 Reason: Kurnik documents withdrawal by the declarer but does not precisely state the UI/phase boundary. This is the smallest clean candidate window consistent with the sequence of the documented game and with common Polish descriptions that place the decision after seeing the musik.
 
-### Bomb award and the 800 lock
+### Bomb counting / award / 800 lock
 
-`ordinary-lock-applies-to-bomb-awards`
+`per-player-count / ordinary-lock-applies-to-bomb-awards`
 
-- bomb number 1 for a player in the match: no score change;
-- bomb number 2+: each opponent is eligible for +60;
+- each player's bomb count persists across hands in that match;
+- bomb number 1 **for that player**: no score change;
+- that player's bomb number 2+: each opponent is eligible for +60;
 - an opponent already at 800 or more does not receive that +60;
 - there is no candidate maximum bomb count.
 
-Reason: Kurnik places the general 800 rule immediately after the bomb scoring rule and states that at 800+ further points are gained only while being the declarer. Applying the ordinary lock to bomb awards is the current textual-reading pin, pending reference observation.
+Reason: Kurnik documents first-free/later-60, but not the counter scope. Per-player counting is the current reversible pin. Separately, Kurnik places the general 800 rule immediately after the bomb scoring rule and states that at 800+ further points are gained only while being the declarer. Applying the ordinary lock to bomb awards is the current textual-reading pin, pending reference observation.
 
 ### Trick obligation
 
@@ -142,7 +145,7 @@ Independent descriptions of common 2P variants explicitly leave cards outside tr
 2. **Transfer visibility reference check** — confirm PlayOK behavior for the two passed cards.
 3. **Four nines timing** — determine initial-hand vs post-musik/post-transfer eligibility and whether a transferred fourth nine counts.
 4. **Post-musik contract ceiling** — validate or replace `same-marriage-cap-after-exchange`; Kurnik's wording currently supports the auction cap more strongly than this final-declaration cap.
-5. **Bomb reference validation** — confirm the exact PlayOK bomb window and whether an opponent at 800+ is blocked from the repeated-bomb +60 award.
+5. **Bomb reference validation** — confirm PlayOK's exact bomb window, counter scope (global vs per-player), and whether an opponent at 800+ is blocked from the repeated-bomb +60 award.
 6. **Stronger-card obligation reference check** — validate the strict trump/overtrump legal set against actual PlayOK behavior.
 7. **Marriage with zero captured tricks** — reference-check `declared-marriage-counts`.
 
@@ -153,8 +156,8 @@ The core/browser smoke suites pin and exercise:
 - compulsory 100 auction resolution;
 - bidding above 120 bounded by marriage capacity;
 - hidden-state seat projection boundary;
-- first bomb free;
-- repeated bomb +60 award with ordinary 800-lock behavior;
+- first per-player bomb free;
+- repeated per-player bomb +60 award with ordinary 800-lock behavior;
 - bomb count persistence across hands;
 - bomb ending a hand before exchange/trick play while preserving card invariants;
 - deliberate bomb confirmation UI on desktop and true 390 px mobile;
