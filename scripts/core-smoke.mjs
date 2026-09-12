@@ -16,8 +16,20 @@ import {
 assert.equal(roundDefenderScore(25, 'nearest-10-half-up'), 30);
 assert.equal(roundDefenderScore(25, 'nearest-10-six-up'), 20);
 
+// Hidden-information boundary before anything is public: no opponent card or talon
+// identity may appear anywhere in seat 0's serialized observation.
+const hiddenState = createMatch(PLAYOK_3P_800_CANDIDATE, 1234, 0);
+const hiddenObservation = observe(hiddenState, 0);
+const hiddenSerialized = JSON.stringify(hiddenObservation);
+for (const card of [...hiddenState.hand.hands[1], ...hiddenState.hand.hands[2], ...hiddenState.hand.talon]) {
+  assert.equal(hiddenSerialized.includes(card), false, `hidden card leaked into observation: ${card}`);
+}
+assert.deepEqual(hiddenObservation.ownHand, hiddenState.hand.hands[0]);
+assert.equal(hiddenObservation.revealedTalon, null);
+assert.equal('hands' in hiddenObservation, false);
+
 // Forced 100: after both other players pass, the forced forehand wins.
-let state = createMatch(PLAYOK_3P_800_CANDIDATE, 1234, 0);
+let state = hiddenState;
 assert.equal(state.hand.auction.highBidder, 1);
 assert.equal(state.hand.auction.turn, 2);
 let result = applyCommand(state, { type: 'pass', seat: 2 });
@@ -32,11 +44,34 @@ assert.equal(state.hand.hands[1].length, 10);
 assert.equal(state.hand.revealedTalon?.length, 3);
 assertCoreInvariants(state);
 
-// Projection exposes the observing seat's cards, counts and public talon, not authoritative hands.
+// Projection exposes the observing seat's cards, counts and now-public talon,
+// but still not authoritative hands.
 const observation = observe(state, 0);
 assert.equal(observation.ownHand.length, 7);
 assert.deepEqual(observation.opponentCardCounts, [7, 10, 7]);
 assert.equal('hands' in observation, false);
+
+// Current recipient-private transfer pin: the recipient sees the card received by
+// that seat, while the card transferred to the other opponent remains hidden.
+// Choose cards that came from the declarer's original hand rather than the public talon.
+const publicTalon = new Set(state.hand.revealedTalon ?? []);
+const privateTransferCards = state.hand.hands[1].filter((card) => !publicTalon.has(card)).slice(0, 2);
+assert.equal(privateTransferCards.length, 2);
+result = applyCommand(state, {
+  type: 'exchange',
+  seat: 1,
+  give: [
+    { to: 0, card: privateTransferCards[0] },
+    { to: 2, card: privateTransferCards[1] },
+  ],
+});
+assert.equal(result.ok, true);
+state = result.state;
+assertCoreInvariants(state);
+const recipientObservation = observe(state, 0);
+const recipientSerialized = JSON.stringify(recipientObservation);
+assert.ok(recipientObservation.ownHand.includes(privateTransferCards[0]), 'recipient must see its received card');
+assert.equal(recipientSerialized.includes(privateTransferCards[1]), false, 'other transferred card leaked to recipient');
 
 // Auction >120 is capped by marriage capacity for the acting hand.
 const bidScenario = createMatch(PLAYOK_3P_800_CANDIDATE, 10, 0);
