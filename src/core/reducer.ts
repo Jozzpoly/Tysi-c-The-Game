@@ -1,7 +1,18 @@
 import { cardPoints, shuffledDeck, sortHand, suitOf, type CardId } from './cards.js';
 import { roundDefenderScore } from './rules.js';
 import { allowedBidValues, allowedContractValues, canDeclareMarriage, currentWinningPlay, legalCards } from './legality.js';
-import { cloneState, createHand, nextSeat, type ApplyResult, type Command, type MatchState, type Scores, type Seat, type SeatObservation } from './model.js';
+import {
+  cloneState,
+  createHand,
+  nextSeat,
+  type ApplyResult,
+  type Command,
+  type GameEvent,
+  type MatchState,
+  type Scores,
+  type Seat,
+  type SeatObservation,
+} from './model.js';
 
 function activeCount(active: readonly boolean[]): number {
   return active.filter(Boolean).length;
@@ -16,13 +27,17 @@ function nextActiveSeat(active: readonly boolean[], seat: Seat): Seat {
   throw new Error('no active bidder');
 }
 
-function finishAuction(state: MatchState): void {
+function finishAuction(state: MatchState, events: GameEvent[]): void {
   const hand = state.hand;
   const declarer = hand.auction.highBidder;
   hand.declarer = declarer;
   hand.revealedTalon = hand.talon.slice();
   hand.hands[declarer] = sortHand([...hand.hands[declarer], ...hand.talon]);
   hand.phase = 'exchange';
+  events.push(
+    { type: 'auction-won', audience: 'public', seat: declarer, value: hand.auction.currentBid },
+    { type: 'talon-revealed', audience: 'public', cards: hand.talon.slice() },
+  );
 }
 
 function removeCard(cards: CardId[], card: CardId): boolean {
@@ -32,13 +47,14 @@ function removeCard(cards: CardId[], card: CardId): boolean {
   return true;
 }
 
-function scoreHand(state: MatchState): void {
+function scoreHand(state: MatchState, events: GameEvent[]): void {
   const hand = state.hand;
   if (hand.declarer === null || hand.contract === null) throw new Error('cannot score incomplete hand');
 
   const delta: Scores = [0, 0, 0];
   const declarerRaw = hand.capturedCardPoints[hand.declarer] + hand.marriagePoints[hand.declarer];
-  delta[hand.declarer] = declarerRaw >= hand.contract ? hand.contract : -hand.contract;
+  const contractMade = declarerRaw >= hand.contract;
+  delta[hand.declarer] = contractMade ? hand.contract : -hand.contract;
 
   for (const seat of [0, 1, 2] as const) {
     if (seat === hand.declarer) continue;
@@ -57,34 +73,60 @@ function scoreHand(state: MatchState): void {
   hand.handScoreDelta = delta;
   hand.phase = 'complete';
 
+  events.push({
+    type: 'hand-scored',
+    audience: 'public',
+    delta: [...delta] as Scores,
+    scores: [...state.scores] as Scores,
+    declarer: hand.declarer,
+    contract: hand.contract,
+    contractMade,
+  });
+
   const winners = ([0, 1, 2] as Seat[]).filter((seat) => state.scores[seat] >= state.rules.targetScore);
   if (winners.length === 0) return;
 
   state.status = 'complete';
   if (winners.includes(hand.declarer)) {
     state.winner = hand.declarer;
-    return;
+  } else {
+    const bestScore = Math.max(...winners.map((seat) => state.scores[seat]));
+    const best = winners.filter((seat) => state.scores[seat] === bestScore);
+    if (best.length === 1) state.winner = best[0];
+    else state.draw = true;
   }
 
-  const bestScore = Math.max(...winners.map((seat) => state.scores[seat]));
-  const best = winners.filter((seat) => state.scores[seat] === bestScore);
-  if (best.length === 1) state.winner = best[0];
-  else state.draw = true;
+  events.push({
+    type: 'match-completed',
+    audience: 'public',
+    winner: state.winner,
+    draw: state.draw,
+    scores: [...state.scores] as Scores,
+  });
 }
 
-function success(state: MatchState): ApplyResult {
+function success(state: MatchState, events: GameEvent[] = []): ApplyResult {
   state.revision += 1;
-  return { ok: true, state };
+  return { ok: true, state, events };
 }
 
 function failure(state: MatchState, reason: string): ApplyResult {
-  return { ok: false, state, reason };
+  return { ok: false, state, reason, events: [] };
+}
+
+/**
+ * Canonical visibility filter for transient command feedback.
+ * Adapters must never send the authoritative event list directly to a seat.
+ */
+export function eventsForSeat(events: readonly GameEvent[], seat: Seat): GameEvent[] {
+  return events.filter((event) => event.audience === 'public' || event.audience === seat);
 }
 
 export function applyCommand(original: MatchState, command: Command): ApplyResult {
   if (original.status !== 'playing' && command.type !== 'next-hand') return failure(original, 'MATCH_COMPLETE');
   const state = cloneState(original);
   const hand = state.hand;
+  const events: GameEvent[] = [];
 
   if (command.type === 'bid') {
     if (hand.phase !== 'auction') return failure(original, 'WRONG_PHASE');
@@ -93,22 +135,24 @@ export function applyCommand(original: MatchState, command: Command): ApplyResul
     hand.auction.currentBid = command.value;
     hand.auction.highBidder = command.seat;
     hand.auction.turn = nextActiveSeat(hand.auction.active, command.seat);
-    return success(state);
+    events.push({ type: 'bid-placed', audience: 'public', seat: command.seat, value: command.value });
+    return success(state, events);
   }
 
   if (command.type === 'pass') {
     if (hand.phase !== 'auction') return failure(original, 'WRONG_PHASE');
     if (command.seat !== hand.auction.turn || !hand.auction.active[command.seat]) return failure(original, 'NOT_YOUR_TURN');
     hand.auction.active[command.seat] = false;
-    if (activeCount(hand.auction.active) === 1) finishAuction(state);
+    events.push({ type: 'player-passed', audience: 'public', seat: command.seat });
+    if (activeCount(hand.auction.active) === 1) finishAuction(state, events);
     else hand.auction.turn = nextActiveSeat(hand.auction.active, command.seat);
-    return success(state);
+    return success(state, events);
   }
 
   if (command.type === 'exchange') {
     if (hand.phase !== 'exchange' || hand.declarer === null) return failure(original, 'WRONG_PHASE');
     if (command.seat !== hand.declarer) return failure(original, 'NOT_DECLARER');
-    const recipients = command.give.map((item) => item.to);
+    const recipients = command.give.map((item) => item.to) as [Seat, Seat];
     const cards = command.give.map((item) => item.card);
     if (new Set(recipients).size !== 2 || recipients.includes(command.seat)) return failure(original, 'INVALID_RECIPIENTS');
     if (new Set(cards).size !== 2 || !cards.every((card) => hand.hands[command.seat].includes(card))) {
@@ -118,10 +162,12 @@ export function applyCommand(original: MatchState, command: Command): ApplyResul
       removeCard(hand.hands[command.seat], item.card);
       hand.hands[item.to].push(item.card);
       hand.hands[item.to] = sortHand(hand.hands[item.to]);
+      events.push({ type: 'card-received', audience: item.to, from: command.seat, to: item.to, card: item.card });
     }
     hand.hands[command.seat] = sortHand(hand.hands[command.seat]);
     hand.phase = 'contract';
-    return success(state);
+    events.unshift({ type: 'exchange-completed', audience: 'public', from: command.seat, recipients });
+    return success(state, events);
   }
 
   if (command.type === 'contract') {
@@ -131,7 +177,8 @@ export function applyCommand(original: MatchState, command: Command): ApplyResul
     hand.contract = command.value;
     hand.phase = 'trick';
     hand.trickLeader = hand.declarer;
-    return success(state);
+    events.push({ type: 'contract-set', audience: 'public', seat: command.seat, value: command.value });
+    return success(state, events);
   }
 
   if (command.type === 'play') {
@@ -149,12 +196,15 @@ export function applyCommand(original: MatchState, command: Command): ApplyResul
       hand.trump = suit;
       if (!hand.declaredMarriages[command.seat].includes(suit)) {
         hand.declaredMarriages[command.seat].push(suit);
-        hand.marriagePoints[command.seat] += state.rules.marriage.values[suit];
+        const points = state.rules.marriage.values[suit];
+        hand.marriagePoints[command.seat] += points;
+        events.push({ type: 'marriage-declared', audience: 'public', seat: command.seat, suit, points });
       }
     }
 
     hand.trick.push({ seat: command.seat, card: command.card });
-    if (hand.trick.length < 3) return success(state);
+    events.push({ type: 'card-played', audience: 'public', seat: command.seat, card: command.card });
+    if (hand.trick.length < 3) return success(state, events);
 
     const completedPlays = hand.trick.map((play) => ({ ...play }));
     const winner = currentWinningPlay(completedPlays, hand.trump).seat;
@@ -173,8 +223,17 @@ export function applyCommand(original: MatchState, command: Command): ApplyResul
     hand.trick = [];
     hand.trickLeader = winner;
 
-    if (hand.trickIndex === 8) scoreHand(state);
-    return success(state);
+    events.push({
+      type: 'trick-completed',
+      audience: 'public',
+      trick: {
+        ...hand.lastCompletedTrick,
+        plays: hand.lastCompletedTrick.plays.map((play) => ({ ...play })),
+      },
+    });
+
+    if (hand.trickIndex === 8) scoreHand(state, events);
+    return success(state, events);
   }
 
   if (command.type === 'next-hand') {
@@ -185,7 +244,8 @@ export function applyCommand(original: MatchState, command: Command): ApplyResul
     state.dealer = nextDealer;
     state.handNumber += 1;
     state.hand = createHand(nextDealer, shuffled.deck, state.rules);
-    return success(state);
+    events.push({ type: 'hand-started', audience: 'public', handNumber: state.handNumber, dealer: nextDealer });
+    return success(state, events);
   }
 
   return failure(original, 'UNKNOWN_COMMAND');
@@ -219,7 +279,10 @@ export function observe(state: MatchState, seat: Seat): SeatObservation {
     capturedCardPoints: [...hand.capturedCardPoints] as Scores,
     capturedCards: hand.capturedCards.map((cards) => cards.slice()) as [CardId[], CardId[], CardId[]],
     marriagePoints: [...hand.marriagePoints] as Scores,
+    capturedTricks: [...hand.capturedTricks] as [number, number, number],
+    declaredMarriages: hand.declaredMarriages.map((suits) => suits.slice()) as SeatObservation['declaredMarriages'],
     lastTrickWinner: hand.lastTrickWinner,
+    handScoreDelta: hand.handScoreDelta ? ([...hand.handScoreDelta] as Scores) : null,
     status: state.status,
     winner: state.winner,
     draw: state.draw,
