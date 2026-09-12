@@ -73,7 +73,7 @@ export function forgetSeatToken(room: string): void {
 }
 
 export async function createRemoteRoom(mode: RoomMode): Promise<RoomIdentity> {
-  const result = await jsonRequest<{ room: string; seat: Seat; token: string; state: RoomSnapshot }>('/api/rooms', {
+  const result = await jsonRequest<RoomIdentity>('/api/rooms', {
     method: 'POST',
     body: JSON.stringify({ mode }),
   });
@@ -93,15 +93,10 @@ export async function joinRemoteRoom(room: string): Promise<RoomIdentity> {
 }
 
 export async function getRoomSession(room: string, token: string): Promise<RoomSession> {
-  const result = await jsonRequest<{ room: string; ok: true; seat: Seat; roomState?: RoomSnapshot; room?: string; projection: SeatProjection | null; state?: RoomSnapshot }>(
+  return jsonRequest<RoomSession>(
     `/api/match/${encodeURIComponent(room)}`,
     { headers: { Authorization: `Bearer ${token}` } },
-  ) as unknown as { room: string; ok: true; seat: Seat; state?: RoomSnapshot; projection: SeatProjection | null } & { room?: string };
-
-  // Worker spreads SessionResponse after { room }, and SessionResponse itself names
-  // its public snapshot `room`. JSON therefore contains the snapshot at `room`.
-  const raw = result as unknown as { room: RoomSnapshot; seat: Seat; projection: SeatProjection | null };
-  return { room, seat: raw.seat, state: raw.room, projection: raw.projection };
+  );
 }
 
 export function openRoomSocket(room: string, token: string): WebSocket {
