@@ -25,6 +25,34 @@ export type Command =
   | { type: 'play'; seat: Seat; card: CardId; declareMarriage?: boolean }
   | { type: 'next-hand' };
 
+/**
+ * Transient facts emitted by an accepted command for adapters/presentation.
+ * They are not an event-sourced authority: MatchState remains canonical.
+ * `audience` lets network/UI adapters filter private feedback before sending it.
+ */
+export type GameEvent =
+  | { type: 'bid-placed'; audience: 'public'; seat: Seat; value: number }
+  | { type: 'player-passed'; audience: 'public'; seat: Seat }
+  | { type: 'auction-won'; audience: 'public'; seat: Seat; value: number }
+  | { type: 'talon-revealed'; audience: 'public'; cards: CardId[] }
+  | { type: 'exchange-completed'; audience: 'public'; from: Seat; recipients: [Seat, Seat] }
+  | { type: 'card-received'; audience: Seat; from: Seat; to: Seat; card: CardId }
+  | { type: 'contract-set'; audience: 'public'; seat: Seat; value: number }
+  | { type: 'marriage-declared'; audience: 'public'; seat: Seat; suit: Suit; points: number }
+  | { type: 'card-played'; audience: 'public'; seat: Seat; card: CardId }
+  | { type: 'trick-completed'; audience: 'public'; trick: CompletedTrick }
+  | {
+      type: 'hand-scored';
+      audience: 'public';
+      delta: Scores;
+      scores: Scores;
+      declarer: Seat;
+      contract: number;
+      contractMade: boolean;
+    }
+  | { type: 'match-completed'; audience: 'public'; winner: Seat | null; draw: boolean; scores: Scores }
+  | { type: 'hand-started'; audience: 'public'; handNumber: number; dealer: Seat };
+
 export interface AuctionState {
   currentBid: number;
   highBidder: Seat;
@@ -71,6 +99,7 @@ export interface MatchState {
 export interface ApplyResult {
   ok: boolean;
   state: MatchState;
+  events: GameEvent[];
   reason?: string;
 }
 
@@ -95,7 +124,10 @@ export interface SeatObservation {
   capturedCardPoints: Scores;
   capturedCards: [CardId[], CardId[], CardId[]];
   marriagePoints: Scores;
+  capturedTricks: [number, number, number];
+  declaredMarriages: [Suit[], Suit[], Suit[]];
   lastTrickWinner: Seat | null;
+  handScoreDelta: Scores | null;
   status: MatchState['status'];
   winner: Seat | null;
   draw: boolean;
