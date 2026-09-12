@@ -37,22 +37,32 @@ export function legalCards(state: MatchState, seat: Seat): CardId[] {
   const cards = hand.hands[seat];
   if (hand.trick.length === 0) return cards.slice();
 
+  const rules = state.rules.trick;
+  if (!rules.mustFollowSuit) return cards.slice();
+
   const leadSuit = suitOf(hand.trick[0].card);
   const suited = cards.filter((card) => suitOf(card) === leadSuit);
   const winner = currentWinningPlay(hand.trick, hand.trump);
 
+  // The follow-suit obligation dominates the beat obligation. If a trump is
+  // currently winning but the player can still follow the led suit, that player
+  // follows suit rather than attempting to beat the trump.
   if (suited.length > 0) {
-    if (suitOf(winner.card) === leadSuit) {
+    if (rules.mustBeatWhenPossible && suitOf(winner.card) === leadSuit) {
       const stronger = suited.filter((card) => compareSameSuit(card, winner.card) > 0);
       if (stronger.length > 0) return stronger;
     }
     return suited;
   }
 
-  if (!hand.trump) return cards.slice();
+  // Documented Polish Tysiąc families differ here. When trumping while void is
+  // not compulsory, every remaining card is legal; choosing a trump voluntarily
+  // does not create an additional overtrump obligation in this bounded model.
+  if (!hand.trump || !rules.mustTrumpWhenVoid) return cards.slice();
+
   const trumps = cards.filter((card) => suitOf(card) === hand.trump);
   if (trumps.length === 0) return cards.slice();
-  if (suitOf(winner.card) === hand.trump) {
+  if (rules.mustOvertrumpWhenPossible && suitOf(winner.card) === hand.trump) {
     const overtrumps = trumps.filter((card) => compareSameSuit(card, winner.card) > 0);
     if (overtrumps.length > 0) return overtrumps;
   }

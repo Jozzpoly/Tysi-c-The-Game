@@ -38,10 +38,14 @@ export interface ThreePlayerRules {
     readonly redealKeepsDealer: boolean;
   };
   readonly trick: {
-    readonly mustFollowSuit: true;
-    readonly mustBeatWhenPossible: true;
-    readonly mustTrumpWhenVoid: true;
-    readonly mustOvertrumpWhenPossible: true;
+    /** Follow the led suit whenever the hand contains it. */
+    readonly mustFollowSuit: boolean;
+    /** While following suit, beat the current led-suit winner when possible. */
+    readonly mustBeatWhenPossible: boolean;
+    /** When void in the led suit and trump exists, a trump is compulsory. */
+    readonly mustTrumpWhenVoid: boolean;
+    /** If trump is compulsory and a trump already wins, overtrump when possible. */
+    readonly mustOvertrumpWhenPossible: boolean;
   };
   readonly marriage: {
     readonly values: Readonly<Record<Suit, number>>;
@@ -103,6 +107,9 @@ export const PLAYOK_3P_800_CANDIDATE: ThreePlayerRules = {
     redealKeepsDealer: true,
   },
   trick: {
+    // Current PlayOK/Kurnik textual-reading pin. These are deliberately ordinary
+    // booleans because documented Polish variants differ, especially on whether
+    // trump is compulsory when void in the led suit.
     mustFollowSuit: true,
     mustBeatWhenPossible: true,
     mustTrumpWhenVoid: true,
