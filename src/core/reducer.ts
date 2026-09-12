@@ -122,10 +122,6 @@ function failure(state: MatchState, reason: string): ApplyResult {
   return { ok: false, state, reason, events: [] };
 }
 
-/**
- * Canonical visibility filter for transient command feedback.
- * Adapters must never send the authoritative event list directly to a seat.
- */
 export function eventsForSeat(events: readonly GameEvent[], seat: Seat): GameEvent[] {
   return events.filter((event) => event.audience === 'public' || event.audience === seat);
 }
@@ -160,21 +156,19 @@ export function applyCommand(original: MatchState, command: Command): ApplyResul
   if (command.type === 'bomb') {
     if (hand.phase !== 'exchange' || hand.declarer === null) return failure(original, 'WRONG_PHASE');
     if (command.seat !== hand.declarer) return failure(original, 'NOT_DECLARER');
-    if (!state.rules.bomb.enabled) return failure(original, 'BOMB_DISABLED');
+    const bombRules = state.rules.bomb;
+    if (!bombRules?.enabled) return failure(original, 'BOMB_DISABLED');
 
     state.bombsUsed[command.seat] += 1;
     const bombNumber = state.bombsUsed[command.seat];
     const delta: Scores = [0, 0, 0];
-    const free = state.rules.bomb.firstBombFree && bombNumber === 1;
+    const free = bombRules.firstBombFree && bombNumber === 1;
 
     if (!free) {
       for (const seat of [0, 1, 2] as const) {
         if (seat === command.seat) continue;
-        if (
-          state.rules.bomb.opponentAwardRespectsLock &&
-          state.scores[seat] >= state.rules.scoring.lockThreshold
-        ) continue;
-        delta[seat] = state.rules.bomb.repeatedOpponentAward;
+        if (bombRules.opponentAwardRespectsLock && state.scores[seat] >= state.rules.scoring.lockThreshold) continue;
+        delta[seat] = bombRules.repeatedOpponentAward;
       }
     }
 
@@ -217,7 +211,8 @@ export function applyCommand(original: MatchState, command: Command): ApplyResul
     hand.hands[command.seat] = sortHand(hand.hands[command.seat]);
     hand.fourNinesSeat = null;
 
-    if (state.rules.fourNines.enabled && state.rules.fourNines.window === 'after-exchange-before-contract') {
+    const fourNinesRules = state.rules.fourNines;
+    if (fourNinesRules?.enabled && fourNinesRules.window === 'after-exchange-before-contract') {
       const eligible = ([0, 1, 2] as Seat[]).find((seat) => hasFourNines(hand.hands[seat]));
       if (eligible !== undefined) {
         hand.phase = 'redeal-option';
@@ -237,11 +232,12 @@ export function applyCommand(original: MatchState, command: Command): ApplyResul
   if (command.type === 'request-redeal') {
     if (hand.phase !== 'redeal-option' || hand.fourNinesSeat === null) return failure(original, 'WRONG_PHASE');
     if (command.seat !== hand.fourNinesSeat) return failure(original, 'NOT_YOUR_TURN');
-    if (!state.rules.fourNines.enabled || !hasFourNines(hand.hands[command.seat])) return failure(original, 'REDEAL_NOT_AVAILABLE');
+    const fourNinesRules = state.rules.fourNines;
+    if (!fourNinesRules?.enabled || !hasFourNines(hand.hands[command.seat])) return failure(original, 'REDEAL_NOT_AVAILABLE');
 
     const shuffled = shuffledDeck(state.seed);
     state.seed = shuffled.nextSeed;
-    const dealer = state.rules.fourNines.redealKeepsDealer ? state.dealer : nextSeat(state.dealer);
+    const dealer = fourNinesRules.redealKeepsDealer ? state.dealer : nextSeat(state.dealer);
     state.dealer = dealer;
     state.hand = createHand(dealer, shuffled.deck, state.rules);
     events.push({ type: 'four-nines-redeal', audience: 'public', seat: command.seat, handNumber: state.handNumber, dealer });
@@ -251,7 +247,8 @@ export function applyCommand(original: MatchState, command: Command): ApplyResul
   if (command.type === 'continue-after-four-nines') {
     if (hand.phase !== 'redeal-option' || hand.fourNinesSeat === null) return failure(original, 'WRONG_PHASE');
     if (command.seat !== hand.fourNinesSeat) return failure(original, 'NOT_YOUR_TURN');
-    if (!state.rules.fourNines.optional) return failure(original, 'REDEAL_REQUIRED');
+    const fourNinesRules = state.rules.fourNines;
+    if (!fourNinesRules?.enabled || !fourNinesRules.optional) return failure(original, 'REDEAL_REQUIRED');
     if (!hasFourNines(hand.hands[command.seat])) return failure(original, 'REDEAL_NOT_AVAILABLE');
     hand.fourNinesSeat = null;
     hand.phase = 'contract';
@@ -272,9 +269,7 @@ export function applyCommand(original: MatchState, command: Command): ApplyResul
   if (command.type === 'play') {
     if (hand.phase !== 'trick' || hand.trickLeader === null) return failure(original, 'WRONG_PHASE');
     if (!legalCards(state, command.seat).includes(command.card)) return failure(original, 'ILLEGAL_CARD');
-    if (command.declareMarriage && !canDeclareMarriage(state, command.seat, command.card)) {
-      return failure(original, 'ILLEGAL_MARRIAGE');
-    }
+    if (command.declareMarriage && !canDeclareMarriage(state, command.seat, command.card)) return failure(original, 'ILLEGAL_MARRIAGE');
     if (!removeCard(hand.hands[command.seat], command.card)) return failure(original, 'CARD_NOT_HELD');
 
     if (hand.trick.length === 0) hand.lastCompletedTrick = null;
