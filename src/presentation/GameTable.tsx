@@ -179,11 +179,11 @@ export function GameTable({ projection, seatNames, message = '', onCommand, onNe
             </div>
           )}
 
-          {view.status === 'playing' && view.phase === 'auction' && pass && (
+          {view.status === 'playing' && view.phase === 'auction' && (pass || bids.length > 0) && (
             <div className="decision-card">
               <h2>Twoja licytacja</h2>
               <div className="actions bid-actions">
-                <button onClick={() => void onCommand(pass)}>Pas</button>
+                {pass && <button onClick={() => void onCommand(pass)}>Pas</button>}
                 {bids.map((bid) => (
                   <button className="primary" key={bid.value} onClick={() => void onCommand(bid)}>{bid.value}</button>
                 ))}
