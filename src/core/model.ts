@@ -4,6 +4,7 @@ import type { ThreePlayerRules } from './rules.js';
 export type Seat = 0 | 1 | 2;
 export type Scores = [number, number, number];
 export type Hands = [CardId[], CardId[], CardId[]];
+export type BombCounts = [number, number, number];
 
 export interface PlayedCard {
   seat: Seat;
@@ -17,9 +18,15 @@ export interface CompletedTrick {
   index: number;
 }
 
+export type HandCompletion =
+  | { kind: 'played' }
+  | { kind: 'bomb'; seat: Seat; bombNumber: number }
+  | null;
+
 export type Command =
   | { type: 'bid'; seat: Seat; value: number }
   | { type: 'pass'; seat: Seat }
+  | { type: 'bomb'; seat: Seat }
   | { type: 'exchange'; seat: Seat; give: readonly [{ to: Seat; card: CardId }, { to: Seat; card: CardId }] }
   | { type: 'contract'; seat: Seat; value: number }
   | { type: 'play'; seat: Seat; card: CardId; declareMarriage?: boolean }
@@ -35,6 +42,7 @@ export type GameEvent =
   | { type: 'player-passed'; audience: 'public'; seat: Seat }
   | { type: 'auction-won'; audience: 'public'; seat: Seat; value: number }
   | { type: 'talon-revealed'; audience: 'public'; cards: CardId[] }
+  | { type: 'hand-bombed'; audience: 'public'; seat: Seat; bombNumber: number; delta: Scores; scores: Scores }
   | { type: 'exchange-completed'; audience: 'public'; from: Seat; recipients: [Seat, Seat] }
   | { type: 'card-received'; audience: Seat; from: Seat; to: Seat; card: CardId }
   | { type: 'contract-set'; audience: 'public'; seat: Seat; value: number }
@@ -81,6 +89,7 @@ export interface HandState {
   declaredMarriages: [Suit[], Suit[], Suit[]];
   lastTrickWinner: Seat | null;
   handScoreDelta: Scores | null;
+  completion: HandCompletion;
 }
 
 export interface MatchState {
@@ -88,6 +97,7 @@ export interface MatchState {
   seed: number;
   revision: number;
   scores: Scores;
+  bombsUsed: BombCounts;
   dealer: Seat;
   handNumber: number;
   hand: HandState;
@@ -107,6 +117,7 @@ export interface SeatObservation {
   revision: number;
   seat: Seat;
   scores: Scores;
+  bombsUsed: BombCounts;
   handNumber: number;
   dealer: Seat;
   phase: HandState['phase'];
@@ -128,6 +139,7 @@ export interface SeatObservation {
   declaredMarriages: [Suit[], Suit[], Suit[]];
   lastTrickWinner: Seat | null;
   handScoreDelta: Scores | null;
+  completion: HandCompletion;
   status: MatchState['status'];
   winner: Seat | null;
   draw: boolean;
@@ -168,6 +180,7 @@ export function createHand(dealer: Seat, deck: readonly CardId[], rules: ThreePl
     declaredMarriages: [[], [], []],
     lastTrickWinner: null,
     handScoreDelta: null,
+    completion: null,
   };
 }
 
@@ -178,6 +191,7 @@ export function createMatch(rules: ThreePlayerRules, seed = 1, dealer: Seat = 0)
     seed: shuffled.nextSeed,
     revision: 0,
     scores: [0, 0, 0],
+    bombsUsed: [0, 0, 0],
     dealer,
     handNumber: 1,
     hand: createHand(dealer, shuffled.deck, rules),
@@ -192,6 +206,7 @@ export function cloneState(state: MatchState): MatchState {
   return {
     ...state,
     scores: [...state.scores] as Scores,
+    bombsUsed: [...state.bombsUsed] as BombCounts,
     hand: {
       ...hand,
       hands: [hand.hands[0].slice(), hand.hands[1].slice(), hand.hands[2].slice()],
@@ -211,6 +226,7 @@ export function cloneState(state: MatchState): MatchState {
       capturedTricks: [...hand.capturedTricks] as [number, number, number],
       declaredMarriages: hand.declaredMarriages.map((suits) => suits.slice()) as [Suit[], Suit[], Suit[]],
       handScoreDelta: hand.handScoreDelta ? ([...hand.handScoreDelta] as Scores) : null,
+      completion: hand.completion ? { ...hand.completion } : null,
     },
   };
 }
