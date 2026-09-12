@@ -24,7 +24,7 @@ export function describeFeedback(
 
   const redeal = events.find((event) => event.type === 'four-nines-redeal');
   if (redeal?.type === 'four-nines-redeal') {
-    return `${nameForSeat(redeal.seat)} ma cztery dziewiątki — ponowne rozdanie.`;
+    return `${nameForSeat(redeal.seat)}: cztery dziewiątki — ponowne rozdanie.`;
   }
 
   const bomb = events.find((event) => event.type === 'hand-bombed');
