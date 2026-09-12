@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import {
   PLAYOK_3P_800_CANDIDATE,
   actingSeat,
@@ -55,7 +55,7 @@ function Card({ card, disabled, selected, onClick }: { card: CardId; disabled?: 
 
 function App() {
   // Local single-player authority. Rendering below intentionally uses only the
-  // same seat projection a remote client could receive from MatchDO.
+  // same seat projection a remote client could receive from MatchRoom.
   // ?seed=N is a reproducible QA hook; ordinary product startup stays random.
   const [authority, setAuthority] = useState<MatchState>(() => freshMatch(startupSeed()));
   const [selectedTransfer, setSelectedTransfer] = useState<CardId[]>([]);
@@ -162,6 +162,9 @@ function App() {
 
   const visibleTrick = view.trick.length > 0 ? view.trick : view.lastCompletedTrick?.plays ?? [];
   const showingCompletedTrick = view.trick.length === 0 && view.lastCompletedTrick !== null;
+  const handStyle = {
+    '--hand-spread-count': Math.max(0, humanCards.length - 1),
+  } as CSSProperties;
 
   return (
     <main className="app-shell">
@@ -290,7 +293,7 @@ function App() {
                 <div className="actions">
                   {[...marriageCards].map((card) => (
                     <button className="primary" key={card} onClick={() => playCard(card, true)}>
-                      Melduj {SUIT_SYMBOL[suitOf(card)]}
+                      Melduj {rankOf(card)}{SUIT_SYMBOL[suitOf(card)]}
                     </button>
                   ))}
                 </div>
@@ -315,7 +318,7 @@ function App() {
           <strong>Twoje karty</strong>
           <span>{humanCards.length}</span>
         </div>
-        <div className="hand">
+        <div className="hand" style={handStyle}>
           {humanCards.map((card) => {
             const exchangeMode = view.phase === 'exchange' && exchanges.length > 0;
             const canPlay = view.phase === 'trick' && playable.has(card);
