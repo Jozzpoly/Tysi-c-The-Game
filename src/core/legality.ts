@@ -98,6 +98,9 @@ export function legalCommands(state: MatchState, seat?: Seat): Command[] {
     if (actor !== hand.declarer) return [];
     const opponents = ([0, 1, 2] as Seat[]).filter((candidate) => candidate !== actor);
     const commands: Command[] = [];
+    if (state.rules.bomb.enabled && state.rules.bomb.window === 'after-talon-before-exchange') {
+      commands.push({ type: 'bomb', seat: actor });
+    }
     for (const first of hand.hands[actor]) for (const second of hand.hands[actor]) {
       if (first === second) continue;
       commands.push({ type: 'exchange', seat: actor, give: [{ to: opponents[0], card: first }, { to: opponents[1], card: second }] });
