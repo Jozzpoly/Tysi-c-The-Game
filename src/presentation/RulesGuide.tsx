@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import './RulesGuide.css';
 
 interface RulesGuideProps {
   label?: string;
@@ -56,7 +57,7 @@ export function RulesGuide({ label = 'Jak grać', className = '' }: RulesGuidePr
               <section className="rules-block">
                 <h3>Kontrakt i lewy</h3>
                 <p>Po wymianie ustalasz ostateczny kontrakt — nie niższy niż wygrana stawka. Jeśli go nie zrealizujesz, tracisz jego wartość.</p>
-                <p>Rozdanie ma 8 lew. Interfejs pozwala kliknąć tylko legalne karty: dokładamy do koloru i przebijamy, gdy wymagają tego zasady tego profilu.</p>
+                <p>Rozdanie ma 8 lew. W tej wersji: dołóż do koloru; jeśli możesz, przebij wyższą kartą tego koloru; bez koloru zagraj atut; jeśli atut już leży i masz wyższy, przebij go.</p>
               </section>
 
               <section className="rules-block">
