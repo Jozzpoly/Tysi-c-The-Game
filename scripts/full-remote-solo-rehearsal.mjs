@@ -182,6 +182,11 @@ function compactDiagnostic(current) {
   };
 }
 
+function isMatchComplete(current) {
+  return current.phaseTitle === 'Rozdanie zakończone'
+    && (current.heading === 'Remis' || current.heading.endsWith(' wygrywa'));
+}
+
 function assertLayout(label, current, width) {
   if (current.width !== width) throw new Error(`${label}: viewport ${current.width}, expected ${width}`);
   if (current.scrollWidth > current.width + 1) {
@@ -201,7 +206,7 @@ async function waitForActionableState(session, label, previousRevision = null) {
     if (current.connection.includes('ruchy przy stole')) {
       throw new Error(`playback active: ${JSON.stringify(compactDiagnostic(current))}`);
     }
-    if (current.body.includes('Mecz zakończony.')) return current;
+    if (isMatchComplete(current)) return current;
     const actionable = current.enabledButtons.length > 0 || current.enabledHandCards > 0;
     if (!actionable) {
       throw new Error(`no human action: ${JSON.stringify(compactDiagnostic(current))}`);
@@ -318,7 +323,7 @@ async function runFullMatch(label, width, height, mobile) {
     let reconnectDone = false;
     const startedAt = Date.now();
 
-    while (!current.body.includes('Mecz zakończony.')) {
+    while (!isMatchComplete(current)) {
       if (counters.decisions >= 1400) throw new Error(`${label}: decision bound exceeded`);
       if (Date.now() - startedAt > 120_000) throw new Error(`${label}: wall-clock rehearsal bound exceeded`);
 
