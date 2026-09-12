@@ -23,7 +23,7 @@ export type Command =
   | { type: 'exchange'; seat: Seat; give: readonly [{ to: Seat; card: CardId }, { to: Seat; card: CardId }] }
   | { type: 'contract'; seat: Seat; value: number }
   | { type: 'play'; seat: Seat; card: CardId; declareMarriage?: boolean }
-  | { type: 'next-hand' };
+  | { type: 'next-hand'; seat: Seat };
 
 /**
  * Transient facts emitted by an accepted command for adapters/presentation.
