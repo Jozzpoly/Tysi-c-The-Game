@@ -1,4 +1,5 @@
 import { DurableObject } from 'cloudflare:workers';
+export { MatchRoom } from './match-room.js';
 
 export interface RevisionResult {
   ok: boolean;
