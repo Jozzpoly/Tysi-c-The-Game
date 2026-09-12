@@ -6,6 +6,7 @@ import {
   assertCoreInvariants,
   cardId,
   createMatch,
+  eventsForSeat,
   legalCards,
   observe,
   playAutomatedHand,
@@ -28,15 +29,22 @@ assert.deepEqual(hiddenObservation.ownHand, hiddenState.hand.hands[0]);
 assert.equal(hiddenObservation.revealedTalon, null);
 assert.equal('hands' in hiddenObservation, false);
 
+// Rejected commands never emit feedback facts.
+const rejected = applyCommand(hiddenState, { type: 'pass', seat: 0 });
+assert.equal(rejected.ok, false);
+assert.deepEqual(rejected.events, []);
+
 // Forced 100: after both other players pass, the forced forehand wins.
 let state = hiddenState;
 assert.equal(state.hand.auction.highBidder, 1);
 assert.equal(state.hand.auction.turn, 2);
 let result = applyCommand(state, { type: 'pass', seat: 2 });
 assert.equal(result.ok, true);
+assert.deepEqual(result.events.map((event) => event.type), ['player-passed']);
 state = result.state;
 result = applyCommand(state, { type: 'pass', seat: 0 });
 assert.equal(result.ok, true);
+assert.deepEqual(result.events.map((event) => event.type), ['player-passed', 'auction-won', 'talon-revealed']);
 state = result.state;
 assert.equal(state.hand.phase, 'exchange');
 assert.equal(state.hand.declarer, 1);
@@ -66,6 +74,21 @@ result = applyCommand(state, {
   ],
 });
 assert.equal(result.ok, true);
+assert.deepEqual(result.events.map((event) => event.type), ['exchange-completed', 'card-received', 'card-received']);
+
+// The transient feedback channel must obey the same hidden-information boundary
+// as SeatObservation. Seat 0 gets only its private received-card event; seat 2 gets
+// only its own; the declarer sees no private receive event at all.
+const seat0EventJson = JSON.stringify(eventsForSeat(result.events, 0));
+assert.ok(seat0EventJson.includes(privateTransferCards[0]), 'seat 0 event feed must include its received card');
+assert.equal(seat0EventJson.includes(privateTransferCards[1]), false, 'seat 2 transfer leaked through event feed');
+const seat2EventJson = JSON.stringify(eventsForSeat(result.events, 2));
+assert.ok(seat2EventJson.includes(privateTransferCards[1]), 'seat 2 event feed must include its received card');
+assert.equal(seat2EventJson.includes(privateTransferCards[0]), false, 'seat 0 transfer leaked through event feed');
+const declarerEventJson = JSON.stringify(eventsForSeat(result.events, 1));
+assert.equal(declarerEventJson.includes(privateTransferCards[0]), false, 'private transfer identity leaked through public event');
+assert.equal(declarerEventJson.includes(privateTransferCards[1]), false, 'private transfer identity leaked through public event');
+
 state = result.state;
 assertCoreInvariants(state);
 const recipientObservation = observe(state, 0);
@@ -144,7 +167,8 @@ precedenceScenario.hand.trick = [
 precedenceScenario.hand.hands[2] = [cardId('clubs', 'A'), cardId('hearts', 'A')];
 assert.deepEqual(legalCards(precedenceScenario, 2), [cardId('clubs', 'A')]);
 
-// Declaring a marriage on lead immediately establishes trump and awards the pinned marriage value.
+// Declaring a marriage on lead immediately establishes trump, awards the pinned
+// marriage value and emits presentation facts without requiring state diffing.
 const marriageScenario = createMatch(PLAYOK_3P_800_CANDIDATE, 59, 0);
 marriageScenario.hand.phase = 'trick';
 marriageScenario.hand.declarer = 0;
@@ -155,6 +179,10 @@ result = applyCommand(marriageScenario, { type: 'play', seat: 0, card: cardId('h
 assert.equal(result.ok, true);
 assert.equal(result.state.hand.trump, 'hearts');
 assert.equal(result.state.hand.marriagePoints[0], 100);
+assert.deepEqual(result.events.map((event) => event.type), ['marriage-declared', 'card-played']);
+const marriageEvent = result.events.find((event) => event.type === 'marriage-declared');
+assert.equal(marriageEvent?.points, 100);
+assert.equal(marriageEvent?.suit, 'hearts');
 
 // Scoring boundary: a defender already on the 800 lock does not increase from defender points.
 const lockScenario = createMatch(PLAYOK_3P_800_CANDIDATE, 60, 0);
@@ -173,6 +201,8 @@ lockScenario.hand.hands[2] = [cardId('clubs', '9')];
 result = applyCommand(lockScenario, { type: 'play', seat: 2, card: cardId('clubs', '9') });
 assert.equal(result.ok, true);
 assert.equal(result.state.scores[1], 800);
+assert.ok(result.events.some((event) => event.type === 'trick-completed'));
+assert.ok(result.events.some((event) => event.type === 'hand-scored'));
 
 // If declarer and defenders all cross 1000 in the same hand, the documented declarer precedence wins.
 const simultaneousScenario = createMatch(PLAYOK_3P_800_CANDIDATE, 61, 0);
@@ -194,6 +224,7 @@ assert.equal(result.ok, true);
 assert.equal(result.state.status, 'complete');
 assert.equal(result.state.winner, 0);
 assert.equal(result.state.draw, false);
+assert.ok(result.events.some((event) => event.type === 'match-completed'));
 
 for (const seed of [1, 2, 3, 17, 99]) {
   const handEnd = playAutomatedHand(createMatch(PLAYOK_3P_800_CANDIDATE, seed));
