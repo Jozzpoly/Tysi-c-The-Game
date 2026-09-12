@@ -4,9 +4,9 @@ import {
   actingSeat,
   applyCommand,
   assertCoreInvariants,
-  conservativeCommand,
   createMatch,
   legalCommands,
+  productBotCommand,
   rankOf,
   suitOf,
   type CardId,
@@ -26,7 +26,7 @@ function settleBots(initial: MatchState, maxSteps = 128): MatchState {
     if (state.status === 'complete' || state.hand.phase === 'complete') return state;
     const actor = actingSeat(state);
     if (actor === null || actor === HUMAN) return state;
-    const result = applyCommand(state, conservativeCommand(state));
+    const result = applyCommand(state, productBotCommand(state, actor));
     if (!result.ok) throw new Error(`Bot command rejected: ${result.reason}`);
     state = result.state;
     assertCoreInvariants(state);
