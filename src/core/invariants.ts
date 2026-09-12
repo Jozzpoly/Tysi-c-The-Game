@@ -1,4 +1,4 @@
-import { CARD_POINTS, RANK_STRENGTH, SUITS, cardPoints } from './cards.js';
+import { CARD_POINTS, RANK_STRENGTH, SUITS, cardPoints, rankOf } from './cards.js';
 import type { MatchState } from './model.js';
 
 export function assertCoreInvariants(state: MatchState): void {
@@ -27,11 +27,22 @@ export function assertCoreInvariants(state: MatchState): void {
       if (hand.hands[seat].length !== expected) {
         throw new Error(`bomb-complete seat ${seat} hand size ${hand.hands[seat].length} !== ${expected}`);
       }
-    } else if (['contract', 'trick', 'complete'].includes(hand.phase)) {
+    } else if (['redeal-option', 'contract', 'trick', 'complete'].includes(hand.phase)) {
       const playedPending = hand.trick.some((play) => play.seat === seat) ? 1 : 0;
       const expected = Math.max(0, 8 - hand.trickIndex - playedPending);
       if (hand.hands[seat].length !== expected) throw new Error(`seat ${seat} hand size ${hand.hands[seat].length} !== ${expected}`);
     }
+  }
+
+  if (hand.phase === 'redeal-option') {
+    if (hand.fourNinesSeat === null) throw new Error('redeal-option phase requires an eligible seat');
+    const nines = hand.hands[hand.fourNinesSeat].filter((card) => rankOf(card) === '9');
+    if (nines.length !== 4) throw new Error('redeal-option seat must hold all four nines');
+    if (hand.contract !== null || hand.trickIndex !== 0 || pending.length !== 0 || captured.length !== 0) {
+      throw new Error('four-nines redeal option must occur before contract/trick play');
+    }
+  } else if (hand.fourNinesSeat !== null) {
+    throw new Error('four-nines seat may only exist during redeal-option phase');
   }
 
   if (hand.completion?.kind === 'bomb') {
