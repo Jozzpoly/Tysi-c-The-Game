@@ -62,6 +62,10 @@ export function GameTable({ projection, seatNames, message = '', onCommand, onNe
   const pass = humanCommands.find((command): command is Extract<Command, { type: 'pass' }> => command.type === 'pass');
   const bomb = humanCommands.find((command): command is Extract<Command, { type: 'bomb' }> => command.type === 'bomb');
   const exchanges = humanCommands.filter((command): command is Extract<Command, { type: 'exchange' }> => command.type === 'exchange');
+  const requestRedeal = humanCommands.find((command): command is Extract<Command, { type: 'request-redeal' }> => command.type === 'request-redeal');
+  const continueAfterFourNines = humanCommands.find(
+    (command): command is Extract<Command, { type: 'continue-after-four-nines' }> => command.type === 'continue-after-four-nines',
+  );
   const contracts = humanCommands.filter((command): command is Extract<Command, { type: 'contract' }> => command.type === 'contract');
   const nextHand = humanCommands.find((command): command is Extract<Command, { type: 'next-hand' }> => command.type === 'next-hand');
 
@@ -94,6 +98,7 @@ export function GameTable({ projection, seatNames, message = '', onCommand, onNe
   const phaseLabel = {
     auction: 'Licytacja',
     exchange: 'Wymiana po musiku',
+    'redeal-option': 'Cztery dziewiątki',
     contract: 'Deklaracja gry',
     trick: `Lewa ${Math.min(8, view.trickIndex + 1)}/8`,
     complete: 'Rozdanie zakończone',
@@ -223,6 +228,17 @@ export function GameTable({ projection, seatNames, message = '', onCommand, onNe
                   {bomb && <button className="ghost" onClick={() => setConfirmBomb(true)}>Bomba — wycofaj się</button>}
                 </>
               )}
+            </div>
+          )}
+
+          {view.status === 'playing' && view.phase === 'redeal-option' && view.fourNinesOption && requestRedeal && (
+            <div className="decision-card">
+              <h2>Masz cztery dziewiątki</h2>
+              <p>Możesz poprosić o ponowne rozdanie bez zmiany wyniku. Jeśli grasz dalej, pozostali gracze nie dostają informacji o tej decyzji.</p>
+              <div className="actions">
+                <button className="primary" onClick={() => void onCommand(requestRedeal)}>Rozdaj ponownie</button>
+                {continueAfterFourNines && <button onClick={() => void onCommand(continueAfterFourNines)}>Graj dalej</button>}
+              </div>
             </div>
           )}
 
