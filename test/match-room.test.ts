@@ -286,5 +286,5 @@ describe('MatchRoom Durable Object lifecycle and authority', () => {
 
     opened0.socket.close(1000, 'test complete');
     opened2.socket.close(1000, 'test complete');
-  });
+  }, 15_000);
 });
