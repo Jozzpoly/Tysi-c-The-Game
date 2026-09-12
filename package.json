@@ -7,7 +7,7 @@
     "dev": "vite",
     "build:core": "tsc -p tsconfig.core.json",
     "build:web": "tsc -p tsconfig.app.json && vite build",
-    "test:core": "npm run build:core && node scripts/core-smoke.mjs",
+    "test:core": "npm run build:core && node scripts/core-smoke.mjs && node scripts/product-bot-smoke.mjs",
     "check": "npm run test:core && npm run build:web"
   },
   "dependencies": {
