@@ -64,8 +64,10 @@ function estimateContract(hand: readonly CardId[], rules: ThreePlayerRules): num
   // Calibrated to the capabilities of this deliberately shallow player.
   // A marriage is potential rather than guaranteed score, so only part of its nominal
   // value is trusted at auction time. This is bot policy, not a game-rule claim.
+  // The 60-point base is the current A/B candidate after the 70-point base produced
+  // only ~44% success on voluntarily won contracts across a 40-match seeded survey.
   const estimate =
-    70 +
+    60 +
     Math.floor(rawPoints * 0.75) +
     Math.floor(marriage * 0.45) +
     aces * 5 +
