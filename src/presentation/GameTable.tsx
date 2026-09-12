@@ -7,6 +7,7 @@ import {
   type Seat,
   type SeatProjection,
 } from '../core/index.js';
+import { RulesGuide } from './RulesGuide.js';
 import { ScoreSummary } from './ScoreSummary.js';
 
 const SUIT_SYMBOL = { spades: '♠', clubs: '♣', diamonds: '♦', hearts: '♥' } as const;
@@ -110,10 +111,13 @@ export function GameTable({ projection, seatNames, message = '', onCommand, onNe
     <main className="app-shell">
       <header className="topbar">
         <div>
-          <div className="eyebrow">Tysiąc The Game · candidate slice</div>
+          <div className="eyebrow">Tysiąc The Game</div>
           <h1>{phaseLabel}</h1>
         </div>
-        {onNewGame && <button className="ghost" onClick={onNewGame}>Nowa gra</button>}
+        <div className="topbar-actions">
+          <RulesGuide />
+          {onNewGame && <button className="ghost" onClick={onNewGame}>Nowa gra</button>}
+        </div>
       </header>
 
       <section className="scoreboard" aria-label="Wynik meczu">
@@ -196,7 +200,11 @@ export function GameTable({ projection, seatNames, message = '', onCommand, onNe
                 {pass && <button onClick={() => void onCommand(pass)}>Pas</button>}
                 {bids.map((bid) => <button className="primary" key={bid.value} onClick={() => void onCommand(bid)}>{bid.value}</button>)}
               </div>
-              <small>Wszystkie wartości pokazane tutaj są legalne dla aktualnej ręki.</small>
+              <small className="decision-help">
+                {pass
+                  ? 'Licytujesz zobowiązanie punktowe. Jeśli wygrasz, bierzesz musik i zostajesz grającym; pas wycofuje cię z tej licytacji.'
+                  : 'Masz obowiązkową stawkę 100. Jeśli wygrasz, bierzesz musik i zostajesz grającym.'}
+              </small>
             </div>
           )}
 
@@ -216,7 +224,7 @@ export function GameTable({ projection, seatNames, message = '', onCommand, onNe
                   <h2>Oddaj po jednej karcie</h2>
                   {exchanges.length > 0 && (
                     <>
-                      <p>1. wybrana → {seatName(exchanges[0].give[0].to)}, 2. wybrana → {seatName(exchanges[0].give[1].to)}. Widoczność transferu jest na razie jawnym pinem profilu.</p>
+                      <p>Po musiku oddajesz po jednej karcie każdemu rywalowi. 1. wybrana → {seatName(exchanges[0].give[0].to)}, 2. wybrana → {seatName(exchanges[0].give[1].to)}.</p>
                       <button className="primary" disabled={selectedTransfer.length !== 2} onClick={confirmTransfer}>Potwierdź wymianę</button>
                     </>
                   )}
@@ -243,6 +251,7 @@ export function GameTable({ projection, seatNames, message = '', onCommand, onNe
               <div className="actions contract-actions">
                 {contracts.map((contract) => <button key={contract.value} onClick={() => void onCommand(contract)}>{contract.value}</button>)}
               </div>
+              <small className="decision-help">To ostateczne zobowiązanie punktowe. Nie może być niższe od wygranej stawki; jeśli go nie zrealizujesz, tracisz jego wartość.</small>
             </div>
           )}
 
@@ -260,6 +269,11 @@ export function GameTable({ projection, seatNames, message = '', onCommand, onNe
                   ))}
                 </div>
               )}
+              <small className="decision-help">
+                {marriageCards.size > 0
+                  ? 'Meldunek K+Q daje punkty i ustawia ten kolor jako atut. Możesz też zagrać aktywną kartę bez meldowania.'
+                  : 'Kliknij jedną z aktywnych kart — interfejs blokuje zagrania nielegalne w tej lewie.'}
+              </small>
             </div>
           )}
 
@@ -289,7 +303,7 @@ export function GameTable({ projection, seatNames, message = '', onCommand, onNe
       </section>
 
       <footer className="footer">
-        <span>Profil: {projection.profile.id} v{projection.profile.version}</span>
+        <span>Zasady: PlayOK/Kurnik 3P 800 · test v{projection.profile.version}</span>
         <span>rev {view.revision}</span>
         {message && <span className="message">{message}</span>}
       </footer>

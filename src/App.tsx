@@ -14,6 +14,7 @@ import {
 } from './core/index.js';
 import { describeFeedback } from './presentation/feedback.js';
 import { GameTable } from './presentation/GameTable.js';
+import { RulesGuide } from './presentation/RulesGuide.js';
 import { RemoteRoom } from './remote/RemoteRoom.js';
 import { createRemoteRoom, normalizedRoomCode, type RoomMode } from './remote/room-client.js';
 import './styles.css';
@@ -182,6 +183,11 @@ function App() {
         <h1>Usiądź do stołu</h1>
         <p>Bez konta. Prywatny pokój działa na tym samym silniku reguł dla ludzi i botów.</p>
 
+        <div className="home-guide-row">
+          <span>Pierwszy raz grasz w Tysiąca?</span>
+          <RulesGuide label="Zasady w 60 sekund" />
+        </div>
+
         <div className="mode-grid">
           <button className="mode-card primary" disabled={busy !== null} onClick={() => void create('solo')}>
             <strong>Zagraj sam</strong><span>Ty + 2 boty</span>
@@ -208,7 +214,7 @@ function App() {
         </div>
 
         {message && <div className="home-message">{message}</div>}
-        <small>Profil reguł: PlayOK/Kurnik 3P 800 candidate. Projekt nadal prowadzi jawne unresolved rule probes.</small>
+        <small>Zasady: PlayOK/Kurnik 3P 800 · wersja testowa. Rzadkie warianty nadal weryfikujemy.</small>
       </section>
     </main>
   );
