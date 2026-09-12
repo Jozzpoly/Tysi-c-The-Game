@@ -8,7 +8,7 @@ import {
   productBotCommand,
 } from '../dist/core/index.js';
 
-function playProductBotMatch(seed, maxCommands = 50000) {
+function playProductBotMatch(seed, maxCommands = 10000) {
   let state = createMatch(PLAYOK_3P_800_CANDIDATE, seed);
   assertCoreInvariants(state);
 
@@ -32,7 +32,11 @@ function playProductBotMatch(seed, maxCommands = 50000) {
     assertCoreInvariants(state);
   }
 
-  throw new Error(`product bots did not finish seed ${seed} within ${maxCommands} commands`);
+  throw new Error(
+    `product bots did not finish seed ${seed} within ${maxCommands} commands; ` +
+      `hand=${state.handNumber} scores=${state.scores.join('/')} phase=${state.hand.phase} ` +
+      `bid=${state.hand.auction.currentBid} declarer=${state.hand.declarer} contract=${state.hand.contract}`,
+  );
 }
 
 for (const seed of [4, 11, 23, 71, 101]) {
