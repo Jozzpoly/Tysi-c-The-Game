@@ -23,6 +23,16 @@ export function assertCoreInvariants(state: MatchState): void {
     }
   }
 
+  if (hand.lastCompletedTrick) {
+    if (hand.lastCompletedTrick.plays.length !== 3) throw new Error('completed trick must contain exactly 3 plays');
+    if (hand.lastCompletedTrick.index !== hand.trickIndex) throw new Error('completed trick index must match current completed trick count');
+    if (!hand.lastCompletedTrick.plays.some((play) => play.seat === hand.lastCompletedTrick?.winner)) {
+      throw new Error('completed trick winner must be one of its players');
+    }
+    const points = hand.lastCompletedTrick.plays.reduce((sum, play) => sum + cardPoints(play.card), 0);
+    if (points !== hand.lastCompletedTrick.points) throw new Error('completed trick point total mismatch');
+  }
+
   if (hand.phase === 'auction' && hand.talon.length !== 3) throw new Error('auction talon must have 3 cards');
   if (hand.phase === 'exchange' && hand.declarer !== null && hand.hands[hand.declarer].length !== 10) {
     throw new Error('declarer must hold 10 cards before exchange');
