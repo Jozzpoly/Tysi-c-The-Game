@@ -47,6 +47,32 @@ function removeCard(cards: CardId[], card: CardId): boolean {
   return true;
 }
 
+function finishMatchIfNeeded(state: MatchState, events: GameEvent[], declarerPrecedence: Seat | null): void {
+  const winners = ([0, 1, 2] as Seat[]).filter((seat) => state.scores[seat] >= state.rules.targetScore);
+  if (winners.length === 0) return;
+
+  state.status = 'complete';
+  state.winner = null;
+  state.draw = false;
+
+  if (declarerPrecedence !== null && winners.includes(declarerPrecedence)) {
+    state.winner = declarerPrecedence;
+  } else {
+    const bestScore = Math.max(...winners.map((seat) => state.scores[seat]));
+    const best = winners.filter((seat) => state.scores[seat] === bestScore);
+    if (best.length === 1) state.winner = best[0];
+    else state.draw = true;
+  }
+
+  events.push({
+    type: 'match-completed',
+    audience: 'public',
+    winner: state.winner,
+    draw: state.draw,
+    scores: [...state.scores] as Scores,
+  });
+}
+
 function scoreHand(state: MatchState, events: GameEvent[]): void {
   const hand = state.hand;
   if (hand.declarer === null || hand.contract === null) throw new Error('cannot score incomplete hand');
@@ -71,6 +97,7 @@ function scoreHand(state: MatchState, events: GameEvent[]): void {
     state.scores[2] + delta[2],
   ];
   hand.handScoreDelta = delta;
+  hand.completion = { kind: 'played' };
   hand.phase = 'complete';
 
   events.push({
@@ -83,26 +110,7 @@ function scoreHand(state: MatchState, events: GameEvent[]): void {
     contractMade,
   });
 
-  const winners = ([0, 1, 2] as Seat[]).filter((seat) => state.scores[seat] >= state.rules.targetScore);
-  if (winners.length === 0) return;
-
-  state.status = 'complete';
-  if (winners.includes(hand.declarer)) {
-    state.winner = hand.declarer;
-  } else {
-    const bestScore = Math.max(...winners.map((seat) => state.scores[seat]));
-    const best = winners.filter((seat) => state.scores[seat] === bestScore);
-    if (best.length === 1) state.winner = best[0];
-    else state.draw = true;
-  }
-
-  events.push({
-    type: 'match-completed',
-    audience: 'public',
-    winner: state.winner,
-    draw: state.draw,
-    scores: [...state.scores] as Scores,
-  });
+  finishMatchIfNeeded(state, events, hand.declarer);
 }
 
 function success(state: MatchState, events: GameEvent[] = []): ApplyResult {
@@ -146,6 +154,48 @@ export function applyCommand(original: MatchState, command: Command): ApplyResul
     events.push({ type: 'player-passed', audience: 'public', seat: command.seat });
     if (activeCount(hand.auction.active) === 1) finishAuction(state, events);
     else hand.auction.turn = nextActiveSeat(hand.auction.active, command.seat);
+    return success(state, events);
+  }
+
+  if (command.type === 'bomb') {
+    if (hand.phase !== 'exchange' || hand.declarer === null) return failure(original, 'WRONG_PHASE');
+    if (command.seat !== hand.declarer) return failure(original, 'NOT_DECLARER');
+    if (!state.rules.bomb.enabled) return failure(original, 'BOMB_DISABLED');
+
+    state.bombsUsed[command.seat] += 1;
+    const bombNumber = state.bombsUsed[command.seat];
+    const delta: Scores = [0, 0, 0];
+    const free = state.rules.bomb.firstBombFree && bombNumber === 1;
+
+    if (!free) {
+      for (const seat of [0, 1, 2] as const) {
+        if (seat === command.seat) continue;
+        if (
+          state.rules.bomb.opponentAwardRespectsLock &&
+          state.scores[seat] >= state.rules.scoring.lockThreshold
+        ) continue;
+        delta[seat] = state.rules.bomb.repeatedOpponentAward;
+      }
+    }
+
+    state.scores = [
+      state.scores[0] + delta[0],
+      state.scores[1] + delta[1],
+      state.scores[2] + delta[2],
+    ];
+    hand.handScoreDelta = delta;
+    hand.completion = { kind: 'bomb', seat: command.seat, bombNumber };
+    hand.phase = 'complete';
+
+    events.push({
+      type: 'hand-bombed',
+      audience: 'public',
+      seat: command.seat,
+      bombNumber,
+      delta: [...delta] as Scores,
+      scores: [...state.scores] as Scores,
+    });
+    finishMatchIfNeeded(state, events, null);
     return success(state, events);
   }
 
@@ -257,6 +307,7 @@ export function observe(state: MatchState, seat: Seat): SeatObservation {
     revision: state.revision,
     seat,
     scores: [...state.scores] as Scores,
+    bombsUsed: [...state.bombsUsed] as SeatObservation['bombsUsed'],
     handNumber: state.handNumber,
     dealer: state.dealer,
     phase: hand.phase,
@@ -283,6 +334,7 @@ export function observe(state: MatchState, seat: Seat): SeatObservation {
     declaredMarriages: hand.declaredMarriages.map((suits) => suits.slice()) as SeatObservation['declaredMarriages'],
     lastTrickWinner: hand.lastTrickWinner,
     handScoreDelta: hand.handScoreDelta ? ([...hand.handScoreDelta] as Scores) : null,
+    completion: hand.completion ? { ...hand.completion } : null,
     status: state.status,
     winner: state.winner,
     draw: state.draw,

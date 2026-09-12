@@ -56,13 +56,23 @@ This profile is deliberately narrow. Where Kurnik text is ambiguous or other rea
 
 ### Bomb / redeal
 
-- Kurnik documents a bomb/withdrawal mechanism for a declarer who does not want to play the contract.
-- Kurnik documents the first bomb as free and later bombs as granting 60 points to each opponent in 3P.
-- Four nines can trigger a redeal request.
+Kurnik documents all of the following:
 
-The exact bomb window/count semantics, interaction with the 800 lock, and exact four-nines timing are **not yet executable truth**.
+- the declarer can withdraw from playing by throwing a bomb;
+- bombing does not subtract the bid/contract from the declarer;
+- the first bomb is free;
+- on later bombs, each opponent receives +60 in 3P (+40 in 4P);
+- four nines can trigger a redeal request.
 
-## Provisional pins required for the first implementation
+The first-free/later-60 behavior is therefore **documented** target-family evidence, not borrowed from another Tysiąc variant.
+
+Kurnik does **not** state a maximum number of bombs. Pagat's separate Polish variant describes a two-bomb maximum at some tables; this project does not import that limit into the PlayOK candidate without target evidence.
+
+Kurnik also does not explicitly define whether "first bomb" is counted globally or per player. The current executable candidate counts bombs **per player for the duration of the match**. That scope is a project pin pending reference observation, not a documented PlayOK fact.
+
+Exact PlayOK bomb timing and the interaction between bomb-awarded points and the 800 lock are likewise not explicitly specified by the Kurnik text. They are pinned below and remain reference-sensitive.
+
+## Provisional pins required for the executable candidate
 
 These are deliberate project choices needed to make an executable candidate. They are not yet PlayOK reference observations.
 
@@ -80,7 +90,27 @@ Reason: Kurnik documents the transfer but not its visibility. Other documented T
 
 After taking the musik and transferring two cards, the current implementation allows the final declaration from the winning auction value up to `120 + value of marriages still held`.
 
-Reason: Kurnik explicitly says the final declaration cannot be lower than the winning bid, but does not clearly state whether the auction's marriage-capacity ceiling continues after the musik. This is an explicit reversible implementation pin pending a PlayOK reference probe.
+Reason: Kurnik explicitly caps what may be **bid** above 120, but its separate post-musik sentence only says that the final declaration cannot be lower than the winning bid. The page does not explicitly repeat the upper marriage-cap rule for the final declaration. This pin is therefore deliberately provisional and currently has weaker support than the auction cap itself.
+
+### Bomb window
+
+`after-talon-before-exchange`
+
+The declarer may bomb after the auction has finished and the musik has been revealed/taken, but before committing the two-card exchange.
+
+Reason: Kurnik documents withdrawal by the declarer but does not precisely state the UI/phase boundary. This is the smallest clean candidate window consistent with the sequence of the documented game and with common Polish descriptions that place the decision after seeing the musik.
+
+### Bomb counting / award / 800 lock
+
+`per-player-count / ordinary-lock-applies-to-bomb-awards`
+
+- each player's bomb count persists across hands in that match;
+- bomb number 1 **for that player**: no score change;
+- that player's bomb number 2+: each opponent is eligible for +60;
+- an opponent already at 800 or more does not receive that +60;
+- there is no candidate maximum bomb count.
+
+Reason: Kurnik documents first-free/later-60, but not the counter scope. Per-player counting is the current reversible pin. Separately, Kurnik places the general 800 rule immediately after the bomb scoring rule and states that at 800+ further points are gained only while being the declarer. Applying the ordinary lock to bomb awards is the current textual-reading pin, pending reference observation.
 
 ### Trick obligation
 
@@ -107,27 +137,30 @@ Reason: Kurnik states marriage scoring without the additional captured-trick con
 
 Kurnik's unified rules page says that points for cards "from the musiks" go to the winner of the last trick. That statement cannot be applied naively to the current 3P deal without double-counting, because the 3-card musik is taken by the declarer, two cards are transferred, and all 24 cards then enter the eight tricks.
 
-Independent descriptions of common 2P variants explicitly leave four cards outside trick play and award those cards to the last-trick winner, which is a plausible explanation for Kurnik's unified wording. This makes `no-extra-3p-musik-score` the current-best interpretation, **but not a PlayOK-observed fact**. The earlier repository claim that this issue was definitively resolved was too strong and has been withdrawn.
+Independent descriptions of common 2P variants explicitly leave cards outside trick play and award those cards to the last-trick winner, which is a plausible explanation for Kurnik's unified wording. This makes `no-extra-3p-musik-score` the current-best interpretation, **but not a PlayOK-observed fact**.
 
 ## Material open scenarios
 
 1. **3P musik/last-trick reference check** — confirm that PlayOK 3P does not add a second score for the original musik cards.
 2. **Transfer visibility reference check** — confirm PlayOK behavior for the two passed cards.
-3. **Four nines: initial hand vs received card** — determine the exact eligibility point and whether a transferred fourth nine counts.
-4. **Post-musik contract ceiling reference check** — validate or replace `same-marriage-cap-after-exchange`.
-5. **Bomb availability** — exact phase(s) in which the declarer can bomb.
-6. **Bomb repetition/penalty** — exact count semantics beyond Kurnik's first-free/later-60 wording.
-7. **800 lock + bomb** — whether bomb-awarded opponent points are blocked by the 800 lock.
-8. **Stronger-card obligation reference check** — validate the strict trump/overtrump legal set against actual PlayOK behavior.
-9. **Marriage with zero captured tricks** — reference-check `declared-marriage-counts`.
+3. **Four nines timing** — determine initial-hand vs post-musik/post-transfer eligibility and whether a transferred fourth nine counts.
+4. **Post-musik contract ceiling** — validate or replace `same-marriage-cap-after-exchange`; Kurnik's wording currently supports the auction cap more strongly than this final-declaration cap.
+5. **Bomb reference validation** — confirm PlayOK's exact bomb window, counter scope (global vs per-player), and whether an opponent at 800+ is blocked from the repeated-bomb +60 award.
+6. **Stronger-card obligation reference check** — validate the strict trump/overtrump legal set against actual PlayOK behavior.
+7. **Marriage with zero captured tricks** — reference-check `declared-marriage-counts`.
 
 ## Executable scenarios currently present
 
-The core smoke suite pins and exercises:
+The core/browser smoke suites pin and exercise:
 
 - compulsory 100 auction resolution;
 - bidding above 120 bounded by marriage capacity;
 - hidden-state seat projection boundary;
+- first per-player bomb free;
+- repeated per-player bomb +60 award with ordinary 800-lock behavior;
+- bomb count persistence across hands;
+- bomb ending a hand before exchange/trick play while preserving card invariants;
+- deliberate bomb confirmation UI on desktop and true 390 px mobile;
 - strict follow-and-beat behavior;
 - trump when void;
 - overtrump when possible;

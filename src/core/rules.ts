@@ -16,6 +16,13 @@ export interface ThreePlayerRules {
   readonly exchange: {
     readonly transferVisibility: 'recipient-private' | 'public';
   };
+  readonly bomb: {
+    readonly enabled: boolean;
+    readonly window: 'after-talon-before-exchange';
+    readonly firstBombFree: boolean;
+    readonly repeatedOpponentAward: number;
+    readonly opponentAwardRespectsLock: boolean;
+  };
   readonly trick: {
     readonly mustFollowSuit: true;
     readonly mustBeatWhenPossible: true;
@@ -32,14 +39,14 @@ export interface ThreePlayerRules {
     readonly lockThreshold: number;
   };
   readonly unresolved: {
-    readonly bomb: true;
+    readonly bombReferenceValidation: true;
     readonly fourNinesRedeal: true;
   };
 }
 
 export const PLAYOK_3P_800_CANDIDATE: ThreePlayerRules = {
   id: 'PLAYOK_3P_800_CANDIDATE',
-  version: 1,
+  version: 2,
   targetScore: 1000,
   auction: {
     openingBid: 100,
@@ -52,6 +59,20 @@ export const PLAYOK_3P_800_CANDIDATE: ThreePlayerRules = {
   },
   exchange: {
     transferVisibility: 'recipient-private',
+  },
+  bomb: {
+    enabled: true,
+    // Kurnik documents withdrawal by the declarer and the first-free/later-60
+    // scoring. The exact reference UI timing is not documented precisely enough,
+    // so the candidate pins the smallest natural window: after the talon is
+    // revealed/taken and before any exchange is committed.
+    window: 'after-talon-before-exchange',
+    firstBombFree: true,
+    repeatedOpponentAward: 60,
+    // Kurnik places the 800-lock rule immediately after bomb scoring. Until a
+    // black-box reference probe says otherwise, ordinary score-lock semantics
+    // also apply to bomb-awarded opponent points.
+    opponentAwardRespectsLock: true,
   },
   trick: {
     mustFollowSuit: true,
@@ -74,7 +95,7 @@ export const PLAYOK_3P_800_CANDIDATE: ThreePlayerRules = {
     lockThreshold: 800,
   },
   unresolved: {
-    bomb: true,
+    bombReferenceValidation: true,
     fourNinesRedeal: true,
   },
 };
