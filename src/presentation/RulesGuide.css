@@ -1,0 +1,23 @@
+.rules-dialog.rules-dialog,
+.rules-dialog .rules-dialog-header,
+.rules-dialog .rules-dialog-header > div,
+.rules-dialog .rules-grid,
+.rules-dialog .rules-block,
+.rules-dialog .marriage-values,
+.rules-dialog .marriage-values span {
+  min-width: 0;
+}
+
+.rules-dialog .rules-block,
+.rules-dialog .rules-dialog-header > div {
+  overflow-wrap: anywhere;
+}
+
+.rules-dialog .marriage-values {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.rules-dialog .marriage-values span {
+  padding-inline: 3px;
+  white-space: normal;
+}
