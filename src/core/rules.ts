@@ -16,14 +16,22 @@ export interface ThreePlayerRules {
   readonly exchange: {
     readonly transferVisibility: 'recipient-private' | 'public';
   };
-  readonly bomb: {
+  /**
+   * Optional at runtime for persisted matches created before bomb support existed.
+   * Absence means the historical pinned match keeps that feature disabled.
+   */
+  readonly bomb?: {
     readonly enabled: boolean;
     readonly window: 'after-talon-before-exchange';
     readonly firstBombFree: boolean;
     readonly repeatedOpponentAward: number;
     readonly opponentAwardRespectsLock: boolean;
   };
-  readonly fourNines: {
+  /**
+   * Optional at runtime for persisted matches created before four-nines support.
+   * Absence means the historical pinned match keeps that feature disabled.
+   */
+  readonly fourNines?: {
     readonly enabled: boolean;
     readonly window: 'after-exchange-before-contract';
     readonly optional: boolean;
@@ -45,8 +53,10 @@ export interface ThreePlayerRules {
     readonly lockThreshold: number;
   };
   readonly unresolved: {
-    readonly bombReferenceValidation: true;
-    readonly fourNinesReferenceValidation: true;
+    readonly bombReferenceValidation?: true;
+    readonly fourNinesReferenceValidation?: true;
+    readonly bomb?: true;
+    readonly fourNinesRedeal?: true;
   };
 }
 
