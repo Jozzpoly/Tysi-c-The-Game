@@ -3,6 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "packageManager": "npm@11.19.0",
   "scripts": {
     "dev": "vite",
     "typegen": "wrangler types",
@@ -11,6 +12,10 @@
     "test:core": "npm run build:core && node scripts/core-smoke.mjs && node scripts/product-bot-smoke.mjs",
     "test:worker": "npm run typegen && vitest run --config vitest.config.ts --max-workers=1 --no-isolate",
     "check": "npm run test:core && npm run test:worker && npm run build:web"
+  },
+  "allowScripts": {
+    "esbuild@0.28.1": true,
+    "workerd@1.20260911.1": true
   },
   "dependencies": {
     "react": "^19.3.0",
