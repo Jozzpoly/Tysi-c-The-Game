@@ -66,7 +66,7 @@ async function createSession(width, height, mobile) {
       },
     }),
   });
-  const session = value.sessionId ?? value['sessionId'];
+  const session = value.sessionId ?? value.sessionId;
   await webdriver(`/session/${session}/goog/cdp/execute`, {
     method: 'POST',
     body: JSON.stringify({
@@ -117,6 +117,39 @@ async function waitText(session, text, timeoutMs = 30_000) {
     () => execute(session, `return document.body?.innerText.includes(${JSON.stringify(text)}) ?? false;`),
     timeoutMs,
   );
+}
+
+async function browserDocument(session) {
+  return execute(session, `return {
+    url: location.href,
+    title: document.title,
+    readyState: document.readyState,
+    body: (document.body?.innerText ?? '').slice(0, 1200),
+  };`);
+}
+
+async function waitPublicHome(session, timeoutMs = 90_000) {
+  const deadline = Date.now() + timeoutMs;
+  let last = null;
+  let attempt = 0;
+
+  while (Date.now() < deadline) {
+    const cacheBust = `${BASE_URL}/?__public_smoke=${Date.now()}-${attempt++}`;
+    try {
+      await navigate(session, cacheBust);
+      for (let probe = 0; probe < 6 && Date.now() < deadline; probe += 1) {
+        last = await browserDocument(session);
+        if (last.body.includes('Usiądź do stołu')) return last;
+        await sleep(500);
+      }
+    } catch (error) {
+      last = { error: String(error) };
+    }
+    await sleep(1_000);
+  }
+
+  try { await screenshot(session, 'public-deploy-failure-host'); } catch {}
+  throw new Error(`public home readiness timed out: ${JSON.stringify(last)}`);
 }
 
 async function clickLeading(session, text) {
@@ -193,6 +226,31 @@ async function clickAuctionDecision(session, label) {
   return clicked;
 }
 
+async function publicAssetsReady() {
+  const response = await fetch(`${BASE_URL}/?__asset_probe=${Date.now()}`, {
+    cache: 'no-store',
+    headers: { 'cache-control': 'no-cache' },
+  }).catch(() => null);
+  if (!response?.ok) return false;
+
+  const html = await response.text().catch(() => '');
+  if (!html.includes('id="root"')) return false;
+
+  const assetPaths = [...html.matchAll(/(?:src|href)="([^"?#]+\.(?:js|css))(?:[?#][^"]*)?"/gu)]
+    .map((match) => match[1]);
+  if (assetPaths.length === 0) return false;
+
+  for (const assetPath of assetPaths) {
+    const assetUrl = new URL(assetPath, `${BASE_URL}/`).href;
+    const asset = await fetch(`${assetUrl}${assetUrl.includes('?') ? '&' : '?'}__asset_probe=${Date.now()}`, {
+      cache: 'no-store',
+      headers: { 'cache-control': 'no-cache' },
+    }).catch(() => null);
+    if (!asset?.ok) return false;
+  }
+  return true;
+}
+
 await mkdir(OUTPUT, { recursive: true });
 
 await waitFor('public worker health', async () => {
@@ -201,6 +259,8 @@ await waitFor('public worker health', async () => {
   const body = await response.json().catch(() => null);
   return body?.service === 'match-room';
 }, 90_000);
+
+await waitFor('public SPA assets', publicAssetsReady, 90_000);
 
 const driver = startDriver();
 let host;
@@ -211,8 +271,7 @@ try {
   host = await createSession(1440, 1000, false);
   joiner = await createSession(390, 844, true);
 
-  await navigate(host, BASE_URL);
-  await waitText(host, 'Usiądź do stołu');
+  await waitPublicHome(host);
   await clickLeading(host, 'Zagraj we dwóch');
   await waitText(host, 'Kopiuj link dla znajomego');
   const hostLobby = await state(host);
@@ -277,6 +336,15 @@ try {
     revision: stableRevision,
     restoredRevision: restored.revision,
   }, null, 2));
+} catch (error) {
+  if (host) {
+    try {
+      const diagnostic = await browserDocument(host);
+      console.error(`public deploy browser diagnostic: ${JSON.stringify(diagnostic)}`);
+      await screenshot(host, 'public-deploy-failure-host');
+    } catch {}
+  }
+  throw error;
 } finally {
   await closeSession(joiner);
   await closeSession(host);
