@@ -2,54 +2,65 @@
 
 **Codename:** `Tysiąc The Game`
 
-Nowoczesny, webowy stół do rodziny gier **Tysiąc** — jeden klient na desktop i mobile, multiplayer, boty oraz wersjonowane profile zasad.
+Browser-first Tysiąc for desktop and mobile: private friend tables, first-class bots and a small set of explicitly tested real rule profiles.
 
 ## Product thesis
 
-Najpierw dobra gra, potem elastyczność.
+Najpierw dobra gra i dobry stół. Elastyczność zasad ma chronić realne odmiany Tysiąca, a nie zamienić projektu w generic card-game framework.
 
-- otwierasz link i grasz;
-- desktop i mobile są równorzędnymi klientami;
-- prywatne stoły + boty są pierwszym celem;
-- serwer jest autorytetem;
-- rdzeń gry jest deterministyczny i testowalny;
-- zasady nie są jednym hardcodowanym wariantem: realne odmiany Tysiąca są reprezentowane jako wersjonowane profile;
-- oficjalne profile są certyfikowane scenariuszami i symulacjami.
+Initial target:
+
+- 3-player auction Tysiąc;
+- open link / private table without mandatory account creation;
+- Human + Bot + Bot worth playing;
+- later Human + Human + Bot and Human + Human + Human online;
+- clean responsive UX rather than desktop UI merely shrunk onto phone;
+- reconnect/background/refresh treated as normal browser lifecycle.
 
 ## Current technical direction
 
-- TypeScript
-- React + Vite
-- Cloudflare Worker + Static Assets
-- Durable Object per match
-- SQLite-backed Durable Object storage
-- WebSocket Hibernation
+Freshly re-audited on 2026-09-12:
 
-Ten stack jest **current-best**, nie dogmatem. Zmieniamy go tylko na podstawie realnego evidence.
+- TypeScript deterministic domain core;
+- React + Vite client;
+- Cloudflare Worker + one Durable Object per online table;
+- SQLite-backed Durable Object storage, initially used simply;
+- hibernating WebSockets;
+- authoritative online state with per-seat projections;
+- Vitest + scenario/invariant/simulation testing.
 
-## First game mode
+Cloudflare remains **current-best**, not a permanent requirement.
 
-`3-player auction Tysiąc`
+## Rules stance
 
-Pierwszy profil referencyjny: roboczo `POLISH_3P_800_CANDIDATE`.
+There is no single defensible "Polish Tysiąc" ruleset.
 
-## Development path
+The old `POLISH_3P_800_CANDIDATE` label was too broad. The first concrete reference target is now provisionally source-scoped as `PLAYOK_3P_800_CANDIDATE` (Kurnik/PlayOK family), with unresolved edge cases kept explicit and black-box/reference probes added when necessary.
 
-1. Headless hand — pełne rozdanie bez UI.
-2. Headless match — gra do końca z botami testowymi.
-3. Local table — Human + Bot + Bot w przeglądarce.
-4. MatchDO — prawdziwy multiplayer Human + Human + Bot.
-5. PC/mobile resilience — reconnect, background, refresh, weak network.
-6. Friend build — wersja, którą warto normalnie wysłać do gry.
+Named profiles are tested bundles of supported behavior. We do not promise that every arbitrary combination of internal rule fields is valid.
+
+## Current execution
+
+**Foundation Run 01:** rules kernel → deterministic headless hands/matches → thin playable local Human + Bot + Bot table, plus a small Cloudflare Durable Object deployment canary.
+
+The live reconstruction and decision record is:
+
+- [`docs/EXECUTION_STATE.md`](docs/EXECUTION_STATE.md)
+
+Other useful context:
+
+- [`docs/PROJECT.md`](docs/PROJECT.md)
+- [`AGENTS.md`](AGENTS.md)
+- [`docs/rules/PLAYOK_3P_800_CANDIDATE.md`](docs/rules/PLAYOK_3P_800_CANDIDATE.md)
 
 ## Source of truth
 
-- runtime truth: działający kod + testy;
-- rules truth: profile + executable scenarios;
-- architecture truth: aktualny kod + krótkie decyzje w `docs/`;
-- product intent: `docs/PROJECT.md`;
-- historia rozmów jest kontekstem, nie nadrzędnym authority.
+In descending practical authority:
 
-## Current status
+1. running code + executable tests/invariants;
+2. explicit profile definitions and scenario fixtures;
+3. current repository execution/product docs;
+4. external documented/reference evidence for rule claims;
+5. historical chat/handoff material.
 
-Projekt został zainicjalizowany 2026-09-12. Implementacja gameplayu jeszcze się nie rozpoczęła. Najbliższy etap to zamknięcie minimalnego Rules Architecture / Game Core Blueprint i pierwszy headless vertical slice.
+Product feel and whether the game is worth using remain Owner judgement.
