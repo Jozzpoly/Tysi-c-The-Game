@@ -148,8 +148,10 @@ async function view(session) {
       body: document.body?.innerText ?? '',
       revision: revText ? Number(revText.slice(4)) : null,
       connection: document.querySelector('.connection-banner')?.textContent?.trim() ?? '',
+      phaseTitle: document.querySelector('.topbar h1')?.textContent?.trim() ?? '',
       heading: document.querySelector('.decision-card h2')?.textContent?.trim() ?? '',
       decisionText: document.querySelector('.decision-card')?.innerText ?? '',
+      message: document.querySelector('.message')?.textContent?.trim() ?? '',
       enabledButtons: [...document.querySelectorAll('.decision-card button:not(:disabled)')].map((node) => node.textContent?.trim() ?? ''),
       enabledHandCards: document.querySelectorAll('.hand .card:not(:disabled)').length,
       handCards: document.querySelectorAll('.hand .card').length,
@@ -162,6 +164,22 @@ async function view(session) {
       room: new URLSearchParams(location.search).get('room'),
     };
   `);
+}
+
+function compactDiagnostic(current) {
+  return {
+    revision: current.revision,
+    connection: current.connection,
+    phaseTitle: current.phaseTitle,
+    heading: current.heading,
+    decisionText: current.decisionText,
+    message: current.message,
+    enabledButtons: current.enabledButtons,
+    enabledHandCards: current.enabledHandCards,
+    handCards: current.handCards,
+    scores: current.scores,
+    room: current.room,
+  };
 }
 
 function assertLayout(label, current, width) {
@@ -177,11 +195,17 @@ function assertLayout(label, current, width) {
 async function waitForActionableState(session, label, previousRevision = null) {
   return waitFor(label, async () => {
     const current = await view(session);
-    if (!current.connection.includes('online')) return false;
-    if (current.connection.includes('ruchy przy stole')) return false;
+    if (!current.connection.includes('online')) {
+      throw new Error(`not online: ${JSON.stringify(compactDiagnostic(current))}`);
+    }
+    if (current.connection.includes('ruchy przy stole')) {
+      throw new Error(`playback active: ${JSON.stringify(compactDiagnostic(current))}`);
+    }
     if (current.body.includes('Mecz zakończony.')) return current;
     const actionable = current.enabledButtons.length > 0 || current.enabledHandCards > 0;
-    if (!actionable) return false;
+    if (!actionable) {
+      throw new Error(`no human action: ${JSON.stringify(compactDiagnostic(current))}`);
+    }
     if (previousRevision !== null && current.revision !== null && current.revision < previousRevision) {
       throw new Error(`${label}: revision regressed ${current.revision} < ${previousRevision}`);
     }
