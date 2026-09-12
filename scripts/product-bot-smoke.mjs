@@ -16,11 +16,28 @@ function playProductBotMatch(seed, maxCommands = 20000) {
   let contractMax = 0;
   let madeContracts = 0;
   let failedContracts = 0;
+  let forcedMade = 0;
+  let forcedFailed = 0;
+  let voluntaryMade = 0;
+  let voluntaryFailed = 0;
   assertCoreInvariants(state);
 
   for (let i = 0; i < maxCommands; i += 1) {
     if (state.status === 'complete') {
-      return { state, minScore, contracts, contractTotal, contractMax, madeContracts, failedContracts, commands: i };
+      return {
+        state,
+        minScore,
+        contracts,
+        contractTotal,
+        contractMax,
+        madeContracts,
+        failedContracts,
+        forcedMade,
+        forcedFailed,
+        voluntaryMade,
+        voluntaryFailed,
+        commands: i,
+      };
     }
 
     if (state.hand.phase === 'complete') {
@@ -47,8 +64,17 @@ function playProductBotMatch(seed, maxCommands = 20000) {
       const declarer = result.state.hand.declarer;
       assert.notEqual(declarer, null);
       const delta = result.state.hand.handScoreDelta?.[declarer] ?? 0;
-      if (delta > 0) madeContracts += 1;
+      const made = delta > 0;
+      const forcedHundred = result.state.hand.auction.currentBid === 100;
+
+      if (made) madeContracts += 1;
       else failedContracts += 1;
+
+      if (forcedHundred) {
+        if (made) forcedMade += 1;
+        else forcedFailed += 1;
+      } else if (made) voluntaryMade += 1;
+      else voluntaryFailed += 1;
     }
 
     state = result.state;
@@ -79,6 +105,10 @@ const totalContractValue = results.reduce((sum, result) => sum + result.contract
 const maxContract = Math.max(...results.map((result) => result.contractMax));
 const made = results.reduce((sum, result) => sum + result.madeContracts, 0);
 const failed = results.reduce((sum, result) => sum + result.failedContracts, 0);
+const forcedMade = results.reduce((sum, result) => sum + result.forcedMade, 0);
+const forcedFailed = results.reduce((sum, result) => sum + result.forcedFailed, 0);
+const voluntaryMade = results.reduce((sum, result) => sum + result.voluntaryMade, 0);
+const voluntaryFailed = results.reduce((sum, result) => sum + result.voluntaryFailed, 0);
 const winnerCounts = [0, 0, 0];
 let draws = 0;
 for (const result of results) {
@@ -86,10 +116,13 @@ for (const result of results) {
   else winnerCounts[result.state.winner] += 1;
 }
 
+const rate = (won, lost) => (won / Math.max(1, won + lost)).toFixed(3);
 console.log(
   `product-bot survey matches=${results.length} avgHands=${(totalHands / results.length).toFixed(1)} ` +
     `maxHands=${maxHands} worstMinScore=${worstMinScore} avgContract=${(totalContractValue / totalContracts).toFixed(1)} ` +
-    `maxContract=${maxContract} made=${made} failed=${failed} successRate=${(made / (made + failed)).toFixed(3)} ` +
+    `maxContract=${maxContract} overall=${made}/${failed}:${rate(made, failed)} ` +
+    `forced100=${forcedMade}/${forcedFailed}:${rate(forcedMade, forcedFailed)} ` +
+    `voluntary=${voluntaryMade}/${voluntaryFailed}:${rate(voluntaryMade, voluntaryFailed)} ` +
     `winners=${winnerCounts.join('/')} draws=${draws}`,
 );
 console.log('product bot smoke: PASS');
