@@ -111,7 +111,7 @@ Worker/workerd suite: **14/14 PASS** across lifecycle, privacy, server bots, con
 
 ## Real browser -> MatchRoom path — PASS locally
 
-Normal `/` now enters the real room flow. Deterministic `?seed=`, `?seat=` or `?local=1` remain QA-only local paths.
+Normal `/` enters the real room flow. Deterministic `?seed=`, `?seat=` or `?local=1` remain QA-only local paths.
 
 `RemoteRoom` recovers the seat from its locally stored room credential, obtains an authenticated snapshot, opens the hibernating WebSocket and feeds the same `GameTable` used locally.
 
@@ -137,15 +137,27 @@ Same path at 390 x 844: revision **1 -> 6 -> reconnect 6**, no horizontal overfl
 - own hands are disjoint/private;
 - one human UI command is received by both browser sessions on the shared revision stream.
 
+### Navigation / remote chrome
+
+A separate mobile Chrome gate proves:
+
+- in-match `Wróć do startu` cleanly leaves the room view without deleting its reconnect credential;
+- browser Back restores the same room and reconnects the same seat;
+- another Back restores the root screen through `popstate` synchronization;
+- fixed remote status/exit controls do not geometrically overlap the mobile phase heading;
+- the page remains free of horizontal overflow.
+
+Long-lived feedback naming reads the current room-seat snapshot rather than a stale React closure.
+
 This is local Vite/workerd + real Chrome evidence, not a production-network claim.
 
 ## Build/deployability — PASS / remote execution NOT PROVEN
 
-Full Foundation CI currently gates:
+Full Foundation CI gates:
 
-`core -> worker -> local browser -> remote browser -> production build -> wrangler deploy --dry-run`
+`core -> worker -> local browser -> remote browser -> navigation browser -> production build -> wrangler deploy --dry-run`
 
-All are green on main after the remote-room work.
+All are green on main.
 
 `wrangler deploy --dry-run` packages client assets, Worker and only the `MATCH_ROOM` Durable Object binding successfully.
 
@@ -157,15 +169,14 @@ All are green on main after the remote-room work.
 - gameplay quality with Owner/real humans;
 - unresolved PlayOK-specific reference probes.
 
-## Small product debt now visible
+## Remaining product debt
 
-Not architectural blockers:
+No currently known local networking/navigation blocker remains. The important open evidence is production-shaped rather than architectural:
 
-- connection-status pill overlaps the mobile heading slightly;
-- remote in-match flow needs an explicit safe route back to the start screen;
-- browser Back/Forward should synchronize App route state (`popstate`);
-- remote feedback naming should avoid a stale room-state closure over a long-lived socket;
-- room/session lifecycle still needs real production soak/reconnect evidence after deployment.
+- real Cloudflare deploy + public create/join/reconnect verification;
+- production soak/reconnect under actual WAN/mobile conditions;
+- Owner/real-human gameplay and UX feedback;
+- further visual/product polish only after that evidence warrants it.
 
 ## Architecture to preserve
 
@@ -192,8 +203,7 @@ Avoid for now:
 
 ## Immediate next work
 
-1. Clean up the small remote-navigation/presentation debts without changing authority semantics.
-2. Keep local + remote browser evidence mandatory.
-3. Prepare the smallest safe real Cloudflare deployment path.
-4. Do **not** call Foundation remotely proven until a real deployment and public-room/browser check exist.
-5. Keep rule research demand-driven by concrete unresolved scenarios or failing gameplay/reference evidence.
+1. Prepare the smallest safe real Cloudflare deployment path without weakening current CI gates.
+2. Perform a real deployment only when an authorized Cloudflare credential/tool is available.
+3. Verify the public deployment with separate desktop/mobile browser sessions before calling Foundation remotely proven.
+4. Keep rule research demand-driven by concrete unresolved scenarios or failing gameplay/reference evidence.
