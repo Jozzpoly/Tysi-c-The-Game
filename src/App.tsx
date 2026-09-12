@@ -5,8 +5,9 @@ import {
   applyCommand,
   assertCoreInvariants,
   createMatch,
-  legalCommands,
+  eventsForSeat,
   productBotCommand,
+  projectSeat,
   rankOf,
   suitOf,
   type CardId,
@@ -14,29 +15,18 @@ import {
   type MatchState,
   type Seat,
 } from './core/index.js';
+import { describeFeedback } from './presentation/feedback.js';
 import './styles.css';
 
 const HUMAN: Seat = 0;
 const SEAT_NAMES = ['Ty', 'Bot A', 'Bot B'] as const;
 const SUIT_SYMBOL = { spades: '♠', clubs: '♣', diamonds: '♦', hearts: '♥' } as const;
+const seatName = (seat: Seat) => SEAT_NAMES[seat];
 
 function freshMatch(seed = Date.now() >>> 0): MatchState {
   const state = createMatch(PLAYOK_3P_800_CANDIDATE, seed, 0);
   assertCoreInvariants(state);
   return state;
-}
-
-function cardLabel(card: CardId): string {
-  return `${rankOf(card)}${SUIT_SYMBOL[suitOf(card)]}`;
-}
-
-function describeCommand(command: Command): string {
-  if (command.type === 'pass') return 'pas';
-  if (command.type === 'bid') return `licytuje ${command.value}`;
-  if (command.type === 'exchange') return 'oddaje po karcie przeciwnikom';
-  if (command.type === 'contract') return `gra ${command.value}`;
-  if (command.type === 'play') return `${command.declareMarriage ? `melduje ${SUIT_SYMBOL[suitOf(command.card)]} i ` : ''}zagrywa ${cardLabel(command.card)}`;
-  return 'następne rozdanie';
 }
 
 function Card({ card, disabled, selected, onClick }: { card: CardId; disabled?: boolean; selected?: boolean; onClick?: () => void }) {
@@ -56,37 +46,47 @@ function Card({ card, disabled, selected, onClick }: { card: CardId; disabled?: 
 }
 
 function App() {
-  const [state, setState] = useState<MatchState>(() => freshMatch(1));
+  // Local single-player authority. Rendering below intentionally uses only the
+  // same seat projection a remote client could receive from MatchDO.
+  const [authority, setAuthority] = useState<MatchState>(() => freshMatch(1));
   const [selectedTransfer, setSelectedTransfer] = useState<CardId[]>([]);
   const [message, setMessage] = useState('Pierwszy grywalny vertical slice — profil PlayOK/Kurnik candidate.');
 
+  const projection = useMemo(() => projectSeat(authority, HUMAN), [authority]);
+  const view = projection.observation;
+  const humanCommands = projection.legalCommands;
+
+  function publishFeedback(events: Parameters<typeof describeFeedback>[0], fallback = '') {
+    const text = describeFeedback(eventsForSeat(events, HUMAN), seatName);
+    setMessage(text || fallback);
+  }
+
   useEffect(() => {
-    if (state.status === 'complete' || state.hand.phase === 'complete') return;
-    const actor = actingSeat(state);
+    if (authority.status === 'complete' || authority.hand.phase === 'complete') return;
+    const actor = actingSeat(authority);
     if (actor === null || actor === HUMAN) return;
 
-    const delay = state.hand.phase === 'trick' ? 520 : 360;
+    const delay = authority.hand.phase === 'trick' ? 520 : 360;
     const timer = window.setTimeout(() => {
       try {
-        const command = productBotCommand(state, actor);
-        const result = applyCommand(state, command);
+        const command = productBotCommand(authority, actor);
+        const result = applyCommand(authority, command);
         if (!result.ok) {
           setMessage(`${SEAT_NAMES[actor]}: ruch odrzucony (${result.reason})`);
           return;
         }
         assertCoreInvariants(result.state);
-        setState(result.state);
-        setMessage(`${SEAT_NAMES[actor]}: ${describeCommand(command)}`);
+        setAuthority(result.state);
+        publishFeedback(result.events, `${SEAT_NAMES[actor]} wykonał ruch.`);
       } catch (error) {
         setMessage(error instanceof Error ? error.message : String(error));
       }
     }, delay);
 
     return () => window.clearTimeout(timer);
-  }, [state]);
+  }, [authority]);
 
-  const humanCommands = useMemo(() => legalCommands(state, HUMAN), [state]);
-  const humanCards = state.hand.hands[HUMAN];
+  const humanCards = view.ownHand;
   const playable = new Set(
     humanCommands.filter((c): c is Extract<Command, { type: 'play' }> => c.type === 'play').map((c) => c.card),
   );
@@ -96,19 +96,22 @@ function App() {
       .map((c) => c.card),
   );
   const bids = humanCommands.filter((c): c is Extract<Command, { type: 'bid' }> => c.type === 'bid');
+  const pass = humanCommands.find((c): c is Extract<Command, { type: 'pass' }> => c.type === 'pass');
+  const exchanges = humanCommands.filter((c): c is Extract<Command, { type: 'exchange' }> => c.type === 'exchange');
   const contracts = humanCommands.filter((c): c is Extract<Command, { type: 'contract' }> => c.type === 'contract');
+  const nextHand = humanCommands.find((c): c is Extract<Command, { type: 'next-hand' }> => c.type === 'next-hand');
 
   function commit(command: Command) {
-    const result = applyCommand(state, command);
+    const result = applyCommand(authority, command);
     if (!result.ok) {
       setMessage(`Odrzucone: ${result.reason}`);
       return;
     }
     try {
       assertCoreInvariants(result.state);
-      setState(result.state);
+      setAuthority(result.state);
       setSelectedTransfer([]);
-      setMessage(`Ty: ${describeCommand(command)}`);
+      publishFeedback(result.events, 'Ruch przyjęty.');
     } catch (error) {
       setMessage(error instanceof Error ? error.message : String(error));
     }
@@ -123,10 +126,9 @@ function App() {
   }
 
   function confirmTransfer() {
-    if (state.hand.declarer !== HUMAN || selectedTransfer.length !== 2) return;
-    const command = humanCommands.find(
-      (candidate): candidate is Extract<Command, { type: 'exchange' }> =>
-        candidate.type === 'exchange' &&
+    if (view.declarer !== HUMAN || selectedTransfer.length !== 2) return;
+    const command = exchanges.find(
+      (candidate) =>
         candidate.give[0].card === selectedTransfer[0] &&
         candidate.give[1].card === selectedTransfer[1],
     );
@@ -145,12 +147,12 @@ function App() {
     auction: 'Licytacja',
     exchange: 'Wymiana po musiku',
     contract: 'Deklaracja gry',
-    trick: `Lewa ${Math.min(8, state.hand.trickIndex + 1)}/8`,
+    trick: `Lewa ${Math.min(8, view.trickIndex + 1)}/8`,
     complete: 'Rozdanie zakończone',
-  }[state.hand.phase];
+  }[view.phase];
 
-  const visibleTrick = state.hand.trick.length > 0 ? state.hand.trick : state.hand.lastCompletedTrick?.plays ?? [];
-  const showingCompletedTrick = state.hand.trick.length === 0 && state.hand.lastCompletedTrick !== null;
+  const visibleTrick = view.trick.length > 0 ? view.trick : view.lastCompletedTrick?.plays ?? [];
+  const showingCompletedTrick = view.trick.length === 0 && view.lastCompletedTrick !== null;
 
   return (
     <main className="app-shell">
@@ -162,7 +164,7 @@ function App() {
         <button
           className="ghost"
           onClick={() => {
-            setState(freshMatch());
+            setAuthority(freshMatch());
             setSelectedTransfer([]);
             setMessage('Nowa gra.');
           }}
@@ -172,11 +174,11 @@ function App() {
       </header>
 
       <section className="scoreboard" aria-label="Wynik meczu">
-        {state.scores.map((score, seat) => (
+        {view.scores.map((score, seat) => (
           <div className={`score ${seat === HUMAN ? 'human' : ''}`} key={seat}>
             <span>{SEAT_NAMES[seat]}</span>
             <strong>{score}</strong>
-            <small>{state.dealer === seat ? 'rozdaje' : state.hand.declarer === seat ? 'gra' : ''}</small>
+            <small>{view.dealer === seat ? 'rozdaje' : view.declarer === seat ? 'gra' : ''}</small>
           </div>
         ))}
       </section>
@@ -186,9 +188,9 @@ function App() {
           {[1, 2].map((seat) => (
             <div className="opponent" key={seat}>
               <strong>{SEAT_NAMES[seat]}</strong>
-              <span>{state.hand.hands[seat as Seat].length} kart</span>
+              <span>{view.opponentCardCounts[seat as Seat]} kart</span>
               <div className="card-backs" aria-hidden="true">
-                {Array.from({ length: Math.min(state.hand.hands[seat as Seat].length, 8) }, (_, i) => (
+                {Array.from({ length: Math.min(view.opponentCardCounts[seat as Seat], 8) }, (_, i) => (
                   <i key={i} />
                 ))}
               </div>
@@ -198,16 +200,16 @@ function App() {
 
         <div className="center">
           <div className="status-strip">
-            <span>Stawka <strong>{state.hand.auction.currentBid}</strong></span>
-            <span>Kontrakt <strong>{state.hand.contract ?? '—'}</strong></span>
-            <span>Atut <strong>{state.hand.trump ? SUIT_SYMBOL[state.hand.trump] : '—'}</strong></span>
+            <span>Stawka <strong>{view.auction.currentBid}</strong></span>
+            <span>Kontrakt <strong>{view.contract ?? '—'}</strong></span>
+            <span>Atut <strong>{view.trump ? SUIT_SYMBOL[view.trump] : '—'}</strong></span>
           </div>
 
-          {state.hand.revealedTalon && state.hand.phase !== 'trick' && state.hand.phase !== 'complete' && (
+          {view.revealedTalon && view.phase !== 'trick' && view.phase !== 'complete' && (
             <div className="talon">
               <span>Musik</span>
               <div className="mini-cards">
-                {state.hand.revealedTalon.map((card) => <Card key={card} card={card} disabled />)}
+                {view.revealedTalon.map((card) => <Card key={card} card={card} disabled />)}
               </div>
             </div>
           )}
@@ -224,27 +226,27 @@ function App() {
               ))
             )}
           </div>
-          {showingCompletedTrick && state.hand.lastCompletedTrick && (
+          {showingCompletedTrick && view.lastCompletedTrick && (
             <div className="trick-result">
-              Lewa {state.hand.lastCompletedTrick.index}: {SEAT_NAMES[state.hand.lastCompletedTrick.winner]} · {state.hand.lastCompletedTrick.points} pkt
+              Lewa {view.lastCompletedTrick.index}: {SEAT_NAMES[view.lastCompletedTrick.winner]} · {view.lastCompletedTrick.points} pkt
             </div>
           )}
         </div>
 
         <section className="decision" aria-live="polite">
-          {state.status === 'complete' && (
+          {view.status === 'complete' && (
             <div className="decision-card">
-              <h2>{state.draw ? 'Remis' : `${SEAT_NAMES[state.winner ?? 0]} wygrywa`}</h2>
+              <h2>{view.draw ? 'Remis' : `${SEAT_NAMES[view.winner ?? 0]} wygrywa`}</h2>
               <p>Pełny mecz doszedł do końca na tym samym reducerze co testy headless.</p>
-              <button className="primary" onClick={() => setState(freshMatch())}>Zagraj ponownie</button>
+              <button className="primary" onClick={() => setAuthority(freshMatch())}>Zagraj ponownie</button>
             </div>
           )}
 
-          {state.status === 'playing' && state.hand.phase === 'auction' && actingSeat(state) === HUMAN && (
+          {view.status === 'playing' && view.phase === 'auction' && pass && (
             <div className="decision-card">
               <h2>Twoja licytacja</h2>
               <div className="actions bid-actions">
-                <button onClick={() => commit({ type: 'pass', seat: HUMAN })}>Pas</button>
+                <button onClick={() => commit(pass)}>Pas</button>
                 {bids.map((bid) => (
                   <button className="primary" key={bid.value} onClick={() => commit(bid)}>{bid.value}</button>
                 ))}
@@ -253,7 +255,7 @@ function App() {
             </div>
           )}
 
-          {state.status === 'playing' && state.hand.phase === 'exchange' && state.hand.declarer === HUMAN && (
+          {view.status === 'playing' && view.phase === 'exchange' && exchanges.length > 0 && (
             <div className="decision-card">
               <h2>Oddaj po jednej karcie</h2>
               <p>1. wybrana → Bot A, 2. wybrana → Bot B. Widoczność transferu jest na razie jawnym pinem profilu.</p>
@@ -261,7 +263,7 @@ function App() {
             </div>
           )}
 
-          {state.status === 'playing' && state.hand.phase === 'contract' && state.hand.declarer === HUMAN && (
+          {view.status === 'playing' && view.phase === 'contract' && contracts.length > 0 && (
             <div className="decision-card">
               <h2>Ile ostatecznie grasz?</h2>
               <div className="actions contract-actions">
@@ -272,7 +274,7 @@ function App() {
             </div>
           )}
 
-          {state.status === 'playing' && state.hand.phase === 'trick' && actingSeat(state) === HUMAN && (
+          {view.status === 'playing' && view.phase === 'trick' && playable.size > 0 && (
             <div className="decision-card compact">
               <h2>Twój ruch</h2>
               {marriageCards.size > 0 && (
@@ -287,13 +289,13 @@ function App() {
             </div>
           )}
 
-          {state.status === 'playing' && state.hand.phase === 'complete' && (
+          {view.status === 'playing' && view.phase === 'complete' && nextHand && (
             <div className="decision-card">
-              <h2>Rozdanie {state.handNumber} zakończone</h2>
+              <h2>Rozdanie {view.handNumber} zakończone</h2>
               <p>
-                Zmiana: {state.hand.handScoreDelta?.map((value, seat) => `${SEAT_NAMES[seat]} ${value >= 0 ? '+' : ''}${value}`).join(' · ')}
+                Zmiana: {view.handScoreDelta?.map((value, seat) => `${SEAT_NAMES[seat]} ${value >= 0 ? '+' : ''}${value}`).join(' · ')}
               </p>
-              <button className="primary" onClick={() => commit({ type: 'next-hand' })}>Następne rozdanie</button>
+              <button className="primary" onClick={() => commit(nextHand)}>Następne rozdanie</button>
             </div>
           )}
         </section>
@@ -306,8 +308,8 @@ function App() {
         </div>
         <div className="hand">
           {humanCards.map((card) => {
-            const exchangeMode = state.hand.phase === 'exchange' && state.hand.declarer === HUMAN;
-            const canPlay = state.hand.phase === 'trick' && playable.has(card);
+            const exchangeMode = view.phase === 'exchange' && exchanges.length > 0;
+            const canPlay = view.phase === 'trick' && playable.has(card);
             return (
               <Card
                 key={card}
@@ -322,8 +324,8 @@ function App() {
       </section>
 
       <footer className="footer">
-        <span>Profil: {state.rules.id} v{state.rules.version}</span>
-        <span>rev {state.revision}</span>
+        <span>Profil: {projection.profile.id} v{projection.profile.version}</span>
+        <span>rev {view.revision}</span>
         {message && <span className="message">{message}</span>}
       </footer>
     </main>
