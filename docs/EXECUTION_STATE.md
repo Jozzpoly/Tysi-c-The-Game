@@ -1,282 +1,257 @@
-# Execution state — fresh critical restart
+# Execution state — live truth
 
 Date: 2026-09-12
-Status: **live project truth for the next implementation run**
+Status: **Foundation Run 01 is substantially proven locally; online MatchRoom integration is next**
 
-This document records the conclusions that survived a fresh re-derivation of the project. Earlier repository material remains useful history, but it is not authority where it conflicts with this file or with executable evidence.
+This file is the compact execution truth. Earlier planning/history remains useful but is not authority where it conflicts with executable evidence here.
 
-## 1. Product thesis
+## 1. Product target
 
 Build a small, high-quality browser Tysiąc table that is frictionless to open and good enough to use with real people.
 
-Initial product target:
+Current target:
 
 - 3-player auction Tysiąc;
-- instant browser entry on desktop and mobile;
-- private friend table by link/code without mandatory account creation;
-- bots as first-class seats, not a temporary testing hack;
-- Human + Bot + Bot must be worth playing before multiplayer is considered complete;
-- multiplayer must survive refresh, temporary disconnect and mobile backgrounding naturally;
-- the game may later support several real Tysiąc rule families, but it is **not** a generic card-game engine and not an arbitrary rules DSL.
+- desktop and mobile are **equal long-term product targets**;
+- private friend table by link/code, no mandatory account first;
+- bots are first-class seats;
+- Human + Bot + Bot must already be worth playing;
+- refresh, reconnect and mobile suspension must become normal lifecycle;
+- later support several real Tysiąc rule families without becoming a generic card-game engine or arbitrary rules DSL.
 
-The UI should feel like one product across desktop and mobile, but it does not need to be the same layout squeezed to different sizes. Desktop may use the space for persistent context; mobile should prioritize the current trick, the hand and the current required decision.
+Visual polish is deliberately not the current focus. The foundation must instead let a later professional presentation layer consume clear state, legal choices and domain feedback without coupling to hidden authority/network internals.
 
-## 2. Fresh rule-domain findings
+## 2. First rules target
 
-There is no defensible single "Polish Tysiąc" profile.
+First profile: **`PLAYOK_3P_800_CANDIDATE`**.
 
-Strong common structure across Kurnik/PlayOK, Pagat and modern implementations:
+It is source-scoped and intentionally not called canonical "Polish Tysiąc". Real Polish implementations/tables differ materially.
 
-- 3 active players;
-- 24 cards: 9, J, Q, K, 10, A in four suits;
-- trick rank A > 10 > K > Q > J > 9;
-- card points 11 / 10 / 4 / 3 / 2 / 0;
-- 7 cards each + 3-card musik;
-- compulsory 100 for forehand and auction with pass eliminating a bidder;
-- winner takes/reveals the musik, then transfers one card to each opponent so all start play with 8 cards;
-- declarer leads;
-- marriages K+Q are worth 40/60/80/100 and establish trump;
-- eight tricks;
-- declarer receives plus/minus contract value; defenders receive their own trick/marriage score;
-- race to approximately 1000 points.
+Primary profile document:
 
-Material real variation already demonstrated by sources or implementations:
+- `docs/rules/PLAYOK_3P_800_CANDIDATE.md`
 
-- auction increments and permission to bid above 120;
-- 800 vs 900 lock/barrel-style endgame rules;
-- bomb availability, count and scoring;
-- whether a void player must trump;
-- stronger-card / overtrump obligations;
-- redeal conditions and when four nines are checked;
-- visibility of transferred cards;
-- defender rounding at the exact half point;
-- marriage eligibility/scoring edge cases;
-- simultaneous win resolution;
-- 2P and 4P structure.
+Primary references:
 
-Important source conflicts:
+- Kurnik / PlayOK: https://www.kurnik.pl/tysiac/zasady.phtml
+- Pagat: https://www.pagat.com/marriage/1000.html
+- Mizerca: https://mizerca.com/en/thousand-rules
 
-- Kurnik documents an **800** lock; Pagat's Polish section documents **900**; Mizerca uses **800**.
-- Kurnik says defender scores round to tens with 5 upward; Mizerca documents 5 downward / 6 upward.
-- Pagat explicitly reports Polish tables both with and without mandatory trumping when void.
-- Kurnik allows first-trick marriage; Pagat confirms this as a Polish variation relative to its eastern baseline.
+Material unresolved/reference-sensitive items remain explicit:
 
-Therefore the old name `POLISH_3P_800_CANDIDATE` is too broad. The first reference target should be explicitly implementation/source scoped, provisionally **`PLAYOK_3P_800_CANDIDATE`**, because PlayOK/Kurnik gives us a concrete documented target and a possible black-box reference later. It must not be presented as canonical Polish Tysiąc.
+- 3P musik / Kurnik last-trick wording;
+- transfer visibility;
+- four-nines timing;
+- post-musik contract ceiling;
+- bomb timing/count/800 interaction;
+- strict trump/overtrump interpretation;
+- marriage scoring with no captured trick.
 
-### Still-open reference scenarios
+Important correction: Kurnik really does state that points for cards "from the musiks" go to the last-trick winner. Naively applying that sentence to 3P would double-count cards because all 24 cards enter the eight tricks after exchange. `no-extra-3p-musik-score` is therefore the current project pin/current-best interpretation, **not a PlayOK-observed fact**.
 
-Before calling the first profile reference-tested, resolve or explicitly pin behavior for:
+## 3. Domain/core — PASS
 
-1. face-up/face-down visibility of the two transferred cards;
-2. exact four-nines check timing and whether a nine received in transfer counts;
-3. final-contract upper bound after seeing the musik;
-4. bomb timing, count and interaction with the 800 lock;
-5. exact stronger-card obligation inside suit, trumping and overtrumping;
-6. whether a declared marriage scores if its owner wins no trick in the hand;
-7. simultaneous >=1000 winner resolution;
-8. exact defender rounding at 5 for each intended profile.
+The implemented core is pure TypeScript and independent of React/Cloudflare.
 
-The old question about "3P musik points awarded to the last trick" is not a separate 3P mechanic: after the declarer takes the three-card musik and transfers two cards, all 24 cards are in players' hands and are played. We must not double-count them.
+Current properties:
 
-Primary current references:
+- deterministic seeded shuffle;
+- full 3P hand/match state machine;
+- one canonical legality evaluator;
+- auction / musik / exchange / final contract / tricks / marriages / scoring / 800 lock / match end;
+- all actors submit the same domain commands;
+- invariants enforce card identity/conservation/accounting;
+- complete seeded hands and matches execute headlessly;
+- candidate-sensitive scenarios are executable.
 
-- Kurnik / PlayOK rules: https://www.kurnik.pl/tysiac/zasady.phtml
-- Pagat 1000 / Polish Tysiąc: https://www.pagat.com/marriage/1000.html
-- Mizerca Thousand rules: https://mizerca.com/en/thousand-rules
+Core smoke currently covers, among other things:
 
-## 3. Rules architecture — revised
+- compulsory 100;
+- bid ceiling from held marriages;
+- follow-and-beat;
+- trump when void;
+- overtrump;
+- lead-suit precedence;
+- marriage establishes trump and score;
+- 800 lock;
+- simultaneous >=1000 declarer precedence;
+- hidden-card observation boundary;
+- transfer privacy under the current recipient-private pin;
+- full seeded match completion.
 
-Keep the deterministic core, but reject the previous implication that seven policy classes are already the right abstraction.
+## 4. Presentation/network boundary — PASS
+
+Human-facing presentation no longer needs authoritative `MatchState`.
+
+Canonical boundary:
+
+`MatchState -> projectSeat(seat) -> { profile, observation, legalCommands }`
+
+`SeatProjection` is the intended contract for both local and future online clients.
+
+Executable privacy tests serialize the complete projection — including `legalCommands` — and prove that opponent hand identities and hidden talon identities do not leak.
+
+### Domain feedback events
+
+Accepted commands now emit transient typed `GameEvent[]` such as:
+
+- bid/pass/auction win;
+- talon reveal;
+- exchange;
+- private received card;
+- contract;
+- marriage;
+- card play;
+- completed trick;
+- hand score;
+- match completion.
+
+These events are **not event sourcing**. Canonical state remains `MatchState`; reconnect can use a fresh seat projection.
+
+Events carry an audience (`public` or one seat). `eventsForSeat()` is the visibility filter. Executable tests prove that private transferred-card identities cannot leak through the feedback channel.
+
+This boundary is deliberately suitable for later animation, richer graphics, audio, haptics, history and online synchronization without reverse-engineering state diffs.
+
+## 5. Bot — ADEQUATE foundation, not final skill
+
+The first product bot is deterministic and only receives a seat observation + legal commands + public rules.
+
+A pathological first calibration caused matches to spiral into hundreds of hands and very large negative scores. The test limit was not relaxed; the policy was recalibrated.
+
+Current 40-match survey:
+
+- average match: **32.4 hands**;
+- maximum: **49 hands**;
+- worst observed minimum score: **-630**;
+- average contract: **113.6**;
+- voluntary contract success: **61.3%**;
+- forced-100 success: **39.4%**;
+- winner seats: **16 / 15 / 9** in the current fixed survey;
+- no non-terminating match in the survey.
+
+Further tuning should wait for real human gameplay; self-play optimization now risks overfitting.
+
+## 6. Browser/mobile/desktop evidence — PASS as foundation
+
+Real Chrome/ChromeDriver tests run against the Vite/workerd dev app.
+
+The harness uses Chrome DevTools emulation and asserts the actual document width, `window.innerWidth` and `visualViewport`. Earlier false "mobile" evidence at 500 px was detected and withdrawn.
+
+Current tested viewports:
+
+- desktop: **1440 x 1000**;
+- mobile: **390 x 844**.
+
+Both run these real interaction paths:
+
+### Defender path
+
+`auction -> pass -> wait for human trick turn -> click legal card -> completed trick`
+
+### Declarer path
+
+Using deterministic QA seed 2:
+
+`win auction at 200 -> musik -> 10-card exchange -> select two cards -> confirm -> 8-card final contract -> first lead -> completed trick`
+
+The browser test asserts no page-level horizontal overflow at every checked phase and stores screenshots as CI artifacts.
+
+### Presentation debt deliberately left open
+
+The temporary hand presenter horizontally scrolls when the row no longer fits. On the current 390 px viewport:
+
+- available hand width: ~372 px;
+- 7-card row: ~391 px;
+- 8-card row: ~447 px;
+- 10-card exchange row: ~559 px.
+
+This is **not** a long-term mobile design decision. Future card presentation should support adaptive fit/fan/overlap/hit areas while preserving full interaction quality. Do not polish the placeholder into an architectural constraint.
+
+Another small semantic UX debt: a marriage currently offers two visually identical meld buttons when both K and Q can legally be led; future UI must distinguish the card choice.
+
+Normal product startup is random. `?seed=N` exists only as a reproducible QA hook.
+
+## 7. Cloudflare infrastructure — local/runtime PASS, remote NOT YET PROVEN
+
+Current canary uses:
+
+- Worker + Vite integration;
+- one SQLite-backed Durable Object per named room;
+- persisted revision;
+- transaction-based expected-revision gate;
+- hibernating WebSockets;
+- HTTP and WebSocket routing.
+
+Current workerd/Vitest evidence: **5/5 PASS**, covering:
+
+- room isolation;
+- persistence after Durable Object eviction;
+- optimistic revision race (one stale command rejected);
+- routing;
+- an existing WebSocket remaining usable across DO eviction/hibernation.
+
+Production build is green.
+
+`wrangler deploy --dry-run` is green and uses the Vite-generated deployment config, client assets and Durable Object binding.
+
+**Not yet proven:** an actual remote `workers.dev` deployment. No Cloudflare account connector is available in the current agent environment; do not claim remote evidence before it exists.
+
+## 8. Toolchain — PASS / reproducible
+
+- Node 24 in CI;
+- npm 11.19.0;
+- committed `package-lock.json`;
+- CI uses `npm ci` + cache;
+- workflow token is read-only;
+- install-script approvals are pinned only for the current `esbuild` and `workerd` versions;
+- generated Vite/Wrangler artifacts are ignored.
+
+A Node 22/npm 10 install failure was traced to the npm/Arborist `edgesOut` crash rather than hidden dependency conflict; the same graph installs correctly under the current toolchain.
+
+## 9. Current architecture
 
 ### Keep
 
-A pure TypeScript domain kernel with no React, network or Cloudflare dependencies.
+- pure TypeScript core;
+- React + Vite presentation;
+- DOM/CSS/SVG-first cards rather than a game engine/canvas requirement;
+- `SeatProjection` as client data boundary;
+- typed scoped domain feedback events;
+- same commands for human and bot actors;
+- server-authoritative hidden state online;
+- one Durable Object per table;
+- SQLite-backed DO + hibernating WebSockets;
+- snapshot/revision reconnect model.
 
-Conceptually:
+### Avoid for now
 
-`State + Command + Rules + explicit randomness -> Result`
+- generic rules DSL;
+- fixed polymorphic policy hierarchy;
+- event sourcing;
+- D1/accounts/ranking before product need;
+- client prediction;
+- separate mobile rules/UI data model;
+- separate server implementation of game rules.
 
-where `Result` contains the new state and domain facts needed by adapters/UI.
+## 10. Immediate next work
 
-### Change
+Evolve the proven infrastructure canary into a real **local MatchRoom** before any remote deployment.
 
-Start with **concrete rule data + phase-specific evaluators**, not a polymorphic policy framework.
+Hard requirement:
 
-A first rules object can be grouped by evidenced domains for readability (`auction`, `exchange`, `trick`, `marriage`, `scoring`, `match`, `redeal/abort`), but fields are introduced only when two real targets differ or when a known unresolved scenario must be pinned.
+`MatchRoom` must store/use the same canonical `MatchState`, call the same core reducer, and send each seat the same `SeatProjection + eventsForSeat` contract already used locally.
 
-Do not build:
+First protocol must include:
 
-- inheritance between rule families;
-- a generic rules DSL;
-- arbitrary scripting;
-- a combinatorial UI exposing every internal field;
-- claims that every possible field combination is supported.
-
-A named profile is a tested bundle of supported values. "Custom rules" can come later and may be restricted to known-safe combinations.
-
-### Versioning
-
-Keep versioned named profiles and pin a match to an immutable effective rules snapshot. A simple deterministic fingerprint of the normalized rules object is enough initially; no profile registry service is required.
-
-## 4. Core / bot / hidden-information model
-
-This survived strongly:
-
-- one canonical legality evaluator;
-- all actors submit the same domain commands;
-- an online player or bot receives a **seat observation/projection**, never the authoritative hidden state;
-- production online authority owns the full state;
-- local single-player may run the same authority/core in-process without pretending that the browser is a remote server.
-
-Bots have two distinct roles:
-
-1. `RandomLegal` / deterministic scripted controllers for tests and simulation;
-2. an early **heuristic playable bot** for the actual product.
-
-Do not delay an enjoyable solo table until an advanced AI exists. Tysiąc is an imperfect-information game, but prior academic work shows a knowledge/rule-based player is a credible first direction; stronger search-based play can be evaluated later.
-
-## 5. Technical architecture — current-best after re-audit
-
-### Client
-
-**TypeScript + React + Vite** survives.
-
-Reason: the game is predominantly responsive UI/state presentation rather than a rendering-engine problem; React has more than enough capability, Cloudflare has a current first-class React/Vite path, and changing framework would not reduce a material risk.
-
-Prefer DOM/CSS/SVG card UI over Canvas for the first product. Tap/click is the primary interaction; drag may be optional polish later. Never require hover.
-
-### Online authority
-
-**Cloudflare Worker + one Durable Object per active table** survives and is strengthened by current platform guidance.
-
-Use:
-
-- one DO as the coordination atom for one table/match;
-- SQLite-backed Durable Objects (Cloudflare's recommended backend for new DOs);
-- hibernating WebSockets for live connected tables;
-- durable canonical snapshot/revision after accepted commands;
-- reconnect by seat token + latest seat projection.
-
-Do not introduce D1 initially. If later we need accounts, ratings, global history or discovery, a global database can be added then.
-
-Do not require SQL schema complexity just because the DO backend is SQLite: the first match can persist a compact canonical state/snapshot using the storage API and evolve only if queryable history becomes valuable.
-
-### Protocol
-
-Turn-based gameplay does not need client prediction.
-
-Minimum protocol properties:
-
-- client command id;
-- expected server revision;
+- `clientCommandId`;
+- `expectedRevision`;
 - idempotent duplicate handling;
-- server validation through the same core legality path;
-- server broadcasts per-seat projections, not hidden state;
-- reconnect performs state resync instead of trying to replay missed WebSocket packets perfectly.
+- seat-bound command authorization;
+- persistent accepted state;
+- per-seat projections/events;
+- reconnect snapshot;
+- WebSocket hibernation.
 
-Mobile suspension/disconnect is treated as normal lifecycle, not exceptional failure.
+Do not let `next-hand` accidentally become arbitrary client authority. The current domain command has no seat; online hand advancement needs an explicit server/system policy before exposing it remotely.
 
-### Why not switch platform now
-
-- Supabase/Firebase can provide realtime synchronization, auth and global persistence, but the authoritative single-room state machine would require extra coordination/functions/database policy compared with a DO that already is the room authority.
-- A conventional Node/WebSocket server on Fly/Render/etc. is viable and familiar, but makes room placement, persistence, sleep/scale and operations our responsibility.
-- No alternative currently gives enough product benefit to justify replacing the simpler per-room Durable Object model.
-
-Cloudflare remains current-best, not a permanent requirement.
-
-Current platform references:
-
-- https://developers.cloudflare.com/durable-objects/best-practices/rules-of-durable-objects/
-- https://developers.cloudflare.com/durable-objects/best-practices/websockets/
-- https://developers.cloudflare.com/durable-objects/platform/pricing/
-- https://developers.cloudflare.com/workers/framework-guides/web-apps/react/
-- https://developers.cloudflare.com/workers/testing/
-
-## 6. Testing and evidence
-
-Replace the vague ladder "sources -> tests -> simulations -> certified" with evidence types that answer different questions.
-
-### Rule evidence
-
-- **documented** — source text explicitly states the behavior;
-- **reference-observed** — behavior reproduced in an existing implementation;
-- **pinned** — project deliberately selected a behavior where sources disagree;
-- **executable** — scenario fixture proves our implementation does what the profile says.
-
-### Core evidence
-
-- example scenario tests for every material rule branch;
-- invariants after every transition;
-- deterministic seeded simulations with legal controllers;
-- property-based/generative tests where useful (card conservation, legal action closure, terminal progress, no duplicate cards, score/accounting invariants).
-
-Use Vitest for the pure core. `fast-check` is a good candidate for generative invariants. Cloudflare adapters should use the current Workers Vitest integration (`@cloudflare/vitest-plugin`) and later a small production-build integration harness.
-
-### Product evidence
-
-Only real browser play answers whether the table is understandable and pleasant. Owner gameplay is not a rules oracle, but it is primary evidence for feel, information hierarchy and friction.
-
-Avoid the word **certified** unless there is a very explicit internal definition. Prefer statuses such as `candidate`, `scenario-tested`, `reference-tested`, `shipping`.
-
-## 7. Revised development sequence
-
-The previous sequence was directionally good but kept the product invisible for too long.
-
-### Foundation Run 01 — now
-
-Goal: reach a playable local table while preserving falsifiability.
-
-1. Scaffold TypeScript/React/Vite + Vitest and a minimal Cloudflare-compatible project shell.
-2. Implement cards, seats, deterministic shuffle/test RNG and the 3P hand state machine.
-3. Implement only the rule fields needed by the first PlayOK/Kurnik-targeted candidate and already-evidenced variant pressure.
-4. Build scenario fixtures for known rule conflicts and invariants.
-5. Add `RandomLegal` and a minimal heuristic bot boundary.
-6. Prove full headless hands and matches under seeded simulation.
-7. Build a thin responsive Human + Bot + Bot local table immediately after the core is coherent.
-8. Separately perform a tiny Durable Object/WebSocket deployment canary so infrastructure risk does not remain hypothetical.
-
-Exit: we can actually play a complete local 3P match in the browser; core invariants survive simulation; online platform skeleton is proven deployable; open rule questions remain explicit rather than silently guessed.
-
-### Run 02
-
-Bind the same domain commands/seat projections to one Match Durable Object and support private Human + Human + Bot / Human + Human + Human tables.
-
-### Run 03
-
-Resilience and product hardening: refresh/reconnect, mobile backgrounding, weak connection behavior, responsive UX, share flow, friend/domain feedback and reference-rule probes.
-
-## 8. Decisions from the old state
-
-| Previous conclusion | Fresh verdict |
-| --- | --- |
-| Browser-first desktop + mobile | **KEEP** |
-| 3-player auction Tysiąc first | **KEEP** |
-| Bots first-class | **KEEP, strengthen** |
-| TypeScript deterministic core | **KEEP** |
-| React + Vite | **KEEP** |
-| Cloudflare Worker + Match DO | **KEEP as current-best** |
-| SQLite-backed DO | **KEEP, but do not overdesign SQL schema** |
-| Server-authoritative hidden state | **KEEP for online; clarify local authority** |
-| Human/bot same commands | **KEEP** |
-| One canonical `legalActions`/legality authority | **KEEP** |
-| Versioned named rules profiles | **KEEP** |
-| Seven policy-domain architecture as a fixed boundary | **WEAKEN / simplify** |
-| `POLISH_3P_800_CANDIDATE` as first canonical-ish profile | **REJECT / rename to source-scoped PlayOK candidate** |
-| "official profiles are certified" language | **REJECT for now** |
-| Headless hand -> headless match -> UI only afterwards | **CORRECT: get to thin playable UI sooner** |
-| D1 reserved for future global state | **KEEP as possibility, not commitment** |
-| Generic custom rules UI | **DEFER** |
-
-## 9. Current risks
-
-1. Mistaking a PlayOK/Kurnik profile for "the Polish rules".
-2. Encoding uncertain edge cases as accidental core invariants.
-3. Building an abstraction framework before a good local game exists.
-4. Producing technically legal but stupid bots, making the first product unpleasant to evaluate.
-5. Mobile UX being treated as scaled desktop rather than a distinct responsive composition.
-6. Overengineering replay/event sourcing when snapshot + revision + deterministic tests are enough.
-7. Waiting too long to deploy a real Durable Object canary.
-
-## 10. Next action
-
-Execute **Foundation Run 01**. Further research should now be demand-driven by a concrete rule scenario, implementation decision or failing test. Do not pause implementation for exhaustive rule archaeology.
+After MatchRoom passes local workerd tests, reassess the smallest safe route to a real Cloudflare deployment. Further rule research remains demand-driven by concrete unresolved scenarios or failing tests.
