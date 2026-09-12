@@ -222,10 +222,10 @@ function assertViewport(label, layout, expectedWidth) {
   }
 }
 
-async function openScenario(label, width, height, mobile, seed) {
+async function openScenario(label, width, height, mobile, seed, seat = 0) {
   const session = await createSession();
   await emulateViewport(session, width, height, mobile);
-  await navigate(session, `${BASE_URL}?seed=${seed}`);
+  await navigate(session, `${BASE_URL}?seed=${seed}&seat=${seat}`);
   return session;
 }
 
@@ -313,6 +313,37 @@ async function runDeclarerViewport(label, width, height, mobile) {
   }
 }
 
+async function runNonzeroSeatViewport(label, width, height, mobile) {
+  let session;
+  try {
+    session = await openScenario(label, width, height, mobile, 1, 2);
+    await waitForText(session, 'Twoja licytacja');
+    const layout = await inspectLayout(session);
+    assertViewport(`${label}: seat2 auction`, layout, width);
+
+    const identity = await execute(session, `
+      const scores = [...document.querySelectorAll('.score')];
+      const humanIndex = scores.findIndex((node) => node.classList.contains('human'));
+      const humanLabel = scores[humanIndex]?.querySelector('span')?.textContent?.trim() ?? '';
+      const opponents = [...document.querySelectorAll('.opponent strong')].map((node) => node.textContent?.trim() ?? '');
+      return { humanIndex, humanLabel, opponents };
+    `);
+    if (identity.humanIndex !== 2 || identity.humanLabel !== 'Ty') {
+      throw new Error(`${label}: seat2 renderer identity mismatch ${JSON.stringify(identity)}`);
+    }
+    if (identity.opponents.length !== 2 || identity.opponents.includes('Ty')) {
+      throw new Error(`${label}: seat2 opponent composition mismatch ${JSON.stringify(identity)}`);
+    }
+    if (layout.enabledHandCards !== 0 || layout.handCards !== 7) {
+      throw new Error(`${label}: unexpected seat2 auction hand state ${JSON.stringify(layout)}`);
+    }
+    await screenshot(session, `${label}-seat2-auction`);
+    return { layout, identity };
+  } finally {
+    await closeSession(session);
+  }
+}
+
 await mkdir(OUTPUT, { recursive: true });
 const vite = startProcess('npm', ['run', 'dev', '--', '--host', '127.0.0.1', '--port', '4173']);
 const driver = startProcess('chromedriver', ['--port=9515']);
@@ -330,10 +361,12 @@ try {
   const desktop = {
     defender: await runDefenderViewport('desktop', 1440, 1000, false),
     declarer: await runDeclarerViewport('desktop', 1440, 1000, false),
+    seat2: await runNonzeroSeatViewport('desktop', 1440, 1000, false),
   };
   const mobile = {
     defender: await runDefenderViewport('mobile', 390, 844, true),
     declarer: await runDeclarerViewport('mobile', 390, 844, true),
+    seat2: await runNonzeroSeatViewport('mobile', 390, 844, true),
   };
   console.log('browser smoke: PASS');
   console.log(JSON.stringify({ desktop, mobile }, null, 2));
