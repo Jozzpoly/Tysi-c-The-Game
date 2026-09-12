@@ -102,7 +102,7 @@ export function legalCommands(state: MatchState, seat?: Seat): Command[] {
     if (actor !== hand.declarer) return [];
     const opponents = ([0, 1, 2] as Seat[]).filter((candidate) => candidate !== actor);
     const commands: Command[] = [];
-    if (state.rules.bomb.enabled && state.rules.bomb.window === 'after-talon-before-exchange') {
+    if (state.rules.bomb?.enabled && state.rules.bomb.window === 'after-talon-before-exchange') {
       commands.push({ type: 'bomb', seat: actor });
     }
     for (const first of hand.hands[actor]) for (const second of hand.hands[actor]) {
@@ -112,7 +112,7 @@ export function legalCommands(state: MatchState, seat?: Seat): Command[] {
     return commands;
   }
   if (hand.phase === 'redeal-option') {
-    if (hand.fourNinesSeat === null) return [];
+    if (hand.fourNinesSeat === null || !state.rules.fourNines?.enabled) return [];
     const actor = seat ?? hand.fourNinesSeat;
     if (actor !== hand.fourNinesSeat || !hasFourNines(hand.hands[actor])) return [];
     const commands: Command[] = [{ type: 'request-redeal', seat: actor }];
