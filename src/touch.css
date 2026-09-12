@@ -38,8 +38,36 @@ button:active:not(:disabled) {
     padding: 9px 11px;
   }
 
+  /*
+   * Mobile auction/contract choices must not hide valid actions inside a tiny
+   * nested scroll box. Let the decision card grow and the page itself scroll.
+   */
+  .bid-actions,
+  .contract-actions {
+    max-height: none;
+    overflow: visible;
+  }
+
+  .bid-actions > button,
+  .contract-actions > button {
+    min-width: 56px;
+  }
+
   .card {
     min-height: 72px;
+  }
+
+  /*
+   * Ten cards occur after taking the talon. A one-row fan only exposed about
+   * 35px per card on a 390px viewport, which is smaller than a dependable
+   * finger target. Keep ordinary 7/8-card hands as a fan, but make the dense
+   * 10-card exchange hand an explicit 5x2 touch grid.
+   */
+  .hand:has(> .card:nth-child(10)) {
+    grid-template-columns: repeat(5, var(--hand-card-width));
+    column-gap: 8px;
+    row-gap: 12px;
+    justify-content: center;
   }
 
   .hand > .card:active:not(:disabled) {
