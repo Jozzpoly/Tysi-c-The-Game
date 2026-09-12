@@ -27,8 +27,8 @@ This profile is deliberately narrow. Where Kurnik text is ambiguous or other rea
 
 - The player immediately after the dealer is committed to at least 100.
 - Further bids are multiples of 10.
+- Bidding above 120 requires at least one marriage and Kurnik limits the bid to `120 + value of marriages held`.
 - Passing removes the player from that auction.
-- Bidding above 120 requires marriage capacity according to Kurnik's documented limit rule.
 - The auction winner reveals/takes the musik.
 - The winner gives one card to each opponent, leaving 8 cards per player.
 - The declarer sets the final contract at no less than the winning bid.
@@ -37,13 +37,13 @@ This profile is deliberately narrow. Where Kurnik text is ambiguous or other rea
 
 - Declarer leads the first trick.
 - Players are obliged to follow the led suit when able.
-- Kurnik also documents an obligation to play a higher card when possible; the exact interaction with trump/overtrump is kept as a scenario below rather than silently generalized.
+- Kurnik also documents an obligation to play a higher card when possible; the exact interaction with trump/overtrump remains a reference-sensitive scenario rather than universal Tysiąc truth.
 - A marriage is K+Q of one suit and is announced by leading one member while holding the other.
 - Marriage values: spades 40, clubs 60, diamonds 80, hearts 100.
 - Announcing a marriage establishes that suit as trump immediately.
 - Kurnik permits marriage announcement on the first trick.
 - Trick winner leads the next trick.
-- Eight tricks end the hand.
+- Eight tricks end the 3P hand.
 
 ### Scoring / match
 
@@ -60,7 +60,7 @@ This profile is deliberately narrow. Where Kurnik text is ambiguous or other rea
 - Kurnik documents the first bomb as free and later bombs as granting 60 points to each opponent in 3P.
 - Four nines can trigger a redeal request.
 
-The exact bomb availability window/count semantics and exact four-nines timing are **not yet considered executable truth**.
+The exact bomb window/count semantics, interaction with the 800 lock, and exact four-nines timing are **not yet executable truth**.
 
 ## Provisional pins required for the first implementation
 
@@ -72,7 +72,7 @@ These are deliberate project choices needed to make an executable candidate. The
 
 Each opponent sees only the card received by that seat; the other transferred card is not public.
 
-Reason: Kurnik documents the transfer but not its visibility. Pagat documents face-down transfer as a common baseline and face-up transfer as a variation. This pin preserves hidden information until PlayOK behavior is black-box checked.
+Reason: Kurnik documents the transfer but not its visibility. Other documented Tysiąc families contain both private and face-up transfer variants. This pin preserves hidden information until PlayOK behavior is reference-checked.
 
 ### Final contract ceiling after the musik
 
@@ -80,13 +80,13 @@ Reason: Kurnik documents the transfer but not its visibility. Pagat documents fa
 
 After taking the musik and transferring two cards, the current implementation allows the final declaration from the winning auction value up to `120 + value of marriages still held`.
 
-Reason: Kurnik explicitly says the final declaration cannot be lower than the winning bid, but the text does not clearly state whether the auction's marriage-capacity ceiling continues to apply after the musik. The implementation needs a finite legality rule now, so this is an explicit reversible pin pending a PlayOK reference probe. It must not be presented as documented PlayOK behavior.
+Reason: Kurnik explicitly says the final declaration cannot be lower than the winning bid, but does not clearly state whether the auction's marriage-capacity ceiling continues after the musik. This is an explicit reversible implementation pin pending a PlayOK reference probe.
 
 ### Trick obligation
 
 `strict-follow-and-beat / trump-when-void / overtrump-when-possible`
 
-Reason: this is consistent with the strict reading of Kurnik's obligations and with several modern implementations, but Pagat confirms that real Polish tables can differ. Treat it as a candidate behavior to reference-test, not family-core truth.
+Reason: this is consistent with a strict algorithmic reading of Kurnik's "follow suit and beat, with follow-suit precedence", but other real Polish tables differ on mandatory trumping. Treat it as candidate behavior to reference-test, not family-core truth.
 
 Current executable scenarios cover:
 
@@ -99,25 +99,31 @@ Current executable scenarios cover:
 
 `declared-marriage-counts`
 
-Reason: Kurnik states marriage scoring without Mizerca's explicit "must win at least one trick" condition. This is a textual-reading pin pending a focused reference probe.
+Reason: Kurnik states marriage scoring without the additional captured-trick condition found in some other implementations. This is a textual-reading pin pending a focused reference probe.
+
+### 3P musik / last-trick scoring
+
+`no-extra-3p-musik-score` **for the current implementation only**.
+
+Kurnik's unified rules page says that points for cards "from the musiks" go to the winner of the last trick. That statement cannot be applied naively to the current 3P deal without double-counting, because the 3-card musik is taken by the declarer, two cards are transferred, and all 24 cards then enter the eight tricks.
+
+Independent descriptions of common 2P variants explicitly leave four cards outside trick play and award those cards to the last-trick winner, which is a plausible explanation for Kurnik's unified wording. This makes `no-extra-3p-musik-score` the current-best interpretation, **but not a PlayOK-observed fact**. The earlier repository claim that this issue was definitively resolved was too strong and has been withdrawn.
 
 ## Material open scenarios
 
-The following must remain explicit in tests/docs until resolved:
-
-1. **Transfer visibility reference check** — confirm PlayOK actually behaves as `recipient-private`.
-2. **Four nines: initial hand** — when exactly may a player request redeal?
-3. **Four nines: received card** — can a transferred fourth nine create eligibility?
-4. **Post-musik contract ceiling reference check** — validate or replace `same-marriage-cap-after-exchange` against actual PlayOK behavior.
-5. **Bomb availability** — at what exact phase(s) may the declarer bomb?
-6. **Bomb count/penalty** — whether "first free, later +60" has a hard count or any additional constraints.
-7. **800 lock + bomb** — exact score interaction at/above the lock threshold.
-8. **Stronger-card obligation reference check** — validate the exact strict legal set against actual PlayOK behavior.
-9. **Marriage with zero captured tricks** — black-box check the provisional `declared-marriage-counts` pin.
+1. **3P musik/last-trick reference check** — confirm that PlayOK 3P does not add a second score for the original musik cards.
+2. **Transfer visibility reference check** — confirm PlayOK behavior for the two passed cards.
+3. **Four nines: initial hand vs received card** — determine the exact eligibility point and whether a transferred fourth nine counts.
+4. **Post-musik contract ceiling reference check** — validate or replace `same-marriage-cap-after-exchange`.
+5. **Bomb availability** — exact phase(s) in which the declarer can bomb.
+6. **Bomb repetition/penalty** — exact count semantics beyond Kurnik's first-free/later-60 wording.
+7. **800 lock + bomb** — whether bomb-awarded opponent points are blocked by the 800 lock.
+8. **Stronger-card obligation reference check** — validate the strict trump/overtrump legal set against actual PlayOK behavior.
+9. **Marriage with zero captured tricks** — reference-check `declared-marriage-counts`.
 
 ## Executable scenarios currently present
 
-The core smoke suite now pins and exercises:
+The core smoke suite pins and exercises:
 
 - compulsory 100 auction resolution;
 - bidding above 120 bounded by marriage capacity;
@@ -135,13 +141,7 @@ The core smoke suite now pins and exercises:
 
 These scenarios prove **our candidate implementation behavior**. They do not by themselves prove that every provisional pin matches PlayOK.
 
-## Not a separate 3P rule
-
-There is no additional 3-player "musik points to the last trick" scoring step after the normal exchange. Once the auction winner takes the three-card musik and transfers two cards, all 24 cards are in the three 8-card hands and therefore enter trick play. Do not score those three cards a second time.
-
 ## Evidence labels
-
-Use these terms in fixtures/reviews:
 
 - `documented` — directly stated by Kurnik/PlayOK or another named source;
 - `reference-observed` — reproduced in the actual/reference implementation;
@@ -154,4 +154,4 @@ Use these terms in fixtures/reviews:
 - Pagat — 1000 / Polish Tysiąc: https://www.pagat.com/marriage/1000.html
 - Mizerca — Thousand rules: https://mizerca.com/en/thousand-rules
 
-A profile should not move beyond `candidate` merely because the implementation compiles. The material reference-sensitive questions above still need observation against PlayOK where feasible.
+A profile should not move beyond `candidate` merely because the implementation compiles. Material reference-sensitive questions above still need observation against PlayOK where feasible.
