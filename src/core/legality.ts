@@ -25,6 +25,10 @@ export function currentWinningPlay(plays: readonly PlayedCard[], trump: Suit | n
   return winner;
 }
 
+export function hasFourNines(cards: readonly CardId[]): boolean {
+  return cards.filter((card) => rankOf(card) === '9').length === 4;
+}
+
 export function legalCards(state: MatchState, seat: Seat): CardId[] {
   const hand = state.hand;
   if (state.status !== 'playing' || hand.phase !== 'trick') return [];
@@ -105,6 +109,14 @@ export function legalCommands(state: MatchState, seat?: Seat): Command[] {
       if (first === second) continue;
       commands.push({ type: 'exchange', seat: actor, give: [{ to: opponents[0], card: first }, { to: opponents[1], card: second }] });
     }
+    return commands;
+  }
+  if (hand.phase === 'redeal-option') {
+    if (hand.fourNinesSeat === null) return [];
+    const actor = seat ?? hand.fourNinesSeat;
+    if (actor !== hand.fourNinesSeat || !hasFourNines(hand.hands[actor])) return [];
+    const commands: Command[] = [{ type: 'request-redeal', seat: actor }];
+    if (state.rules.fourNines.optional) commands.push({ type: 'continue-after-four-nines', seat: actor });
     return commands;
   }
   if (hand.phase === 'contract') {
