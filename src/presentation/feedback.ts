@@ -22,6 +22,11 @@ export function describeFeedback(
     return match.draw ? 'Mecz zakończony remisem.' : `${nameForSeat(match.winner ?? 0)} wygrywa mecz.`;
   }
 
+  const redeal = events.find((event) => event.type === 'four-nines-redeal');
+  if (redeal?.type === 'four-nines-redeal') {
+    return `${nameForSeat(redeal.seat)} ma cztery dziewiątki — ponowne rozdanie.`;
+  }
+
   const bomb = events.find((event) => event.type === 'hand-bombed');
   if (bomb?.type === 'hand-bombed') {
     const changes = bomb.delta
