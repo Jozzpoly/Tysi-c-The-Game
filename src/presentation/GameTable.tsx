@@ -253,6 +253,12 @@ export function GameTable({ projection, seatNames, message = '', onCommand, onNe
             </div>
           )}
 
+          {view.status === 'playing' && view.phase === 'contract' && contracts.length === 0 && (
+            <div className="decision-card compact">
+              <h2>Czekamy na decyzję przy stole</h2>
+            </div>
+          )}
+
           {view.status === 'playing' && view.phase === 'trick' && playable.size > 0 && (
             <div className="decision-card compact">
               <h2>Twój ruch</h2>
