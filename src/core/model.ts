@@ -34,11 +34,6 @@ export type Command =
   | { type: 'play'; seat: Seat; card: CardId; declareMarriage?: boolean }
   | { type: 'next-hand'; seat: Seat };
 
-/**
- * Transient facts emitted by an accepted command for adapters/presentation.
- * They are not an event-sourced authority: MatchState remains canonical.
- * `audience` lets network/UI adapters filter private feedback before sending it.
- */
 export type GameEvent =
   | { type: 'bid-placed'; audience: 'public'; seat: Seat; value: number }
   | { type: 'player-passed'; audience: 'public'; seat: Seat }
@@ -213,13 +208,16 @@ export function cloneState(state: MatchState): MatchState {
   return {
     ...state,
     scores: [...state.scores] as Scores,
-    bombsUsed: [...state.bombsUsed] as BombCounts,
+    // Runtime compatibility for persisted pre-bomb rooms. The old pinned rules
+    // stay old; this only supplies neutral structural state that did not exist yet.
+    bombsUsed: [...(state.bombsUsed ?? [0, 0, 0])] as BombCounts,
     hand: {
       ...hand,
       hands: [hand.hands[0].slice(), hand.hands[1].slice(), hand.hands[2].slice()],
       talon: hand.talon.slice(),
       revealedTalon: hand.revealedTalon?.slice() ?? null,
       auction: { ...hand.auction, active: [...hand.auction.active] as [boolean, boolean, boolean] },
+      fourNinesSeat: hand.fourNinesSeat ?? null,
       trick: hand.trick.map((play) => ({ ...play })),
       lastCompletedTrick: hand.lastCompletedTrick
         ? {
