@@ -59,7 +59,7 @@ async function webdriver(path, init = {}) {
   return body.value;
 }
 
-async function createSession(width, height) {
+async function createSession() {
   const value = await webdriver('/session', {
     method: 'POST',
     body: JSON.stringify({
@@ -72,7 +72,7 @@ async function createSession(width, height) {
               '--no-sandbox',
               '--disable-dev-shm-usage',
               '--disable-gpu',
-              `--window-size=${width},${height}`,
+              '--window-size=1440,1000',
             ],
           },
         },
@@ -86,6 +86,31 @@ async function execute(session, script) {
   return webdriver(`/session/${session}/execute/sync`, {
     method: 'POST',
     body: JSON.stringify({ script, args: [] }),
+  });
+}
+
+async function cdp(session, cmd, params = {}) {
+  return webdriver(`/session/${session}/goog/cdp/execute`, {
+    method: 'POST',
+    body: JSON.stringify({ cmd, params }),
+  });
+}
+
+async function emulateViewport(session, width, height, mobile) {
+  await cdp(session, 'Emulation.setDeviceMetricsOverride', {
+    width,
+    height,
+    screenWidth: width,
+    screenHeight: height,
+    deviceScaleFactor: 1,
+    mobile,
+    positionX: 0,
+    positionY: 0,
+    dontSetVisibleSize: false,
+  });
+  await cdp(session, 'Emulation.setTouchEmulationEnabled', {
+    enabled: mobile,
+    maxTouchPoints: mobile ? 5 : 1,
   });
 }
 
@@ -124,34 +149,45 @@ async function inspectLayout(session) {
   return execute(session, `return {
     title: document.title,
     width: document.documentElement.clientWidth,
+    innerWidth: window.innerWidth,
+    visualWidth: window.visualViewport?.width ?? null,
     scrollWidth: document.documentElement.scrollWidth,
     height: document.documentElement.clientHeight,
+    innerHeight: window.innerHeight,
     scrollHeight: document.documentElement.scrollHeight,
+    devicePixelRatio: window.devicePixelRatio,
     enabledHandCards: document.querySelectorAll('.hand .card:not(:disabled)').length,
     decision: document.querySelector('.decision-card')?.innerText ?? '',
     message: document.querySelector('.message')?.innerText ?? '',
   };`);
 }
 
-async function runViewport(label, width, height, playThroughTrick) {
+function assertViewport(label, layout, expectedWidth) {
+  if (layout.title !== 'Tysiąc The Game') throw new Error(`${label}: unexpected title ${layout.title}`);
+  if (layout.width !== expectedWidth || layout.innerWidth !== expectedWidth || Math.round(layout.visualWidth ?? -1) !== expectedWidth) {
+    throw new Error(`${label}: requested ${expectedWidth}px viewport but got document=${layout.width}, inner=${layout.innerWidth}, visual=${layout.visualWidth}`);
+  }
+  if (layout.scrollWidth > layout.width + 1) {
+    throw new Error(`${label}: page overflows horizontally (${layout.scrollWidth} > ${layout.width})`);
+  }
+}
+
+async function runViewport(label, width, height, mobile) {
   let session;
   try {
-    session = await createSession(width, height);
+    session = await createSession();
+    await emulateViewport(session, width, height, mobile);
     await navigate(session, BASE_URL);
     await waitForText(session, 'Twoja licytacja');
 
     const auctionLayout = await inspectLayout(session);
-    if (auctionLayout.title !== 'Tysiąc The Game') throw new Error(`${label}: unexpected title ${auctionLayout.title}`);
-    if (auctionLayout.scrollWidth > auctionLayout.width + 1) {
-      throw new Error(`${label}: page overflows horizontally (${auctionLayout.scrollWidth} > ${auctionLayout.width})`);
-    }
+    assertViewport(`${label}: auction`, auctionLayout, width);
     await screenshot(session, `${label}-auction`);
-
-    if (!playThroughTrick) return { auctionLayout };
 
     await clickButtonByText(session, 'Pas');
     await waitForText(session, 'Twój ruch', 20_000);
     const beforePlay = await inspectLayout(session);
+    assertViewport(`${label}: human turn`, beforePlay, width);
     if (beforePlay.enabledHandCards < 1) throw new Error(`${label}: no playable human card`);
     await screenshot(session, `${label}-human-turn`);
 
@@ -165,6 +201,7 @@ async function runViewport(label, width, height, playThroughTrick) {
 
     await waitFor(`${label}: completed trick`, () => execute(session, `return document.querySelector('.trick-result')?.textContent?.includes('Lewa 1:') ?? false;`), 5_000);
     const completed = await inspectLayout(session);
+    assertViewport(`${label}: completed trick`, completed, width);
     await screenshot(session, `${label}-completed-trick`);
     return { auctionLayout, beforePlay, completed };
   } finally {
@@ -186,8 +223,8 @@ try {
     return response?.ok;
   });
 
-  const desktop = await runViewport('desktop', 1440, 1000, true);
-  const mobile = await runViewport('mobile', 390, 844, false);
+  const desktop = await runViewport('desktop', 1440, 1000, false);
+  const mobile = await runViewport('mobile', 390, 844, true);
   console.log('browser smoke: PASS');
   console.log(JSON.stringify({ desktop, mobile }, null, 2));
 } catch (error) {
