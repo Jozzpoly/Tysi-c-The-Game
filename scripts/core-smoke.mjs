@@ -8,6 +8,7 @@ import {
   createMatch,
   eventsForSeat,
   legalCards,
+  legalCommands,
   observe,
   playAutomatedHand,
   playAutomatedMatch,
@@ -51,6 +52,55 @@ assert.equal(state.hand.declarer, 1);
 assert.equal(state.hand.hands[1].length, 10);
 assert.equal(state.hand.revealedTalon?.length, 3);
 assertCoreInvariants(state);
+
+// Candidate bomb window: only the declarer can withdraw after the talon is revealed
+// and before committing the exchange. The first bomb is free and ends the hand
+// without creating a final contract or pretending that tricks were played.
+assert.ok(legalCommands(state, 1).some((command) => command.type === 'bomb'));
+assert.equal(legalCommands(state, 0).some((command) => command.type === 'bomb'), false);
+const wrongBomb = applyCommand(state, { type: 'bomb', seat: 0 });
+assert.equal(wrongBomb.ok, false);
+assert.equal(wrongBomb.reason, 'NOT_DECLARER');
+assert.deepEqual(wrongBomb.events, []);
+
+const firstBomb = applyCommand(state, { type: 'bomb', seat: 1 });
+assert.equal(firstBomb.ok, true);
+assert.equal(firstBomb.state.hand.phase, 'complete');
+assert.equal(firstBomb.state.hand.contract, null);
+assert.deepEqual(firstBomb.state.hand.completion, { kind: 'bomb', seat: 1, bombNumber: 1 });
+assert.deepEqual(firstBomb.state.hand.handScoreDelta, [0, 0, 0]);
+assert.deepEqual(firstBomb.state.scores, [0, 0, 0]);
+assert.deepEqual(firstBomb.state.bombsUsed, [0, 1, 0]);
+assert.deepEqual(firstBomb.events.map((event) => event.type), ['hand-bombed']);
+assertCoreInvariants(firstBomb.state);
+
+const afterBombAdvance = applyCommand(firstBomb.state, { type: 'next-hand', seat: 0 });
+assert.equal(afterBombAdvance.ok, true);
+assert.equal(afterBombAdvance.state.hand.phase, 'auction');
+assert.deepEqual(afterBombAdvance.state.bombsUsed, [0, 1, 0]);
+assertCoreInvariants(afterBombAdvance.state);
+
+// Repeated bomb candidate: each unlocked opponent receives +60. The ordinary
+// Kurnik 800 lock is provisionally applied to bomb awards as well.
+let repeatBombState = createMatch(PLAYOK_3P_800_CANDIDATE, 4321, 0);
+repeatBombState.scores = [790, 0, 800];
+repeatBombState.bombsUsed = [0, 1, 0];
+result = applyCommand(repeatBombState, { type: 'pass', seat: 2 });
+assert.equal(result.ok, true);
+repeatBombState = result.state;
+result = applyCommand(repeatBombState, { type: 'pass', seat: 0 });
+assert.equal(result.ok, true);
+repeatBombState = result.state;
+assert.equal(repeatBombState.hand.declarer, 1);
+const secondBomb = applyCommand(repeatBombState, { type: 'bomb', seat: 1 });
+assert.equal(secondBomb.ok, true);
+assert.deepEqual(secondBomb.state.bombsUsed, [0, 2, 0]);
+assert.deepEqual(secondBomb.state.hand.completion, { kind: 'bomb', seat: 1, bombNumber: 2 });
+assert.deepEqual(secondBomb.state.hand.handScoreDelta, [60, 0, 0]);
+assert.deepEqual(secondBomb.state.scores, [850, 0, 800]);
+const bombEvent = secondBomb.events.find((event) => event.type === 'hand-bombed');
+assert.deepEqual(bombEvent?.delta, [60, 0, 0]);
+assertCoreInvariants(secondBomb.state);
 
 // Projection exposes the observing seat's cards, counts and now-public talon,
 // but still not authoritative hands.
