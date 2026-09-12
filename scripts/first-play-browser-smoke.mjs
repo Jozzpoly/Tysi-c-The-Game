@@ -113,6 +113,25 @@ async function inspectGuide(session) {
   return execute(session, `
     const dialog = document.querySelector('.rules-dialog');
     const rect = dialog?.getBoundingClientRect();
+    const contentRight = dialog ? dialog.getBoundingClientRect().left + dialog.clientWidth : 0;
+    const overflowing = dialog
+      ? [...dialog.querySelectorAll('*')]
+          .map((node) => {
+            const box = node.getBoundingClientRect();
+            return {
+              tag: node.tagName.toLowerCase(),
+              className: typeof node.className === 'string' ? node.className : '',
+              text: (node.textContent ?? '').trim().replace(/\\s+/g, ' ').slice(0, 80),
+              left: Math.round(box.left * 10) / 10,
+              right: Math.round(box.right * 10) / 10,
+              width: Math.round(box.width * 10) / 10,
+              scrollWidth: node.scrollWidth,
+              clientWidth: node.clientWidth,
+            };
+          })
+          .filter((entry) => entry.right > contentRight + 1 || entry.scrollWidth > entry.clientWidth + 1)
+          .slice(0, 12)
+      : [];
     return {
       exists: Boolean(dialog),
       text: dialog?.innerText ?? '',
@@ -126,6 +145,7 @@ async function inspectGuide(session) {
       dialogScrollHeight: dialog?.scrollHeight ?? 0,
       top: rect?.top ?? null,
       bottom: rect?.bottom ?? null,
+      overflowing,
     };
   `);
 }
@@ -135,8 +155,8 @@ function assertGuide(label, guide, width, height) {
   if (guide.width !== width || guide.innerWidth !== width || Math.round(guide.visualWidth ?? -1) !== width) {
     throw new Error(`${label}: viewport mismatch document=${guide.width} inner=${guide.innerWidth} visual=${guide.visualWidth}`);
   }
-  if (guide.documentScrollWidth > width + 1) throw new Error(`${label}: page horizontal overflow ${guide.documentScrollWidth} > ${width}`);
-  if (guide.dialogScrollWidth > guide.dialogClientWidth + 1) throw new Error(`${label}: guide horizontal overflow ${guide.dialogScrollWidth} > ${guide.dialogClientWidth}`);
+  if (guide.documentScrollWidth > width + 1) throw new Error(`${label}: page horizontal overflow ${guide.documentScrollWidth} > ${width}; descendants=${JSON.stringify(guide.overflowing)}`);
+  if (guide.dialogScrollWidth > guide.dialogClientWidth + 1) throw new Error(`${label}: guide horizontal overflow ${guide.dialogScrollWidth} > ${guide.dialogClientWidth}; descendants=${JSON.stringify(guide.overflowing)}`);
   if (guide.top === null || guide.bottom === null || guide.top < -1 || guide.bottom > height + 1) {
     throw new Error(`${label}: guide bounds outside viewport top=${guide.top} bottom=${guide.bottom} height=${height}`);
   }
