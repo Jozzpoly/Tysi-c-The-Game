@@ -217,6 +217,9 @@ function assertViewport(label, layout, expectedWidth) {
   if (layout.scrollWidth > layout.width + 1) {
     throw new Error(`${label}: page overflows horizontally (${layout.scrollWidth} > ${layout.width})`);
   }
+  if (layout.handScrollWidth > layout.handClientWidth + 1) {
+    throw new Error(`${label}: hand presenter overflows horizontally (${layout.handScrollWidth} > ${layout.handClientWidth})`);
+  }
 }
 
 async function openScenario(label, width, height, mobile, seed) {
