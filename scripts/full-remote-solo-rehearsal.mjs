@@ -126,6 +126,16 @@ async function clickButton(session, text) {
   `);
 }
 
+async function clickButtonStartingWith(session, text) {
+  return execute(session, `
+    const button = [...document.querySelectorAll('button')]
+      .find((node) => node.textContent?.trim().startsWith(${JSON.stringify(text)}) && !node.disabled);
+    if (!button) return false;
+    button.click();
+    return true;
+  `);
+}
+
 async function view(session) {
   return execute(session, `
     const revText = [...document.querySelectorAll('.footer span')]
@@ -260,7 +270,7 @@ async function runFullMatch(label, width, height, mobile) {
     await installAcceleratedPresentationClock(session);
     await navigate(session, BASE_URL);
     await waitFor(`${label}: home`, () => execute(session, `return document.body?.innerText.includes('Usiądź do stołu') ?? false;`));
-    if (!await clickButton(session, 'Zagraj sam')) throw new Error(`${label}: cannot create solo room`);
+    if (!await clickButtonStartingWith(session, 'Zagraj sam')) throw new Error(`${label}: cannot create solo room`);
 
     let current = await waitForActionableState(session, `${label}: initial human decision`);
     assertLayout(`${label}: initial`, current, width);
