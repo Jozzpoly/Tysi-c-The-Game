@@ -62,6 +62,10 @@ export function GameTable({ projection, seatNames, message = '', onCommand, onNe
   const pass = humanCommands.find((command): command is Extract<Command, { type: 'pass' }> => command.type === 'pass');
   const bomb = humanCommands.find((command): command is Extract<Command, { type: 'bomb' }> => command.type === 'bomb');
   const exchanges = humanCommands.filter((command): command is Extract<Command, { type: 'exchange' }> => command.type === 'exchange');
+  const requestRedeal = humanCommands.find((command): command is Extract<Command, { type: 'request-redeal' }> => command.type === 'request-redeal');
+  const continueAfterFourNines = humanCommands.find(
+    (command): command is Extract<Command, { type: 'continue-after-four-nines' }> => command.type === 'continue-after-four-nines',
+  );
   const contracts = humanCommands.filter((command): command is Extract<Command, { type: 'contract' }> => command.type === 'contract');
   const nextHand = humanCommands.find((command): command is Extract<Command, { type: 'next-hand' }> => command.type === 'next-hand');
 
@@ -75,11 +79,7 @@ export function GameTable({ projection, seatNames, message = '', onCommand, onNe
 
   function confirmTransfer() {
     if (view.declarer !== humanSeat || selectedTransfer.length !== 2) return;
-    const command = exchanges.find(
-      (candidate) =>
-        candidate.give[0].card === selectedTransfer[0] &&
-        candidate.give[1].card === selectedTransfer[1],
-    );
+    const command = exchanges.find((candidate) => candidate.give[0].card === selectedTransfer[0] && candidate.give[1].card === selectedTransfer[1]);
     if (command) void onCommand(command);
   }
 
@@ -94,6 +94,7 @@ export function GameTable({ projection, seatNames, message = '', onCommand, onNe
   const phaseLabel = {
     auction: 'Licytacja',
     exchange: 'Wymiana po musiku',
+    'redeal-option': 'Cztery dziewiątki',
     contract: 'Deklaracja gry',
     trick: `Lewa ${Math.min(8, view.trickIndex + 1)}/8`,
     complete: 'Rozdanie zakończone',
@@ -101,9 +102,7 @@ export function GameTable({ projection, seatNames, message = '', onCommand, onNe
 
   const visibleTrick = view.trick.length > 0 ? view.trick : view.lastCompletedTrick?.plays ?? [];
   const showingCompletedTrick = view.trick.length === 0 && view.lastCompletedTrick !== null;
-  const handStyle = {
-    '--hand-spread-count': Math.max(0, humanCards.length - 1),
-  } as CSSProperties;
+  const handStyle = { '--hand-spread-count': Math.max(0, humanCards.length - 1) } as CSSProperties;
   const bombCompletion = view.completion?.kind === 'bomb' ? view.completion : null;
 
   return (
@@ -172,9 +171,7 @@ export function GameTable({ projection, seatNames, message = '', onCommand, onNe
             )}
           </div>
           {showingCompletedTrick && view.lastCompletedTrick && (
-            <div className="trick-result">
-              Lewa {view.lastCompletedTrick.index}: {seatName(view.lastCompletedTrick.winner)} · {view.lastCompletedTrick.points} pkt
-            </div>
+            <div className="trick-result">Lewa {view.lastCompletedTrick.index}: {seatName(view.lastCompletedTrick.winner)} · {view.lastCompletedTrick.points} pkt</div>
           )}
         </div>
 
@@ -192,9 +189,7 @@ export function GameTable({ projection, seatNames, message = '', onCommand, onNe
               <h2>Twoja licytacja</h2>
               <div className="actions bid-actions">
                 {pass && <button onClick={() => void onCommand(pass)}>Pas</button>}
-                {bids.map((bid) => (
-                  <button className="primary" key={bid.value} onClick={() => void onCommand(bid)}>{bid.value}</button>
-                ))}
+                {bids.map((bid) => <button className="primary" key={bid.value} onClick={() => void onCommand(bid)}>{bid.value}</button>)}
               </div>
               <small>Wszystkie wartości pokazane tutaj są legalne dla aktualnej ręki.</small>
             </div>
@@ -226,15 +221,28 @@ export function GameTable({ projection, seatNames, message = '', onCommand, onNe
             </div>
           )}
 
+          {view.status === 'playing' && view.phase === 'redeal-option' && view.fourNinesOption && requestRedeal && (
+            <div className="decision-card">
+              <h2>Masz cztery dziewiątki</h2>
+              <p>Możesz poprosić o ponowne rozdanie bez zmiany wyniku. Jeśli grasz dalej, twoje cztery dziewiątki ani wybór nie są pozostałym graczom jawnie pokazywane.</p>
+              <div className="actions">
+                <button className="primary" onClick={() => void onCommand(requestRedeal)}>Rozdaj ponownie</button>
+                {continueAfterFourNines && <button onClick={() => void onCommand(continueAfterFourNines)}>Graj dalej</button>}
+              </div>
+            </div>
+          )}
+
           {view.status === 'playing' && view.phase === 'contract' && contracts.length > 0 && (
             <div className="decision-card">
               <h2>Ile ostatecznie grasz?</h2>
               <div className="actions contract-actions">
-                {contracts.map((contract) => (
-                  <button key={contract.value} onClick={() => void onCommand(contract)}>{contract.value}</button>
-                ))}
+                {contracts.map((contract) => <button key={contract.value} onClick={() => void onCommand(contract)}>{contract.value}</button>)}
               </div>
             </div>
+          )}
+
+          {view.status === 'playing' && view.phase === 'contract' && contracts.length === 0 && (
+            <div className="decision-card compact"><h2>Czekamy na decyzję przy stole</h2></div>
           )}
 
           {view.status === 'playing' && view.phase === 'trick' && playable.size > 0 && (
@@ -243,9 +251,7 @@ export function GameTable({ projection, seatNames, message = '', onCommand, onNe
               {marriageCards.size > 0 && (
                 <div className="actions">
                   {[...marriageCards].map((card) => (
-                    <button className="primary" key={card} onClick={() => playCard(card, true)}>
-                      Melduj {rankOf(card)}{SUIT_SYMBOL[suitOf(card)]}
-                    </button>
+                    <button className="primary" key={card} onClick={() => playCard(card, true)}>Melduj {rankOf(card)}{SUIT_SYMBOL[suitOf(card)]}</button>
                   ))}
                 </div>
               )}
@@ -254,14 +260,8 @@ export function GameTable({ projection, seatNames, message = '', onCommand, onNe
 
           {view.status === 'playing' && view.phase === 'complete' && nextHand && (
             <div className="decision-card">
-              <h2>
-                {bombCompletion
-                  ? `${seatName(bombCompletion.seat)} kończy rozdanie bombą nr ${bombCompletion.bombNumber}`
-                  : `Rozdanie ${view.handNumber} zakończone`}
-              </h2>
-              <p>
-                Zmiana: {view.handScoreDelta?.map((value, seat) => `${seatName(seat as Seat)} ${value >= 0 ? '+' : ''}${value}`).join(' · ')}
-              </p>
+              <h2>{bombCompletion ? `${seatName(bombCompletion.seat)} kończy rozdanie bombą nr ${bombCompletion.bombNumber}` : `Rozdanie ${view.handNumber} zakończone`}</h2>
+              <p>Zmiana: {view.handScoreDelta?.map((value, seat) => `${seatName(seat as Seat)} ${value >= 0 ? '+' : ''}${value}`).join(' · ')}</p>
               <button className="primary" onClick={() => void onCommand(nextHand)}>Następne rozdanie</button>
             </div>
           )}
@@ -269,23 +269,12 @@ export function GameTable({ projection, seatNames, message = '', onCommand, onNe
       </section>
 
       <section className="hand-area">
-        <div className="hand-heading">
-          <strong>Twoje karty</strong>
-          <span>{humanCards.length}</span>
-        </div>
+        <div className="hand-heading"><strong>Twoje karty</strong><span>{humanCards.length}</span></div>
         <div className="hand" style={handStyle}>
           {humanCards.map((card) => {
             const exchangeMode = view.phase === 'exchange' && exchanges.length > 0;
             const canPlay = view.phase === 'trick' && playable.has(card);
-            return (
-              <Card
-                key={card}
-                card={card}
-                selected={selectedTransfer.includes(card)}
-                disabled={!exchangeMode && !canPlay}
-                onClick={exchangeMode ? () => toggleTransfer(card) : canPlay ? () => playCard(card) : undefined}
-              />
-            );
+            return <Card key={card} card={card} selected={selectedTransfer.includes(card)} disabled={!exchangeMode && !canPlay} onClick={exchangeMode ? () => toggleTransfer(card) : canPlay ? () => playCard(card) : undefined} />;
           })}
         </div>
       </section>

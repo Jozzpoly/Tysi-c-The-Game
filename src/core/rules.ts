@@ -16,12 +16,26 @@ export interface ThreePlayerRules {
   readonly exchange: {
     readonly transferVisibility: 'recipient-private' | 'public';
   };
-  readonly bomb: {
+  /**
+   * Optional at runtime for persisted matches created before bomb support existed.
+   * Absence means the historical pinned match keeps that feature disabled.
+   */
+  readonly bomb?: {
     readonly enabled: boolean;
     readonly window: 'after-talon-before-exchange';
     readonly firstBombFree: boolean;
     readonly repeatedOpponentAward: number;
     readonly opponentAwardRespectsLock: boolean;
+  };
+  /**
+   * Optional at runtime for persisted matches created before four-nines support.
+   * Absence means the historical pinned match keeps that feature disabled.
+   */
+  readonly fourNines?: {
+    readonly enabled: boolean;
+    readonly window: 'after-exchange-before-contract';
+    readonly optional: boolean;
+    readonly redealKeepsDealer: boolean;
   };
   readonly trick: {
     readonly mustFollowSuit: true;
@@ -39,14 +53,16 @@ export interface ThreePlayerRules {
     readonly lockThreshold: number;
   };
   readonly unresolved: {
-    readonly bombReferenceValidation: true;
-    readonly fourNinesRedeal: true;
+    readonly bombReferenceValidation?: true;
+    readonly fourNinesReferenceValidation?: true;
+    readonly bomb?: true;
+    readonly fourNinesRedeal?: true;
   };
 }
 
 export const PLAYOK_3P_800_CANDIDATE: ThreePlayerRules = {
   id: 'PLAYOK_3P_800_CANDIDATE',
-  version: 2,
+  version: 3,
   targetScore: 1000,
   auction: {
     openingBid: 100,
@@ -74,6 +90,18 @@ export const PLAYOK_3P_800_CANDIDATE: ThreePlayerRules = {
     // also apply to bomb-awarded opponent points.
     opponentAwardRespectsLock: true,
   },
+  fourNines: {
+    enabled: true,
+    // Kurnik says that a player who "gets four nines" may request a redeal.
+    // Pagat's broader 1000 description places this check after the exchange and
+    // explicitly notes that a fourth nine may be received from the declarer.
+    window: 'after-exchange-before-contract',
+    optional: true,
+    // A redeal repeats the deal rather than advancing normal dealer rotation.
+    // This matches the explicit same-dealer wording in Pagat and remains a
+    // source-scoped candidate behavior until PlayOK itself is reference-probed.
+    redealKeepsDealer: true,
+  },
   trick: {
     mustFollowSuit: true,
     mustBeatWhenPossible: true,
@@ -96,7 +124,7 @@ export const PLAYOK_3P_800_CANDIDATE: ThreePlayerRules = {
   },
   unresolved: {
     bombReferenceValidation: true,
-    fourNinesRedeal: true,
+    fourNinesReferenceValidation: true,
   },
 };
 

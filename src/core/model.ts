@@ -28,15 +28,12 @@ export type Command =
   | { type: 'pass'; seat: Seat }
   | { type: 'bomb'; seat: Seat }
   | { type: 'exchange'; seat: Seat; give: readonly [{ to: Seat; card: CardId }, { to: Seat; card: CardId }] }
+  | { type: 'request-redeal'; seat: Seat }
+  | { type: 'continue-after-four-nines'; seat: Seat }
   | { type: 'contract'; seat: Seat; value: number }
   | { type: 'play'; seat: Seat; card: CardId; declareMarriage?: boolean }
   | { type: 'next-hand'; seat: Seat };
 
-/**
- * Transient facts emitted by an accepted command for adapters/presentation.
- * They are not an event-sourced authority: MatchState remains canonical.
- * `audience` lets network/UI adapters filter private feedback before sending it.
- */
 export type GameEvent =
   | { type: 'bid-placed'; audience: 'public'; seat: Seat; value: number }
   | { type: 'player-passed'; audience: 'public'; seat: Seat }
@@ -45,6 +42,8 @@ export type GameEvent =
   | { type: 'hand-bombed'; audience: 'public'; seat: Seat; bombNumber: number; delta: Scores; scores: Scores }
   | { type: 'exchange-completed'; audience: 'public'; from: Seat; recipients: [Seat, Seat] }
   | { type: 'card-received'; audience: Seat; from: Seat; to: Seat; card: CardId }
+  | { type: 'four-nines-option'; audience: Seat; seat: Seat }
+  | { type: 'four-nines-redeal'; audience: 'public'; seat: Seat; handNumber: number; dealer: Seat }
   | { type: 'contract-set'; audience: 'public'; seat: Seat; value: number }
   | { type: 'marriage-declared'; audience: 'public'; seat: Seat; suit: Suit; points: number }
   | { type: 'card-played'; audience: 'public'; seat: Seat; card: CardId }
@@ -73,10 +72,11 @@ export interface HandState {
   hands: Hands;
   talon: CardId[];
   revealedTalon: CardId[] | null;
-  phase: 'auction' | 'exchange' | 'contract' | 'trick' | 'complete';
+  phase: 'auction' | 'exchange' | 'redeal-option' | 'contract' | 'trick' | 'complete';
   auction: AuctionState;
   declarer: Seat | null;
   contract: number | null;
+  fourNinesSeat: Seat | null;
   trump: Suit | null;
   trickIndex: number;
   trickLeader: Seat | null;
@@ -127,6 +127,7 @@ export interface SeatObservation {
   auction: AuctionState;
   declarer: Seat | null;
   contract: number | null;
+  fourNinesOption: boolean;
   trump: Suit | null;
   trickIndex: number;
   trickLeader: Seat | null;
@@ -168,6 +169,7 @@ export function createHand(dealer: Seat, deck: readonly CardId[], rules: ThreePl
     auction: { currentBid: rules.auction.openingBid, highBidder: forehand, active: [true, true, true], turn: nextSeat(forehand) },
     declarer: null,
     contract: null,
+    fourNinesSeat: null,
     trump: null,
     trickIndex: 0,
     trickLeader: null,
@@ -206,13 +208,16 @@ export function cloneState(state: MatchState): MatchState {
   return {
     ...state,
     scores: [...state.scores] as Scores,
-    bombsUsed: [...state.bombsUsed] as BombCounts,
+    // Runtime compatibility for persisted pre-bomb rooms. The old pinned rules
+    // stay old; this only supplies neutral structural state that did not exist yet.
+    bombsUsed: [...(state.bombsUsed ?? [0, 0, 0])] as BombCounts,
     hand: {
       ...hand,
       hands: [hand.hands[0].slice(), hand.hands[1].slice(), hand.hands[2].slice()],
       talon: hand.talon.slice(),
       revealedTalon: hand.revealedTalon?.slice() ?? null,
       auction: { ...hand.auction, active: [...hand.auction.active] as [boolean, boolean, boolean] },
+      fourNinesSeat: hand.fourNinesSeat ?? null,
       trick: hand.trick.map((play) => ({ ...play })),
       lastCompletedTrick: hand.lastCompletedTrick
         ? {
