@@ -22,6 +22,17 @@ export function describeFeedback(
     return match.draw ? 'Mecz zakończony remisem.' : `${nameForSeat(match.winner ?? 0)} wygrywa mecz.`;
   }
 
+  const bomb = events.find((event) => event.type === 'hand-bombed');
+  if (bomb?.type === 'hand-bombed') {
+    const changes = bomb.delta
+      .map((value, seat) => value === 0 ? null : `${nameForSeat(seat as Seat)} +${value}`)
+      .filter(Boolean)
+      .join(' · ');
+    return bomb.bombNumber === 1
+      ? `${nameForSeat(bomb.seat)} daje pierwszą bombę. Rozdanie kończy się bez zmiany wyniku.`
+      : `${nameForSeat(bomb.seat)} daje bombę nr ${bomb.bombNumber}.${changes ? ` ${changes}.` : ' Bez zmiany wyniku.'}`;
+  }
+
   const hand = events.find((event) => event.type === 'hand-scored');
   if (hand?.type === 'hand-scored') {
     const result = hand.contractMade ? 'realizuje' : 'nie realizuje';
