@@ -1,4 +1,4 @@
-name: Core
+name: Foundation
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
   pull_request:
 
 jobs:
-  core:
+  check:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -14,4 +14,4 @@ jobs:
         with:
           node-version: 22
       - run: npm install --no-audit --no-fund
-      - run: npm run test:core
+      - run: npm run check
