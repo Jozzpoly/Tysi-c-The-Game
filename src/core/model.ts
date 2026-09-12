@@ -18,22 +18,6 @@ export interface CompletedTrick {
   index: number;
 }
 
-export interface SeatScoreSummary {
-  cardPoints: number;
-  marriagePoints: number;
-  rawPoints: number;
-  scoreDelta: number;
-  locked: boolean;
-}
-
-export interface HandScoreSummary {
-  declarer: Seat;
-  contract: number;
-  contractMade: boolean;
-  lockThreshold: number;
-  seats: [SeatScoreSummary, SeatScoreSummary, SeatScoreSummary];
-}
-
 export type HandCompletion =
   | { kind: 'played' }
   | { kind: 'bomb'; seat: Seat; bombNumber: number }
@@ -72,7 +56,6 @@ export type GameEvent =
       declarer: Seat;
       contract: number;
       contractMade: boolean;
-      summary: HandScoreSummary;
     }
   | { type: 'match-completed'; audience: 'public'; winner: Seat | null; draw: boolean; scores: Scores }
   | { type: 'hand-started'; audience: 'public'; handNumber: number; dealer: Seat };
@@ -106,8 +89,6 @@ export interface HandState {
   declaredMarriages: [Suit[], Suit[], Suit[]];
   lastTrickWinner: Seat | null;
   handScoreDelta: Scores | null;
-  /** Public persistent explanation for a normally played/scored hand. */
-  scoreSummary: HandScoreSummary | null;
   completion: HandCompletion;
 }
 
@@ -159,7 +140,6 @@ export interface SeatObservation {
   declaredMarriages: [Suit[], Suit[], Suit[]];
   lastTrickWinner: Seat | null;
   handScoreDelta: Scores | null;
-  scoreSummary: HandScoreSummary | null;
   completion: HandCompletion;
   status: MatchState['status'];
   winner: Seat | null;
@@ -202,7 +182,6 @@ export function createHand(dealer: Seat, deck: readonly CardId[], rules: ThreePl
     declaredMarriages: [[], [], []],
     lastTrickWinner: null,
     handScoreDelta: null,
-    scoreSummary: null,
     completion: null,
   };
 }
@@ -221,14 +200,6 @@ export function createMatch(rules: ThreePlayerRules, seed = 1, dealer: Seat = 0)
     status: 'playing',
     winner: null,
     draw: false,
-  };
-}
-
-function cloneScoreSummary(summary: HandScoreSummary | null | undefined): HandScoreSummary | null {
-  if (!summary) return null;
-  return {
-    ...summary,
-    seats: summary.seats.map((seat) => ({ ...seat })) as HandScoreSummary['seats'],
   };
 }
 
@@ -260,8 +231,6 @@ export function cloneState(state: MatchState): MatchState {
       capturedTricks: [...hand.capturedTricks] as [number, number, number],
       declaredMarriages: hand.declaredMarriages.map((suits) => suits.slice()) as [Suit[], Suit[], Suit[]],
       handScoreDelta: hand.handScoreDelta ? ([...hand.handScoreDelta] as Scores) : null,
-      // Older persisted rooms simply have no summary; rules/state are not migrated.
-      scoreSummary: cloneScoreSummary(hand.scoreSummary),
       completion: hand.completion ? { ...hand.completion } : null,
     },
   };
