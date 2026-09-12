@@ -30,8 +30,8 @@ interface ErrorMessage {
 }
 
 /**
- * Temporary infrastructure canary kept only until the real MatchRoom router is
- * proven end-to-end. It deliberately contains no game logic.
+ * Temporary class retained only while the old Wrangler binding is removed in a
+ * separate safe configuration step. It has no public route and no game role.
  */
 export class MatchCanary extends DurableObject<Env> {
   constructor(ctx: DurableObjectState, env: Env) {
@@ -49,7 +49,6 @@ export class MatchCanary extends DurableObject<Env> {
       if (expectedRevision !== undefined && expectedRevision !== current) {
         return { ok: false, revision: current, reason: 'REVISION_MISMATCH' };
       }
-
       const revision = current + 1;
       await txn.put('revision', revision);
       return { ok: true, revision };
@@ -60,14 +59,11 @@ export class MatchCanary extends DurableObject<Env> {
     if (request.headers.get('Upgrade')?.toLowerCase() !== 'websocket') {
       return Response.json({ error: 'WEBSOCKET_UPGRADE_REQUIRED' }, { status: 426 });
     }
-
     const pair = new WebSocketPair();
     const [client, server] = Object.values(pair);
     this.ctx.acceptWebSocket(server);
-
     const snapshot: SnapshotMessage = { type: 'snapshot', revision: await this.getRevision() };
     server.send(JSON.stringify(snapshot));
-
     return new Response(null, { status: 101, webSocket: client });
   }
 
@@ -76,7 +72,6 @@ export class MatchCanary extends DurableObject<Env> {
       ws.send(JSON.stringify({ type: 'error', reason: 'TEXT_MESSAGES_ONLY' } satisfies ErrorMessage));
       return;
     }
-
     let message: BumpMessage;
     try {
       message = JSON.parse(raw) as BumpMessage;
@@ -84,24 +79,15 @@ export class MatchCanary extends DurableObject<Env> {
       ws.send(JSON.stringify({ type: 'error', reason: 'INVALID_JSON' } satisfies ErrorMessage));
       return;
     }
-
     if (message.type !== 'bump') {
       ws.send(JSON.stringify({ type: 'error', reason: 'UNKNOWN_MESSAGE' } satisfies ErrorMessage));
       return;
     }
-
     const result = await this.bump(message.expectedRevision);
     if (!result.ok) {
-      ws.send(
-        JSON.stringify({
-          type: 'error',
-          reason: result.reason ?? 'REVISION_REJECTED',
-          revision: result.revision,
-        } satisfies ErrorMessage),
-      );
+      ws.send(JSON.stringify({ type: 'error', reason: result.reason ?? 'REVISION_REJECTED', revision: result.revision } satisfies ErrorMessage));
       return;
     }
-
     const update = JSON.stringify({ type: 'revision', revision: result.revision } satisfies RevisionMessage);
     for (const socket of this.ctx.getWebSockets()) socket.send(update);
   }
@@ -122,9 +108,8 @@ function decodeRoom(raw: string): string | null {
   return /^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/.test(room) ? room : null;
 }
 
-function routeFromPath(pathname: string, prefix: 'match' | 'canary'): RoomRoute | null {
-  const expression = new RegExp(`^/api/${prefix}/([^/]+?)(/ws)?$`);
-  const match = expression.exec(pathname);
+function matchRouteFromPath(pathname: string): RoomRoute | null {
+  const match = /^\/api\/match\/([^/]+?)(\/ws)?$/.exec(pathname);
   if (!match) return null;
   const room = decodeRoom(match[1]);
   return room ? { room, websocket: Boolean(match[2]) } : null;
@@ -186,33 +171,6 @@ async function handleMatch(request: Request, env: Env, url: URL, route: RoomRout
   });
 }
 
-async function handleCanary(request: Request, env: Env, route: RoomRoute): Promise<Response> {
-  const stub = env.MATCH_CANARY.getByName(route.room);
-  if (route.websocket) return stub.fetch(request);
-
-  if (request.method === 'GET') {
-    return json({ room: route.room, revision: await stub.getRevision() });
-  }
-
-  if (request.method === 'POST') {
-    let expectedRevision: number | undefined;
-    const text = await request.text();
-    if (text.length > 0) {
-      try {
-        const body = JSON.parse(text) as { expectedRevision?: number };
-        expectedRevision = body.expectedRevision;
-      } catch {
-        return json({ error: 'INVALID_JSON' }, 400);
-      }
-    }
-
-    const result = await stub.bump(expectedRevision);
-    return json({ room: route.room, ...result }, result.ok ? 200 : 409);
-  }
-
-  return new Response('Method not allowed', { status: 405 });
-}
-
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
@@ -221,16 +179,8 @@ export default {
       return json({ ok: true, service: 'match-room', auth: 'foundation-seat-context' });
     }
 
-    const matchRoute = routeFromPath(url.pathname, 'match');
-    if (matchRoute) return handleMatch(request, env, url, matchRoute);
-
-    // Legacy canary stays reachable only until MatchRoom routing has executable
-    // end-to-end evidence; it will then be deleted rather than maintained.
-    if (url.pathname === '/api/canary') {
-      return json({ ok: true, service: 'match-canary', deprecated: true });
-    }
-    const canaryRoute = routeFromPath(url.pathname, 'canary');
-    if (canaryRoute) return handleCanary(request, env, canaryRoute);
+    const route = matchRouteFromPath(url.pathname);
+    if (route) return handleMatch(request, env, url, route);
 
     return new Response('Not found', { status: 404 });
   },
