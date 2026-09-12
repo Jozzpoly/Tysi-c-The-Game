@@ -7,6 +7,7 @@ import {
   type Seat,
   type SeatProjection,
 } from '../core/index.js';
+import { ScoreSummary } from './ScoreSummary.js';
 
 const SUIT_SYMBOL = { spades: '♠', clubs: '♣', diamonds: '♦', hearts: '♥' } as const;
 const ALL_SEATS: readonly Seat[] = [0, 1, 2];
@@ -179,7 +180,11 @@ export function GameTable({ projection, seatNames, message = '', onCommand, onNe
           {view.status === 'complete' && (
             <div className="decision-card">
               <h2>{view.draw ? 'Remis' : `${seatName(view.winner ?? humanSeat)} wygrywa`}</h2>
-              <p>Mecz zakończony.</p>
+              {projection.scoreSummary ? (
+                <ScoreSummary summary={projection.scoreSummary} nameForSeat={seatName} />
+              ) : (
+                <p>Mecz zakończony.</p>
+              )}
               {onNewGame && <button className="primary" onClick={onNewGame}>Zagraj ponownie</button>}
             </div>
           )}
@@ -261,7 +266,11 @@ export function GameTable({ projection, seatNames, message = '', onCommand, onNe
           {view.status === 'playing' && view.phase === 'complete' && nextHand && (
             <div className="decision-card">
               <h2>{bombCompletion ? `${seatName(bombCompletion.seat)} kończy rozdanie bombą nr ${bombCompletion.bombNumber}` : `Rozdanie ${view.handNumber} zakończone`}</h2>
-              <p>Zmiana: {view.handScoreDelta?.map((value, seat) => `${seatName(seat as Seat)} ${value >= 0 ? '+' : ''}${value}`).join(' · ')}</p>
+              {projection.scoreSummary ? (
+                <ScoreSummary summary={projection.scoreSummary} nameForSeat={seatName} />
+              ) : (
+                <p>Zmiana: {view.handScoreDelta?.map((value, seat) => `${seatName(seat as Seat)} ${value >= 0 ? '+' : ''}${value}`).join(' · ')}</p>
+              )}
               <button className="primary" onClick={() => void onCommand(nextHand)}>Następne rozdanie</button>
             </div>
           )}
