@@ -14,6 +14,8 @@ import {
 } from './core/index.js';
 import { describeFeedback } from './presentation/feedback.js';
 import { GameTable } from './presentation/GameTable.js';
+import { RemoteRoom } from './remote/RemoteRoom.js';
+import { createRemoteRoom, normalizedRoomCode, type RoomMode } from './remote/room-client.js';
 import './styles.css';
 
 function freshMatch(seed = Date.now() >>> 0): MatchState {
@@ -45,19 +47,11 @@ function namesForHuman(humanSeat: Seat): readonly [string, string, string] {
   return names;
 }
 
-/**
- * Local single-player authority adapter.
- *
- * GameTable below receives only SeatProjection + commands, exactly the boundary
- * a future remote client will use. Hidden MatchState and bot orchestration stay
- * on this side of the presentation boundary. ?seat=N is QA-only and proves the
- * renderer/controller boundary does not rely on the human occupying seat 0.
- */
-function App() {
+function LocalGame() {
   const [humanSeat] = useState<Seat>(startupSeat);
   const seatNames = useMemo(() => namesForHuman(humanSeat), [humanSeat]);
   const [authority, setAuthority] = useState<MatchState>(() => freshMatch(startupSeed()));
-  const [message, setMessage] = useState('Pierwszy grywalny vertical slice — profil PlayOK/Kurnik candidate.');
+  const [message, setMessage] = useState('Lokalny QA slice — profil PlayOK/Kurnik candidate.');
   const projection = useMemo(() => projectSeat(authority, humanSeat), [authority, humanSeat]);
   const seatName = (seat: Seat) => seatNames[seat];
 
@@ -119,6 +113,97 @@ function App() {
       onCommand={commit}
       onNewGame={startNewGame}
     />
+  );
+}
+
+function roomFromUrl(): string | null {
+  const raw = new URLSearchParams(window.location.search).get('room');
+  return raw ? normalizedRoomCode(raw) : null;
+}
+
+function localQaRequested(): boolean {
+  const params = new URLSearchParams(window.location.search);
+  return params.has('seed') || params.has('seat') || params.get('local') === '1';
+}
+
+function App() {
+  const [room, setRoom] = useState<string | null>(roomFromUrl);
+  const [code, setCode] = useState('');
+  const [busy, setBusy] = useState<RoomMode | 'code' | null>(null);
+  const [message, setMessage] = useState('');
+
+  if (localQaRequested()) return <LocalGame />;
+
+  function navigateRoom(nextRoom: string | null) {
+    const url = new URL(window.location.href);
+    url.search = '';
+    if (nextRoom) url.searchParams.set('room', nextRoom);
+    window.history.pushState({}, '', url);
+    setRoom(nextRoom);
+  }
+
+  async function create(mode: RoomMode) {
+    setBusy(mode);
+    setMessage('Tworzę pokój…');
+    try {
+      const identity = await createRemoteRoom(mode);
+      navigateRoom(identity.room);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : String(error));
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  function openCode() {
+    const normalized = normalizedRoomCode(code);
+    if (!normalized) {
+      setMessage('Kod pokoju powinien mieć 12 znaków.');
+      return;
+    }
+    setBusy('code');
+    navigateRoom(normalized);
+    setBusy(null);
+  }
+
+  if (room) return <RemoteRoom room={room} onLeave={() => navigateRoom(null)} />;
+
+  return (
+    <main className="home-shell">
+      <section className="home-card">
+        <div className="eyebrow">Tysiąc The Game</div>
+        <h1>Usiądź do stołu</h1>
+        <p>Bez konta. Prywatny pokój działa na tym samym silniku reguł dla ludzi i botów.</p>
+
+        <div className="mode-grid">
+          <button className="mode-card primary" disabled={busy !== null} onClick={() => void create('solo')}>
+            <strong>Zagraj sam</strong><span>Ty + 2 boty</span>
+          </button>
+          <button className="mode-card" disabled={busy !== null} onClick={() => void create('duo')}>
+            <strong>Zagraj we dwóch</strong><span>2 graczy + bot</span>
+          </button>
+          <button className="mode-card" disabled={busy !== null} onClick={() => void create('trio')}>
+            <strong>Zagraj we trzech</strong><span>3 graczy</span>
+          </button>
+        </div>
+
+        <div className="join-row">
+          <input
+            aria-label="Kod pokoju"
+            inputMode="text"
+            maxLength={12}
+            placeholder="KOD POKOJU"
+            value={code}
+            onChange={(event) => setCode(event.target.value.toUpperCase())}
+            onKeyDown={(event) => { if (event.key === 'Enter') openCode(); }}
+          />
+          <button disabled={busy !== null} onClick={openCode}>Dołącz kodem</button>
+        </div>
+
+        {message && <div className="home-message">{message}</div>}
+        <small>Profil reguł: PlayOK/Kurnik 3P 800 candidate. Projekt nadal prowadzi jawne unresolved rule probes.</small>
+      </section>
+    </main>
   );
 }
 
