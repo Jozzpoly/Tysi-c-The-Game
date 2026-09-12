@@ -1,7 +1,7 @@
 # Execution state — live truth
 
 Date: 2026-09-12
-Status: **Foundation Run 01 complete. Run 02 is now at human Owner-play readiness.**
+Status: **Foundation Run 01 complete. Run 02 is ready for first serious human Owner play.**
 
 This is the compact execution truth. Earlier plans/history are not authority where they conflict with executable evidence here.
 
@@ -99,6 +99,16 @@ Completed normal hands expose a derived public `scoreSummary` through `SeatProje
 
 It explains card/marriage points, raw hand points, score delta, defender rounding, 800-lock, declarer contract and success/failure. Reconnect reconstructs the same explanation. Bombs retain separate bomb-specific semantics. Desktop and true 390 x 844 mobile Chrome coverage is mandatory.
 
+### First-play guidance — PASS as product readiness layer
+
+Normal player-facing UI now has one shared **`Tysiąc w 60 sekund`** guide available from both home and the active table.
+
+It covers the minimum mental model needed for intentional first play: target 1000, card strength and points, auction/musik/contract, current strict trick obligations, marriages/trump and the 800 lock. Auction, exchange, final-contract and trick/marriage decisions also carry short contextual explanations.
+
+The guide does not implement legality or a second tutorial state machine. Legal commands remain authoritative. Opening/closing help does not mutate match revision or consume the human decision.
+
+Chrome coverage defends 1440 x 1000 and true 390 x 844 layouts, including no horizontal overflow. A real human still needs to prove that this amount and wording of help are actually useful rather than merely present.
+
 ## Remote MatchRoom / identity — PASS
 
 One SQLite-backed Durable Object `MatchRoom` is authoritative online state.
@@ -127,7 +137,7 @@ This is structural compatibility, not migration of old matches to current rules.
 
 Normal `/` uses the real remote room flow; deterministic local authority remains QA-only.
 
-Mandatory browser CI covers desktop 1440 x 1000 and true mobile 390 x 844, solo/duo identity paths, hidden hands, authoritative revisions, auction/exchange/contract/trick, bomb, four nines, causal scoring, transition pacing, navigation/reconnect and guarded horizontal layout safety.
+Mandatory browser CI covers desktop 1440 x 1000 and true mobile 390 x 844, solo/duo identity paths, hidden hands, authoritative revisions, auction/exchange/contract/trick, bomb, four nines, causal scoring, first-play guidance, transition pacing, navigation/reconnect and guarded horizontal layout safety.
 
 ### Complete remote solo rehearsal — PASS
 
@@ -148,11 +158,13 @@ Temporary Foundation Preview run `34701391964` tested commit `6420423870e2905b63
 
 The deployment was intentionally temporary/unclaimed. This proves the Worker + Durable Object + assets + WebSocket boundary outside local workerd, not long-duration production operations.
 
+The current `main` has not yet received a fresh public-edge Owner Preview after the Run 02 gameplay/readiness slices.
+
 ## CI / latest defended main
 
 Normal Foundation gate now includes:
 
-`core -> worker -> local browser -> remote browser -> real playback timing -> full remote solo desktop+mobile rehearsal -> navigation -> bomb/four-nines/scoring browser -> deploy-helper smoke -> production build -> wrangler deploy --dry-run`.
+`core -> worker -> local browser -> remote browser -> real playback timing -> full remote solo desktop+mobile rehearsal -> navigation -> bomb/four-nines/scoring/first-play browser -> deploy-helper smoke -> production build -> wrangler deploy --dry-run`.
 
 The long-path rehearsal currently adds about 70 seconds for two complete matches. Keep it mandatory while regression value exceeds iteration cost; split it deliberately later if it becomes a material drag.
 
@@ -160,16 +172,16 @@ No automatic push-to-production path exists.
 
 Latest defended `main`:
 
-- squash commit: **`43d1de17b8af0fe6f143ee63d6ef281c732d42c1`**;
-- post-merge Foundation run: **`34717851621` / #181**;
+- squash commit: **`e3ab0f77b2c664fa8b8394c8d039ee1e66518b87`**;
+- post-merge Foundation run: **`34720433366` / #190**;
 - result: **PASS**.
 
 ## Still NOT proven
 
 - real Owner/human gameplay quality through complete matches;
+- whether the new first-play guide/context is actually sufficient and well worded for a person unfamiliar with Tysiąc;
 - whether current transition delays feel right rather than merely being observable;
 - whether current bot is enjoyable/credible under human play;
-- whether a player unfamiliar with Tysiąc has enough in-product explanation to understand decisions;
 - exact PlayOK identity for remaining reference-sensitive pins;
 - real-human full duo/trio gameplay quality;
 - long-duration room soak;
@@ -185,13 +197,13 @@ Avoid generic rules DSL, event sourcing, accounts/rankings without need, client 
 
 ## Run 02 — immediate direction
 
-**Automated full-match readiness is defended. The next bounded stage is first human Owner play.**
+**Automated readiness and basic first-play comprehension support are defended. The next evidence must come from the Owner actually playing.**
 
-1. Remove only obvious comprehension blockers for a player who does not already know Tysiąc: compact always-available rules help plus minimal context at the moment of a decision.
-2. Do not redesign the table; current desktop/mobile composition is adequate for the first serious play pass.
-3. Put the same remote product path in front of the Owner on desktop and mobile and play complete matches.
-4. Treat observed confusion, pacing, bot behavior and scoring comprehension as primary evidence; tune from that rather than from additional speculative architecture work.
-5. Preserve unresolved rule pins explicitly and change them only from stronger reference or gameplay evidence.
-6. Move to real-human duo/trio once solo feedback is about the game rather than missing explanation/basic UX.
+1. Publish the current defended `main` as a short-lived public Owner Preview through the existing manual temporary-preview path; do not create a new deployment architecture for this test.
+2. Play the same remote product path on desktop and on a real phone/mobile browser. A complete match is useful, but early confusion or frustration is already evidence worth recording.
+3. Treat observed decision confusion, pacing, bot behavior, score comprehension and mobile ergonomics as primary findings. Do not pre-emptively redesign around imagined problems.
+4. Preserve unresolved rule pins explicitly and change them only from stronger reference or gameplay evidence.
+5. Move to real-human duo/trio once solo feedback is about the game itself rather than missing explanation/basic UX.
+6. Keep visual polish deliberately secondary until the interaction/gameplay feedback identifies where professional graphics, animation, audio and haptics will add the most value.
 
-The project no longer needs proof that a full match can run. It needs proof that a human can **understand it, make intentional decisions and want to keep playing**.
+The project no longer needs another proof that a full match can run. It now needs the Owner to **play the defended build and tell us what the game actually feels like**.
