@@ -23,11 +23,8 @@ function nextMessage(socket: WebSocket): Promise<any> {
     const timeout = setTimeout(() => reject(new Error('WebSocket message timeout')), 2_500);
     socket.addEventListener('message', (event) => {
       clearTimeout(timeout);
-      try {
-        resolve(JSON.parse(event.data as string));
-      } catch {
-        resolve(event.data);
-      }
+      try { resolve(JSON.parse(event.data as string)); }
+      catch { resolve(event.data); }
     }, { once: true });
   });
 }
@@ -63,14 +60,17 @@ async function joinRoom(room: string): Promise<JoinedRoom> {
   return await response.json() as JoinedRoom;
 }
 
-async function getSession(room: string, token: string): Promise<{ seat: number; projection: SeatProjection | null; roomState: any }> {
+async function getSession(room: string, token: string): Promise<{ seat: number; projection: SeatProjection | null; state: any }> {
   const response = await workerExports.default.fetch(`https://example.com/api/match/${room}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   expect(response.status).toBe(200);
   const body = await response.json() as any;
   expect(body.ok).toBe(true);
-  return { seat: body.seat, projection: body.projection, roomState: body.room };
+  expect(body.room).toBe(room);
+  expect(body.state).toBeTruthy();
+  expect(typeof body.state).toBe('object');
+  return { seat: body.seat, projection: body.projection, state: body.state };
 }
 
 async function createTrio(): Promise<{ room: string; tokens: [string, string, string] }> {
@@ -112,6 +112,8 @@ describe('MatchRoom Worker router', () => {
 
     const session = await getSession(created.room, created.token);
     expect(session.seat).toBe(0);
+    expect(session.state.mode).toBe('solo');
+    expect(session.state.seats).toEqual(['human', 'bot', 'bot']);
     expect(session.projection?.observation.seat).toBe(0);
     expect(session.projection?.legalCommands.length).toBeGreaterThan(0);
     expect(session.projection?.legalCommands.every((command) => command.seat === 0)).toBe(true);
