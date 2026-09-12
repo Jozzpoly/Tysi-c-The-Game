@@ -29,6 +29,14 @@ function freshMatch(seed = Date.now() >>> 0): MatchState {
   return state;
 }
 
+function startupSeed(): number | undefined {
+  const raw = new URLSearchParams(window.location.search).get('seed');
+  if (raw === null) return undefined;
+  const value = Number(raw);
+  if (!Number.isInteger(value) || value < 0 || value > 0xffff_ffff) return undefined;
+  return value;
+}
+
 function Card({ card, disabled, selected, onClick }: { card: CardId; disabled?: boolean; selected?: boolean; onClick?: () => void }) {
   const suit = suitOf(card);
   const red = suit === 'hearts' || suit === 'diamonds';
@@ -48,7 +56,8 @@ function Card({ card, disabled, selected, onClick }: { card: CardId; disabled?: 
 function App() {
   // Local single-player authority. Rendering below intentionally uses only the
   // same seat projection a remote client could receive from MatchDO.
-  const [authority, setAuthority] = useState<MatchState>(() => freshMatch(1));
+  // ?seed=N is a reproducible QA hook; ordinary product startup stays random.
+  const [authority, setAuthority] = useState<MatchState>(() => freshMatch(startupSeed()));
   const [selectedTransfer, setSelectedTransfer] = useState<CardId[]>([]);
   const [message, setMessage] = useState('Pierwszy grywalny vertical slice — profil PlayOK/Kurnik candidate.');
 
