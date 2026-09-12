@@ -43,10 +43,25 @@ export function RemoteRoom({ room, onLeave }: RemoteRoomProps) {
   const [connection, setConnection] = useState<ConnectionState>('loading');
   const socketRef = useRef<WebSocket | null>(null);
   const reconnectTimerRef = useRef<number | null>(null);
+  const roomStateRef = useRef<RoomSnapshot | null>(null);
   const names = useMemo(
     () => roomState ? namesForRoom(roomState, seat) : ['Ty', 'Gracz 2', 'Gracz 3'] as const,
     [roomState, seat],
   );
+
+  function replaceRoomState(next: RoomSnapshot | null) {
+    roomStateRef.current = next;
+    setRoomState(next);
+  }
+
+  function patchRoomState(patch: (current: RoomSnapshot) => RoomSnapshot) {
+    setRoomState((current) => {
+      if (!current) return current;
+      const next = patch(current);
+      roomStateRef.current = next;
+      return next;
+    });
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -59,12 +74,13 @@ export function RemoteRoom({ room, onLeave }: RemoteRoomProps) {
       setMessage('Łączenie z pokojem…');
       setProjection(null);
       setSeat(null);
+      replaceRoomState(null);
 
       if (!token) {
         try {
           const state = await getPublicRoom(room);
           if (cancelled) return;
-          setRoomState(state);
+          replaceRoomState(state);
           setConnection('lobby');
           setMessage(state.status === 'lobby' ? 'Pokój czeka na graczy.' : 'Ten pokój już wystartował.');
         } catch (error) {
@@ -79,7 +95,7 @@ export function RemoteRoom({ room, onLeave }: RemoteRoomProps) {
         const session = await getRoomSession(room, token);
         if (cancelled) return;
         setSeat(session.seat);
-        setRoomState(session.state);
+        replaceRoomState(session.state);
         setProjection(session.projection);
         setConnection(session.projection ? 'reconnecting' : 'lobby');
       } catch (error) {
@@ -110,7 +126,7 @@ export function RemoteRoom({ room, onLeave }: RemoteRoomProps) {
 
           if (packet.type === 'lobby') {
             setSeat(packet.seat);
-            setRoomState(packet.room);
+            replaceRoomState(packet.room);
             setConnection('lobby');
             setMessage('Czekamy na pozostałych graczy.');
             return;
@@ -125,28 +141,30 @@ export function RemoteRoom({ room, onLeave }: RemoteRoomProps) {
             setProjection(packet.projection);
             setSeat(packet.projection.observation.seat);
             setConnection('connected');
-            setRoomState((current) => current ? { ...current, status: 'playing', revision: packet.projection.observation.revision } : current);
+            patchRoomState((current) => ({ ...current, status: 'playing', revision: packet.projection.observation.revision }));
             void getPublicRoom(room).then((state) => {
-              if (!cancelled) setRoomState(state);
+              if (!cancelled) replaceRoomState(state);
             }).catch(() => {});
-            const provisionalNames = roomState
-              ? namesForRoom(roomState, packet.projection.observation.seat)
+            const currentRoom = roomStateRef.current;
+            const eventNames = currentRoom
+              ? namesForRoom(currentRoom, packet.projection.observation.seat)
               : ['Ty', 'Gracz 2', 'Gracz 3'] as const;
-            const text = feedback(packet.events, provisionalNames);
+            const text = feedback(packet.events, eventNames);
             if (text) setMessage(text);
             return;
           }
           if (packet.type === 'update' || packet.type === 'duplicate') {
             setProjection(packet.projection);
             setSeat(packet.projection.observation.seat);
-            setRoomState((current) => current ? {
+            patchRoomState((current) => ({
               ...current,
               status: packet.projection.observation.status === 'complete' ? 'complete' : 'playing',
               revision: packet.projection.observation.revision,
-            } : current);
+            }));
             setConnection('connected');
-            const eventNames = roomState
-              ? namesForRoom(roomState, packet.projection.observation.seat)
+            const currentRoom = roomStateRef.current;
+            const eventNames = currentRoom
+              ? namesForRoom(currentRoom, packet.projection.observation.seat)
               : ['Ty', 'Gracz 2', 'Gracz 3'] as const;
             const text = feedback(packet.events, eventNames);
             if (text) setMessage(text);
@@ -190,7 +208,7 @@ export function RemoteRoom({ room, onLeave }: RemoteRoomProps) {
     try {
       setMessage('Zajmuję miejsce…');
       const identity = await joinRemoteRoom(room);
-      setRoomState(identity.state);
+      replaceRoomState(identity.state);
       setSeat(identity.seat);
       setToken(identity.token);
     } catch (error) {
@@ -222,10 +240,11 @@ export function RemoteRoom({ room, onLeave }: RemoteRoomProps) {
 
   if (projection) {
     return (
-      <>
+      <div className="remote-room-active">
+        <button className="room-exit ghost" onClick={onLeave}>Wróć do startu</button>
         <div className={`connection-banner ${connection}`}>Pokój {room} · {connection === 'connected' ? 'online' : 'łączenie…'}</div>
         <GameTable projection={projection} seatNames={names} message={message} onCommand={sendCommand} />
-      </>
+      </div>
     );
   }
 
