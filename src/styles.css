@@ -39,7 +39,8 @@ button { touch-action: manipulation; }
 .topbar h1 { margin: 2px 0 0; font-size: clamp(1.35rem, 4vw, 2.2rem); }
 .eyebrow { color: #a7c7b2; font-size: .78rem; letter-spacing: .08em; text-transform: uppercase; }
 
-.scoreboard { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.scoreboard, .score-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.score-summary { margin: 8px 0 10px; }
 .score { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; padding: 10px 12px; border: 1px solid #ffffff1f; border-radius: 12px; background: #06130dcf; }
 .score.human { border-color: #9bd6ad66; }
 .score strong { font-size: 1.3rem; }
@@ -121,6 +122,8 @@ button.ghost { background: #ffffff0b; }
   .topbar h1 { font-size: 1.25rem; }
   .score { padding: 7px 8px; font-size: .82rem; }
   .score strong { font-size: 1.1rem; }
+  .score-summary { grid-template-columns: 1fr; gap: 5px; }
+  .score-summary .score { text-align: left; }
   .table { min-height: 390px; border-radius: 18px; padding: 11px; gap: 9px; }
   .opponents { gap: 8px; }
   .center { min-height: 160px; gap: 5px; }
