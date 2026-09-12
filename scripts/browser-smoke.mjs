@@ -313,6 +313,53 @@ async function runDeclarerViewport(label, width, height, mobile) {
   }
 }
 
+async function runBombViewport(label, width, height, mobile) {
+  let session;
+  try {
+    session = await openScenario(label, width, height, mobile, 2);
+    await driveHumanToExchange(session, `${label}: bomb`);
+
+    const exchange = await inspectLayout(session);
+    assertViewport(`${label}: bomb exchange`, exchange, width);
+    if (!exchange.decision.includes('Bomba — wycofaj się')) {
+      throw new Error(`${label}: bomb action missing from declarer exchange`);
+    }
+
+    await clickButtonByText(session, 'Bomba — wycofaj się');
+    await waitForText(session, 'Potwierdź bombę');
+    const confirmation = await inspectLayout(session);
+    assertViewport(`${label}: bomb confirmation`, confirmation, width);
+    if (!confirmation.decision.includes('natychmiast kończy to rozdanie')) {
+      throw new Error(`${label}: bomb confirmation does not explain the consequence`);
+    }
+    await screenshot(session, `${label}-bomb-confirmation`);
+
+    await clickButtonByText(session, 'Potwierdź bombę');
+    await waitForText(session, 'kończy rozdanie bombą nr 1');
+    const completed = await inspectLayout(session);
+    assertViewport(`${label}: bomb completed`, completed, width);
+    if (completed.handCards !== 10 || completed.enabledHandCards !== 0) {
+      throw new Error(`${label}: bomb should preserve the 10-card hand as non-interactive evidence`);
+    }
+    if (!completed.message.includes('pierwszą bombę') || !completed.message.includes('bez zmiany wyniku')) {
+      throw new Error(`${label}: first-bomb feedback is not causally explicit: ${completed.message}`);
+    }
+    await screenshot(session, `${label}-bomb-completed`);
+
+    await clickButtonByText(session, 'Następne rozdanie');
+    await waitForText(session, 'Licytacja');
+    const nextHand = await inspectLayout(session);
+    assertViewport(`${label}: after bomb next hand`, nextHand, width);
+    if (nextHand.handCards !== 7) throw new Error(`${label}: next hand after bomb should deal 7 human cards`);
+    const bombCounterVisible = await execute(session, `return document.body?.innerText.includes('bomby: 1') ?? false;`);
+    if (!bombCounterVisible) throw new Error(`${label}: persisted bomb count is not visible after next hand`);
+
+    return { exchange, confirmation, completed, nextHand };
+  } finally {
+    await closeSession(session);
+  }
+}
+
 async function runNonzeroSeatViewport(label, width, height, mobile) {
   let session;
   try {
@@ -361,11 +408,13 @@ try {
   const desktop = {
     defender: await runDefenderViewport('desktop', 1440, 1000, false),
     declarer: await runDeclarerViewport('desktop', 1440, 1000, false),
+    bomb: await runBombViewport('desktop', 1440, 1000, false),
     seat2: await runNonzeroSeatViewport('desktop', 1440, 1000, false),
   };
   const mobile = {
     defender: await runDefenderViewport('mobile', 390, 844, true),
     declarer: await runDeclarerViewport('mobile', 390, 844, true),
+    bomb: await runBombViewport('mobile', 390, 844, true),
     seat2: await runNonzeroSeatViewport('mobile', 390, 844, true),
   };
   console.log('browser smoke: PASS');
