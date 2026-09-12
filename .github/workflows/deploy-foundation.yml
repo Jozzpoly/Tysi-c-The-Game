@@ -1,0 +1,96 @@
+name: Deploy Foundation
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: "Publish the current main branch to the public Cloudflare workers.dev canary"
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tysiac-foundation-public-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: ${{ inputs.confirm }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci --no-audit --no-fund
+
+      - name: Verify deployment credentials are configured
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -z "$CLOUDFLARE_ACCOUNT_ID" ]]; then
+            echo "::error::Missing repository secret CLOUDFLARE_ACCOUNT_ID"
+            exit 1
+          fi
+          if [[ -z "$CLOUDFLARE_API_TOKEN" ]]; then
+            echo "::error::Missing repository secret CLOUDFLARE_API_TOKEN"
+            exit 1
+          fi
+
+      - name: Run complete Foundation gate before publishing
+        run: npm run check
+
+      - name: Deploy to Cloudflare
+        id: deploy
+        uses: cloudflare/wrangler-action@v4
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          wranglerVersion: "4.131.1"
+          packageManager: npm
+          command: deploy
+
+      - name: Require a public deployment URL
+        env:
+          PUBLIC_URL: ${{ steps.deploy.outputs.deployment-url }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -z "$PUBLIC_URL" ]]; then
+            echo "::error::Cloudflare deployment completed without a deployment-url output; public verification cannot proceed."
+            exit 1
+          fi
+          echo "### Public Foundation deployment" >> "$GITHUB_STEP_SUMMARY"
+          echo "$PUBLIC_URL" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Verify public desktop/mobile MatchRoom behavior
+        env:
+          TYSIAC_PUBLIC_URL: ${{ steps.deploy.outputs.deployment-url }}
+        run: node scripts/public-deploy-smoke.mjs
+
+      - name: Record verified deployment
+        env:
+          PUBLIC_URL: ${{ steps.deploy.outputs.deployment-url }}
+        shell: bash
+        run: |
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "**PASS:** public health, duo desktop↔mobile command sync, hidden-hand separation, and refresh/reconnect." >> "$GITHUB_STEP_SUMMARY"
+          echo "Verified URL: $PUBLIC_URL" >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: public-deploy-smoke-${{ github.run_id }}
+          path: artifacts/browser/public-deploy-*.png
+          if-no-files-found: ignore
