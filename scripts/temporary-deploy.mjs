@@ -1,16 +1,9 @@
 import { appendFile } from 'node:fs/promises';
 import { spawn } from 'node:child_process';
-
-const CLAIM_URL_RE = /https:\/\/dash\.cloudflare\.com\/claim-preview\?[^\s)]+/giu;
-const WORKERS_DEV_RE = /https:\/\/[a-z0-9.-]+\.workers\.dev(?:\/[^\s]*)?/iu;
-const ANSI_RE = /\u001b\[[0-9;]*m/gu;
-
-function sanitized(text) {
-  return text
-    .replace(ANSI_RE, '')
-    .replace(CLAIM_URL_RE, '[REDACTED_CLAIM_URL]')
-    .replace(/claimToken=[^\s&]+/giu, 'claimToken=[REDACTED]');
-}
+import {
+  findWorkersDevUrl,
+  sanitizeTemporaryDeployOutput,
+} from './temporary-deploy-output.mjs';
 
 function temporaryEnvironment() {
   const env = { ...process.env };
@@ -46,7 +39,7 @@ function deployTemporary() {
 }
 
 const { code, output } = await deployTemporary();
-const clean = sanitized(output);
+const clean = sanitizeTemporaryDeployOutput(output);
 
 if (code !== 0) {
   console.error('Temporary Cloudflare deployment failed. Sanitized Wrangler output follows:');
@@ -54,7 +47,7 @@ if (code !== 0) {
   process.exit(code || 1);
 }
 
-const deploymentUrl = clean.match(WORKERS_DEV_RE)?.[0]?.replace(/[),.;]+$/u, '');
+const deploymentUrl = findWorkersDevUrl(output);
 if (!deploymentUrl) {
   console.error('Temporary Cloudflare deployment succeeded but no public workers.dev URL was found.');
   console.error(clean);
