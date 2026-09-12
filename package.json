@@ -1,0 +1,13 @@
+{
+  "name": "tysiac-the-game",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "build:core": "tsc -p tsconfig.core.json",
+    "test:core": "npm run build:core && node scripts/core-smoke.mjs"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.3"
+  }
+}
