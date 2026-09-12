@@ -33,6 +33,10 @@ export function conservativeCommand(state: MatchState): Command {
     return exchanges[0];
   }
 
+  if (phase === 'redeal-option') {
+    return commands.find((command) => command.type === 'request-redeal') ?? commands[0];
+  }
+
   if (phase === 'contract') {
     return commands.filter((command): command is Extract<Command, { type: 'contract' }> => command.type === 'contract')[0];
   }
@@ -119,6 +123,13 @@ export function heuristicCommand(
     });
   }
 
+  if (observation.phase === 'redeal-option') {
+    // Four nines can be discarded without score cost in this candidate profile,
+    // so the product bot always takes the neutral redeal rather than leaking a
+    // new strategic heuristic into an otherwise rules-focused slice.
+    return commands.find((command) => command.type === 'request-redeal') ?? commands[0];
+  }
+
   if (observation.phase === 'contract') {
     const contracts = commands
       .filter((command): command is Extract<Command, { type: 'contract' }> => command.type === 'contract')
@@ -193,6 +204,7 @@ export function actingSeat(state: MatchState): Seat | null {
   const hand = state.hand;
   if (hand.phase === 'auction') return hand.auction.turn;
   if (hand.phase === 'exchange' || hand.phase === 'contract') return hand.declarer;
+  if (hand.phase === 'redeal-option') return hand.fourNinesSeat;
   if (hand.phase === 'trick' && hand.trickLeader !== null) {
     if (hand.trick.length === 0) return hand.trickLeader;
     return ((hand.trick[hand.trick.length - 1].seat + 1) % 3) as Seat;
