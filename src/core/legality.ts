@@ -121,5 +121,8 @@ export function legalCommands(state: MatchState, seat?: Seat): Command[] {
     }
     return commands;
   }
-  return hand.phase === 'complete' ? [{ type: 'next-hand' }] : [];
+  // Advancing a completed hand is a participant action, not an anonymous/system
+  // command. A seat projection therefore exposes only that seat's own advance.
+  if (hand.phase === 'complete' && seat !== undefined) return [{ type: 'next-hand', seat }];
+  return [];
 }
