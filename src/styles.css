@@ -15,7 +15,7 @@ button { touch-action: manipulation; }
 .home-card h1, .room-card h1 { margin: 5px 0 8px; font-size: clamp(1.8rem, 6vw, 3rem); }
 .home-card > p, .room-card > p { margin: 0 0 22px; color: #b9c9be; line-height: 1.55; }
 .home-guide-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: -6px 0 16px; padding: 10px 12px; border: 1px solid #ffffff17; border-radius: 12px; background: #ffffff08; color: #b9c9be; font-size: .88rem; }
-.home-guide-row button { flex: 0 0 auto; }
+.home-guide-row > .rules-trigger { flex: 0 0 auto; }
 .mode-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 22px 0; }
 .mode-card { min-height: 112px; display: grid; align-content: center; justify-items: start; gap: 5px; text-align: left; }
 .mode-card strong { font-size: 1rem; }
@@ -129,7 +129,7 @@ button.ghost { background: #ffffff0b; }
   .home-shell, .room-shell { padding: 10px; }
   .home-card, .room-card { padding: 18px 14px; border-radius: 18px; }
   .home-guide-row { align-items: stretch; flex-direction: column; gap: 7px; }
-  .home-guide-row button { width: 100%; }
+  .home-guide-row > .rules-trigger { width: 100%; }
   .mode-grid { grid-template-columns: 1fr; gap: 7px; }
   .mode-card { min-height: 72px; }
   .join-row { grid-template-columns: 1fr; }
