@@ -61,12 +61,32 @@ async function createSession() {
       },
     }),
   });
-  return value.sessionId ?? value.sessionId;
+  return value.sessionId ?? value['sessionId'];
 }
 
 async function execute(session, script) {
   return webdriver(`/session/${session}/execute/sync`, {
     method: 'POST', body: JSON.stringify({ script, args: [] }),
+  });
+}
+
+async function cdp(session, cmd, params = {}) {
+  return webdriver(`/session/${session}/goog/cdp/execute`, {
+    method: 'POST', body: JSON.stringify({ cmd, params }),
+  });
+}
+
+async function emulateViewport(session, width, height) {
+  await cdp(session, 'Emulation.setDeviceMetricsOverride', {
+    width,
+    height,
+    screenWidth: width,
+    screenHeight: height,
+    deviceScaleFactor: 1,
+    mobile: false,
+    positionX: 0,
+    positionY: 0,
+    dontSetVisibleSize: false,
   });
 }
 
@@ -157,6 +177,7 @@ try {
   });
 
   session = await createSession();
+  await emulateViewport(session, 1440, 1000);
   await navigate(session, BASE_URL);
   await waitFor('home', () => execute(session, `return document.body?.innerText.includes('Usiądź do stołu') ?? false;`));
   await clickButton(session, 'Zagraj sam');
@@ -165,7 +186,9 @@ try {
     const view = await currentView(session);
     return view.connection.includes('online') && view.decision === 'Twoja licytacja' && view.revision !== null ? view : false;
   });
-  if (initial.width !== 1440 || initial.scrollWidth > initial.width + 1) throw new Error('initial remote layout invalid');
+  if (initial.width !== 1440 || initial.scrollWidth > initial.width + 1) {
+    throw new Error(`initial remote layout invalid width=${initial.width} scrollWidth=${initial.scrollWidth}`);
+  }
 
   await installTrace(session);
   await clickButton(session, 'Pas');
@@ -205,7 +228,9 @@ try {
   if (!firstEntry.connection.includes('ruchy przy stole') || firstEntry.enabledActions !== 0) {
     throw new Error(`first paced frame was not visibly locked: ${JSON.stringify(firstEntry)}`);
   }
-  if (final.width !== 1440 || final.scrollWidth > final.width + 1) throw new Error('final remote layout invalid');
+  if (final.width !== 1440 || final.scrollWidth > final.width + 1) {
+    throw new Error(`final remote layout invalid width=${final.width} scrollWidth=${final.scrollWidth}`);
+  }
 
   console.log('remote playback smoke: PASS');
   console.log(JSON.stringify({
