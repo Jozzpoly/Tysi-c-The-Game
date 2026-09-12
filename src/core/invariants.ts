@@ -13,14 +13,41 @@ export function assertCoreInvariants(state: MatchState): void {
   if (new Set(accounted).size !== 24) throw new Error('card uniqueness failed');
   if (captured.length !== hand.trickIndex * 3) throw new Error('captured card count does not match completed tricks');
 
+  for (const count of state.bombsUsed) {
+    if (!Number.isInteger(count) || count < 0) throw new Error('bomb counts must be non-negative integers');
+  }
+
   for (const seat of [0, 1, 2] as const) {
     const points = hand.capturedCards[seat].reduce((sum, card) => sum + cardPoints(card), 0);
     if (points !== hand.capturedCardPoints[seat]) throw new Error(`captured points mismatch for seat ${seat}`);
-    if (['contract', 'trick', 'complete'].includes(hand.phase)) {
+
+    const bombComplete = hand.phase === 'complete' && hand.completion?.kind === 'bomb';
+    if (bombComplete) {
+      const expected = seat === hand.declarer ? 10 : 7;
+      if (hand.hands[seat].length !== expected) {
+        throw new Error(`bomb-complete seat ${seat} hand size ${hand.hands[seat].length} !== ${expected}`);
+      }
+    } else if (['contract', 'trick', 'complete'].includes(hand.phase)) {
       const playedPending = hand.trick.some((play) => play.seat === seat) ? 1 : 0;
       const expected = Math.max(0, 8 - hand.trickIndex - playedPending);
       if (hand.hands[seat].length !== expected) throw new Error(`seat ${seat} hand size ${hand.hands[seat].length} !== ${expected}`);
     }
+  }
+
+  if (hand.completion?.kind === 'bomb') {
+    if (hand.phase !== 'complete') throw new Error('bomb completion requires complete hand phase');
+    if (hand.declarer !== hand.completion.seat) throw new Error('only the declarer can complete a hand by bomb');
+    if (hand.contract !== null) throw new Error('bombed hand must not have a final contract');
+    if (hand.trickIndex !== 0 || captured.length !== 0 || pending.length !== 0) {
+      throw new Error('bombed hand must end before trick play');
+    }
+    if (state.bombsUsed[hand.completion.seat] !== hand.completion.bombNumber) {
+      throw new Error('bomb completion count must match match bomb counter');
+    }
+  }
+
+  if (hand.completion?.kind === 'played' && hand.phase !== 'complete') {
+    throw new Error('played completion requires complete hand phase');
   }
 
   if (hand.lastCompletedTrick) {
