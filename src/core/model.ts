@@ -1,0 +1,168 @@
+import { shuffledDeck, sortHand, type CardId, type Suit } from './cards.js';
+import type { ThreePlayerRules } from './rules.js';
+
+export type Seat = 0 | 1 | 2;
+export type Scores = [number, number, number];
+export type Hands = [CardId[], CardId[], CardId[]];
+
+export interface PlayedCard {
+  seat: Seat;
+  card: CardId;
+}
+
+export type Command =
+  | { type: 'bid'; seat: Seat; value: number }
+  | { type: 'pass'; seat: Seat }
+  | { type: 'exchange'; seat: Seat; give: readonly [{ to: Seat; card: CardId }, { to: Seat; card: CardId }] }
+  | { type: 'contract'; seat: Seat; value: number }
+  | { type: 'play'; seat: Seat; card: CardId; declareMarriage?: boolean }
+  | { type: 'next-hand' };
+
+export interface AuctionState {
+  currentBid: number;
+  highBidder: Seat;
+  active: [boolean, boolean, boolean];
+  turn: Seat;
+}
+
+export interface HandState {
+  dealer: Seat;
+  hands: Hands;
+  talon: CardId[];
+  revealedTalon: CardId[] | null;
+  phase: 'auction' | 'exchange' | 'contract' | 'trick' | 'complete';
+  auction: AuctionState;
+  declarer: Seat | null;
+  contract: number | null;
+  trump: Suit | null;
+  trickIndex: number;
+  trickLeader: Seat | null;
+  trick: PlayedCard[];
+  capturedCardPoints: Scores;
+  capturedCards: [CardId[], CardId[], CardId[]];
+  marriagePoints: Scores;
+  capturedTricks: [number, number, number];
+  declaredMarriages: [Suit[], Suit[], Suit[]];
+  lastTrickWinner: Seat | null;
+  handScoreDelta: Scores | null;
+}
+
+export interface MatchState {
+  rules: ThreePlayerRules;
+  seed: number;
+  revision: number;
+  scores: Scores;
+  dealer: Seat;
+  handNumber: number;
+  hand: HandState;
+  status: 'playing' | 'complete';
+  winner: Seat | null;
+  draw: boolean;
+}
+
+export interface ApplyResult {
+  ok: boolean;
+  state: MatchState;
+  reason?: string;
+}
+
+export interface SeatObservation {
+  revision: number;
+  seat: Seat;
+  scores: Scores;
+  handNumber: number;
+  dealer: Seat;
+  phase: HandState['phase'];
+  ownHand: CardId[];
+  opponentCardCounts: [number, number, number];
+  revealedTalon: CardId[] | null;
+  auction: AuctionState;
+  declarer: Seat | null;
+  contract: number | null;
+  trump: Suit | null;
+  trickIndex: number;
+  trickLeader: Seat | null;
+  trick: PlayedCard[];
+  capturedCardPoints: Scores;
+  capturedCards: [CardId[], CardId[], CardId[]];
+  marriagePoints: Scores;
+  lastTrickWinner: Seat | null;
+  status: MatchState['status'];
+  winner: Seat | null;
+  draw: boolean;
+}
+
+export function asSeat(value: number): Seat {
+  return ((value % 3) + 3) % 3 as Seat;
+}
+
+export function nextSeat(seat: Seat): Seat {
+  return asSeat(seat + 1);
+}
+
+export function createHand(dealer: Seat, deck: readonly CardId[], rules: ThreePlayerRules): HandState {
+  if (deck.length !== 24 || new Set(deck).size !== 24) throw new Error('deck must contain 24 unique cards');
+  const hands: Hands = [[], [], []];
+  const forehand = nextSeat(dealer);
+  for (let i = 0; i < 21; i += 1) hands[asSeat(forehand + (i % 3))].push(deck[i]);
+  for (const seat of [0, 1, 2] as const) hands[seat] = sortHand(hands[seat]);
+  return {
+    dealer,
+    hands,
+    talon: deck.slice(21),
+    revealedTalon: null,
+    phase: 'auction',
+    auction: { currentBid: rules.auction.openingBid, highBidder: forehand, active: [true, true, true], turn: nextSeat(forehand) },
+    declarer: null,
+    contract: null,
+    trump: null,
+    trickIndex: 0,
+    trickLeader: null,
+    trick: [],
+    capturedCardPoints: [0, 0, 0],
+    capturedCards: [[], [], []],
+    marriagePoints: [0, 0, 0],
+    capturedTricks: [0, 0, 0],
+    declaredMarriages: [[], [], []],
+    lastTrickWinner: null,
+    handScoreDelta: null,
+  };
+}
+
+export function createMatch(rules: ThreePlayerRules, seed = 1, dealer: Seat = 0): MatchState {
+  const shuffled = shuffledDeck(seed);
+  return {
+    rules,
+    seed: shuffled.nextSeed,
+    revision: 0,
+    scores: [0, 0, 0],
+    dealer,
+    handNumber: 1,
+    hand: createHand(dealer, shuffled.deck, rules),
+    status: 'playing',
+    winner: null,
+    draw: false,
+  };
+}
+
+export function cloneState(state: MatchState): MatchState {
+  const hand = state.hand;
+  return {
+    ...state,
+    scores: [...state.scores] as Scores,
+    hand: {
+      ...hand,
+      hands: [hand.hands[0].slice(), hand.hands[1].slice(), hand.hands[2].slice()],
+      talon: hand.talon.slice(),
+      revealedTalon: hand.revealedTalon?.slice() ?? null,
+      auction: { ...hand.auction, active: [...hand.auction.active] as [boolean, boolean, boolean] },
+      trick: hand.trick.map((play) => ({ ...play })),
+      capturedCardPoints: [...hand.capturedCardPoints] as Scores,
+      capturedCards: hand.capturedCards.map((cards) => cards.slice()) as [CardId[], CardId[], CardId[]],
+      marriagePoints: [...hand.marriagePoints] as Scores,
+      capturedTricks: [...hand.capturedTricks] as [number, number, number],
+      declaredMarriages: hand.declaredMarriages.map((suits) => suits.slice()) as [Suit[], Suit[], Suit[]],
+      handScoreDelta: hand.handScoreDelta ? ([...hand.handScoreDelta] as Scores) : null,
+    },
+  };
+}
