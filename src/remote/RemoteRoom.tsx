@@ -121,14 +121,34 @@ export function RemoteRoom({ room, onLeave }: RemoteRoomProps) {
             setConnection('connected');
             return;
           }
-          if (packet.type === 'started' || packet.type === 'update' || packet.type === 'duplicate') {
+          if (packet.type === 'started') {
             setProjection(packet.projection);
             setSeat(packet.projection.observation.seat);
-            setRoomState((current) => current ? { ...current, status: packet.projection.observation.status === 'complete' ? 'complete' : 'playing', revision: packet.projection.observation.revision } : current);
             setConnection('connected');
-            const text = feedback(packet.events, namesForRoom(roomState ?? {
-              mode: 'trio', status: 'playing', seats: ['human', 'human', 'human'], revision: packet.projection.observation.revision,
-            }, packet.projection.observation.seat));
+            setRoomState((current) => current ? { ...current, status: 'playing', revision: packet.projection.observation.revision } : current);
+            void getPublicRoom(room).then((state) => {
+              if (!cancelled) setRoomState(state);
+            }).catch(() => {});
+            const provisionalNames = roomState
+              ? namesForRoom(roomState, packet.projection.observation.seat)
+              : ['Ty', 'Gracz 2', 'Gracz 3'] as const;
+            const text = feedback(packet.events, provisionalNames);
+            if (text) setMessage(text);
+            return;
+          }
+          if (packet.type === 'update' || packet.type === 'duplicate') {
+            setProjection(packet.projection);
+            setSeat(packet.projection.observation.seat);
+            setRoomState((current) => current ? {
+              ...current,
+              status: packet.projection.observation.status === 'complete' ? 'complete' : 'playing',
+              revision: packet.projection.observation.revision,
+            } : current);
+            setConnection('connected');
+            const eventNames = roomState
+              ? namesForRoom(roomState, packet.projection.observation.seat)
+              : ['Ty', 'Gracz 2', 'Gracz 3'] as const;
+            const text = feedback(packet.events, eventNames);
             if (text) setMessage(text);
             return;
           }
