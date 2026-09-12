@@ -202,24 +202,26 @@ export function GameTable({ projection, seatNames, message = '', onCommand, onNe
 
           {view.status === 'playing' && view.phase === 'exchange' && (exchanges.length > 0 || bomb) && (
             <div className="decision-card">
-              <h2>Oddaj po jednej karcie</h2>
-              {exchanges.length > 0 && (
+              {bomb && confirmBomb ? (
                 <>
-                  <p>1. wybrana → {seatName(exchanges[0].give[0].to)}, 2. wybrana → {seatName(exchanges[0].give[1].to)}. Widoczność transferu jest na razie jawnym pinem profilu.</p>
-                  <button className="primary" disabled={selectedTransfer.length !== 2} onClick={confirmTransfer}>Potwierdź wymianę</button>
-                </>
-              )}
-              {bomb && !confirmBomb && (
-                <button className="ghost" onClick={() => setConfirmBomb(true)}>Bomba — wycofaj się</button>
-              )}
-              {bomb && confirmBomb && (
-                <div className="bomb-confirm">
+                  <h2>Potwierdź bombę</h2>
                   <p>Bomba natychmiast kończy to rozdanie bez rozgrywania kontraktu. Skutek punktowy zależy od liczby wcześniejszych bomb w tym meczu.</p>
                   <div className="actions">
                     <button className="primary" onClick={() => void onCommand(bomb)}>Potwierdź bombę</button>
                     <button onClick={() => setConfirmBomb(false)}>Anuluj</button>
                   </div>
-                </div>
+                </>
+              ) : (
+                <>
+                  <h2>Oddaj po jednej karcie</h2>
+                  {exchanges.length > 0 && (
+                    <>
+                      <p>1. wybrana → {seatName(exchanges[0].give[0].to)}, 2. wybrana → {seatName(exchanges[0].give[1].to)}. Widoczność transferu jest na razie jawnym pinem profilu.</p>
+                      <button className="primary" disabled={selectedTransfer.length !== 2} onClick={confirmTransfer}>Potwierdź wymianę</button>
+                    </>
+                  )}
+                  {bomb && <button className="ghost" onClick={() => setConfirmBomb(true)}>Bomba — wycofaj się</button>}
+                </>
               )}
             </div>
           )}
