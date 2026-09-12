@@ -142,6 +142,8 @@ export function applyCommand(original: MatchState, command: Command): ApplyResul
     }
     if (!removeCard(hand.hands[command.seat], command.card)) return failure(original, 'CARD_NOT_HELD');
 
+    if (hand.trick.length === 0) hand.lastCompletedTrick = null;
+
     if (command.declareMarriage) {
       const suit = suitOf(command.card);
       hand.trump = suit;
@@ -154,12 +156,20 @@ export function applyCommand(original: MatchState, command: Command): ApplyResul
     hand.trick.push({ seat: command.seat, card: command.card });
     if (hand.trick.length < 3) return success(state);
 
-    const winner = currentWinningPlay(hand.trick, hand.trump).seat;
-    hand.capturedCardPoints[winner] += hand.trick.reduce((sum, play) => sum + cardPoints(play.card), 0);
-    hand.capturedCards[winner].push(...hand.trick.map((play) => play.card));
+    const completedPlays = hand.trick.map((play) => ({ ...play }));
+    const winner = currentWinningPlay(completedPlays, hand.trump).seat;
+    const trickPoints = completedPlays.reduce((sum, play) => sum + cardPoints(play.card), 0);
+    hand.capturedCardPoints[winner] += trickPoints;
+    hand.capturedCards[winner].push(...completedPlays.map((play) => play.card));
     hand.capturedTricks[winner] += 1;
     hand.lastTrickWinner = winner;
     hand.trickIndex += 1;
+    hand.lastCompletedTrick = {
+      plays: completedPlays,
+      winner,
+      points: trickPoints,
+      index: hand.trickIndex,
+    };
     hand.trick = [];
     hand.trickLeader = winner;
 
@@ -200,6 +210,12 @@ export function observe(state: MatchState, seat: Seat): SeatObservation {
     trickIndex: hand.trickIndex,
     trickLeader: hand.trickLeader,
     trick: hand.trick.map((play) => ({ ...play })),
+    lastCompletedTrick: hand.lastCompletedTrick
+      ? {
+          ...hand.lastCompletedTrick,
+          plays: hand.lastCompletedTrick.plays.map((play) => ({ ...play })),
+        }
+      : null,
     capturedCardPoints: [...hand.capturedCardPoints] as Scores,
     capturedCards: hand.capturedCards.map((cards) => cards.slice()) as [CardId[], CardId[], CardId[]],
     marriagePoints: [...hand.marriagePoints] as Scores,
