@@ -104,7 +104,8 @@ async function handleRoom(request: Request, env: Env, route: RoomRoute): Promise
   if (route.join) {
     if (request.method !== 'POST') return new Response('Method not allowed', { status: 405, headers: { allow: 'POST' } });
     const result = await stub.joinRoom();
-    return json({ room: route.room, ...result }, result.ok ? 201 : roomStatus(result.reason));
+    if (result.ok) return json({ room: route.room, seat: result.seat, token: result.token, state: result.room }, 201);
+    return json({ room: route.room, ok: false, reason: result.reason, state: result.room ?? null }, roomStatus(result.reason));
   }
 
   if (request.method !== 'GET') return new Response('Method not allowed', { status: 405, headers: { allow: 'GET' } });
@@ -126,7 +127,21 @@ async function handleMatch(request: Request, env: Env, route: MatchRoute): Promi
 
   if (request.method === 'GET') {
     const session = await stub.getSession(token);
-    return json({ room: route.room, ...session }, session.ok ? 200 : commandStatus(session.reason));
+    if (session.ok) {
+      return json({
+        room: route.room,
+        ok: true,
+        seat: session.seat,
+        state: session.room,
+        projection: session.projection,
+      });
+    }
+    return json({
+      room: route.room,
+      ok: false,
+      reason: session.reason,
+      state: session.room ?? null,
+    }, commandStatus(session.reason));
   }
 
   if (request.method === 'POST') {
