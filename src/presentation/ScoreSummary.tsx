@@ -18,7 +18,7 @@ export function ScoreSummary({
         {nameForSeat(summary.declarer)}: {declarer.rawPoints} pkt przy kontrakcie {summary.contract} —{' '}
         {summary.contractMade ? 'kontrakt zrealizowany' : 'kontrakt niezrealizowany'}.
       </p>
-      <div className="scoreboard" aria-label="Rozliczenie rozdania">
+      <div className="score-summary" aria-label="Rozliczenie rozdania">
         {summary.seats.map((seat, index) => {
           const isDeclarer = index === summary.declarer;
           const points = seat.marriagePoints > 0
