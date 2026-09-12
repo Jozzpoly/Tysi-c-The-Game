@@ -2,7 +2,7 @@
 
 Date: 2026-09-12
 
-For the current implementation state and decision audit, read `docs/EXECUTION_STATE.md` first.
+For current implementation/evidence truth, read `docs/EXECUTION_STATE.md` first.
 
 ## Product thesis
 
@@ -14,37 +14,35 @@ The useful first product is simple:
 - play immediately on desktop or phone;
 - play alone with two competent-enough bots;
 - create a private table and send the link to friends;
-- recover naturally from refresh, reconnect and mobile backgrounding;
+- recover naturally from refresh/reconnect/mobile backgrounding;
 - know which concrete rules the table uses.
 
-No mandatory account system is required for this first product.
+No mandatory account system is required for the first product.
 
-## First success condition
+## Product modes
 
-A complete 3-player game that a normal person can actually enjoy:
+Keep the first room model intentionally narrow:
 
-- Human + Bot + Bot in the browser;
-- clean desktop and mobile interaction;
-- full match to the target score;
-- one explicit source-scoped candidate rules profile with material uncertainties documented/tested;
-- deterministic rules core that survives seeded simulation and invariant checks;
-- a proven deployable Cloudflare room skeleton;
-- then Human + Human + Bot / Human + Human + Human private multiplayer with reconnect.
+- `solo`: 1 human + 2 bots;
+- `duo`: 2 humans + 1 bot;
+- `trio`: 3 humans.
+
+Avoid a generic arbitrary seat-plan/configuration DSL unless product evidence later demands it.
 
 ## Rules philosophy
 
-There is no single universal or even single clearly canonical "Polish Tysiąc" ruleset.
+There is no single universal or clearly canonical "Polish Tysiąc" ruleset.
 
 Therefore:
 
-- first implement one explicit reference target, not an invented national canonical profile;
-- initial target: `PLAYOK_3P_800_CANDIDATE`;
-- model a variant field only when real evidence or a concrete unresolved scenario justifies it;
+- first target one explicit reference family, not an invented national canonical profile;
+- current target: `PLAYOK_3P_800_CANDIDATE`;
+- model a variant field only when evidence or a concrete unresolved scenario justifies it;
 - named profiles are supported bundles, not arbitrary combinations guaranteed to work;
-- a friend/domain expert can later validate or define another profile without mutating the meaning of the PlayOK-targeted one;
-- 2P and 4P remain separate future modes because their deal/talon/active-seat structures materially differ.
+- friend/domain-expert validation can later define another profile without mutating the PlayOK-targeted one;
+- 2P and 4P remain separate future modes because their structures materially differ.
 
-## Architecture
+## Architecture — current defended baseline
 
 ### Pure domain core
 
@@ -54,77 +52,70 @@ Conceptually:
 
 `State + Command + Rules + explicit randomness -> Result`
 
-The domain layer contains no React, WebSocket or Cloudflare dependencies.
+No React, WebSocket or Cloudflare dependencies in the domain layer.
 
 Key contracts:
 
 - phase/state;
 - command;
-- canonical legality evaluation + reason;
+- canonical legality evaluation + rejection reason;
 - state transition;
 - seat observation/projection;
-- domain facts/events only where useful to UI/adapters/tests.
+- transient domain facts/events where useful to presentation/adapters/tests.
 
-Avoid a large event-sourcing architecture initially.
+Do not turn this into event sourcing without a demonstrated need.
 
 ### Rules representation
 
 Use a concrete rules object grouped by evidenced concerns such as auction, exchange, trick, marriage, scoring, match and redeal/abort behavior.
 
-These groupings are organizational, not seven mandatory strategy classes.
+Named profiles carry stable identity/version and normalized effective behavior. Variant fields should earn their existence through real rule-family conflicts or executable scenarios.
 
-Named rules profiles carry:
+### Client / presentation
 
-- stable id;
-- version;
-- normalized effective rules;
-- deterministic fingerprint;
-- provenance/status outside the runtime-critical evaluator as needed.
+React + Vite SPA, responsive DOM/CSS/SVG-first UI.
 
-An active match pins its effective rules snapshot.
+Canonical human client boundary:
 
-### Client
+`SeatProjection + scoped GameEvents`
 
-React + Vite SPA, responsive DOM/CSS/SVG UI.
+`GameTable` must remain independent of local vs remote authority.
 
-Desktop and mobile share product semantics and components but may compose the table differently. Core requirements:
+Desktop and mobile share product semantics but may compose the table differently. Long-term both are equal-quality targets, not desktop-first plus a reduced mobile port.
 
-- current trick and required decision are visually dominant;
-- own hand is always easy to scan/tap;
-- no required hover interactions;
-- bidding/exchange decisions use explicit controls, not fragile gesture-only UX;
-- legal cards/actions can be highlighted/explained;
-- score/context remains available without burying the play surface.
+The foundation must allow later professional:
+
+- card/table art;
+- animation and motion feedback;
+- sound/haptics;
+- richer explanation/history;
+- accessible interaction;
+- responsive compositions that preserve clear hit targets and information hierarchy.
 
 ### Bots
 
-Bots operate from the same seat observation and legal commands as humans.
+Bots operate from the same seat observation + legal-command boundary as humans.
 
-Early split:
+Current heuristic is an adequate product baseline, not a final AI opponent. Improve it primarily when real human gameplay exposes concrete weaknesses.
 
-- `RandomLegal` / scripted bots for testing;
-- minimal heuristic playable bot for product evaluation.
+### Online authority
 
-Advanced imperfect-information search is later research, not a blocker for the first good game.
+Current-best: Cloudflare Worker + one SQLite-backed Durable Object `MatchRoom` per table.
 
-### Online server
-
-Current-best: Cloudflare Worker + one SQLite-backed Durable Object per table.
-
-The MatchDO owns:
+`MatchRoom` owns:
 
 - authoritative hidden match state;
-- pinned rules snapshot;
-- seat/session tokens and connection mapping;
 - accepted command revision;
+- seat capability identity;
 - persistence needed for reconnect;
-- per-seat projection broadcasts.
+- server-owned bot turns;
+- per-seat projection/event broadcasts.
 
-Use hibernating WebSockets. Treat socket death as normal; reconnect resynchronizes from authoritative state.
+Use hibernating WebSockets and snapshot/revision reconnect. Socket death is normal lifecycle, not exceptional corruption.
 
-Initial persistence should stay simple. SQLite-backed DO is the storage backend, but this does not require designing a relational event store.
+Room code is shareable identity; seat reconnect token is private authority. No mandatory accounts are needed yet.
 
-D1/global persistence is not part of the first product. It can be introduced later for accounts, ratings, discovery or global history if those features earn their way in.
+D1/global persistence is not part of the first product. Add global identity/history/ranking only if product demand justifies it.
 
 ## Evidence model
 
@@ -133,57 +124,86 @@ Different evidence answers different questions.
 ### Rules
 
 - source-documented behavior;
-- observed behavior in an existing implementation when useful;
+- observed reference behavior where useful;
 - explicit project pin where legitimate variants disagree;
-- executable scenarios proving our profile behavior.
+- executable profile scenarios.
 
 ### Core correctness
 
 - scenario tests;
 - invariants after transitions;
-- deterministic seeded hand/match simulations;
-- property/generative testing for broad invariants.
+- deterministic seeded hands/matches;
+- broad simulation/property testing where it adds signal.
 
-### Platform
+### Platform/runtime
 
-- local Workers-runtime tests;
-- small deployed Durable Object/WebSocket canary;
-- later browser E2E and reconnect/background tests.
+Foundation now has all of:
+
+- local workerd/Vitest tests;
+- desktop/mobile Chrome E2E;
+- local remote-room/reconnect E2E;
+- actual public Cloudflare Worker + Durable Object + assets deployment proof;
+- public desktop↔mobile browser/WebSocket/reconnect proof.
+
+This proves feasibility and current boundary correctness, not long-duration production operations.
 
 ### Product
 
-Owner and target-player gameplay determine whether the table is understandable, pleasant and worth using. That judgement does not replace rule evidence.
+Owner and target-player gameplay determine whether the table is understandable, pleasant and worth using. Product judgement does not replace rule evidence, and automated tests do not replace product judgement.
 
 ## Development sequence
 
-### Foundation Run 01
+### Foundation Run 01 — COMPLETE
 
-1. Scaffold TypeScript + React/Vite + Vitest + Cloudflare-compatible shell.
-2. Build deterministic card/deal/auction/exchange/trick/scoring kernel for 3P.
-3. Add only evidenced variant fields needed for the first candidate and known conflicting sources.
-4. Build focused reference scenarios and invariants.
-5. Complete seeded headless hands and matches with legal controllers.
-6. Add minimal heuristic product bot boundary.
-7. Build thin responsive Human + Bot + Bot table.
-8. Prove a tiny deployed MatchDO/WebSocket canary separately.
+Delivered and proved:
 
-Gate: a complete local match is genuinely playable and repeatable; tests/simulations hold; infrastructure feasibility is demonstrated rather than assumed.
+- deterministic 3P rules/game kernel;
+- executable candidate profile scenarios and invariants;
+- playable heuristic bot baseline;
+- projection/privacy/event boundary;
+- one responsive desktop/mobile `GameTable`;
+- anonymous solo/duo/trio room lifecycle;
+- reconnect capabilities;
+- server-owned bot turns;
+- SQLite Durable Object authority + hibernating WebSockets;
+- local and public Chrome multiplayer/reconnect evidence;
+- guarded permanent/temporary deployment workflows.
 
-### Run 02 — private online table
+### Run 02 — gameplay / rules / product hardening
 
-Bind the same commands and seat projections to the MatchDO. Support anonymous private room creation/join by link/code and bot-filled seats.
+Primary question: **is the game correct enough, understandable enough and enjoyable enough for serious play?**
 
-### Run 03 — resilience / friend build
+Work in this run should prioritize:
 
-Refresh/reconnect, mobile background, weak networks, responsive polish, rule-reference probes, friend/domain feedback, and product-level iteration.
+1. critical audit of unresolved PlayOK-sensitive behaviors;
+2. implementation/tests for rule paths the target profile genuinely requires (especially bombs/redeals if confirmed);
+3. complete solo-match Owner playability on both desktop and mobile;
+4. better causal feedback/history/explanation where the player cannot understand what happened;
+5. bot weaknesses found by real play rather than self-play metric chasing;
+6. real-human duo/trio sessions once the rule/game loop is coherent;
+7. real-device background/suspension/network transition testing;
+8. permanent Cloudflare deployment only when we want a durable friend/Owner test surface.
+
+Do not turn Run 02 into a visual-redesign project. Visual polish can improve obvious interaction blockers, but full art/animation polish should follow gameplay truth.
+
+### Later — friend build / presentation quality
+
+Once gameplay/rules withstand real use:
+
+- stronger feedback/animation/audio/haptics;
+- professional card/table visuals;
+- accessibility pass;
+- permanent deployment and operational soak;
+- additional validated rule profiles;
+- stronger bots if they materially improve play.
 
 ## Long-term possibilities, not commitments
 
 - several reference-tested Polish/house profiles;
 - restrained custom-table presets;
-- stronger bots / imperfect-information search;
+- imperfect-information search/stronger bots;
 - rules learning/explanation tools;
-- replay/debug capsules if real debugging need justifies them;
+- replay/debug capsules if a real debugging need justifies them;
 - accounts, matchmaking/rankings only if product demand justifies global identity/state.
 
 ## Primary project risks
@@ -191,10 +211,11 @@ Refresh/reconnect, mobile background, weak networks, responsive polish, rule-ref
 1. Treating one implementation's rules as canonical Polish Tysiąc.
 2. Silently turning ambiguous edge cases into core invariants.
 3. Building a rule framework instead of a good table.
-4. Bots being legal but unpleasantly stupid.
-5. Hidden-state leakage through client/bot projections.
+4. Bots being legal but strategically unpleasant.
+5. Hidden-state leakage through projections/feedback.
 6. Mobile UX becoming a scaled desktop afterthought.
-7. Overengineering persistence/replay before it solves a real failure mode.
-8. Delaying deployment until Cloudflare assumptions become expensive to change.
+7. Overengineering persistence/replay/global state before a real need.
+8. Confusing green automation with actual gameplay quality.
+9. Polishing visuals before rule/interaction truth is stable.
 
 When uncertain, prefer the smallest reversible action that produces concrete rule, runtime or gameplay evidence.
