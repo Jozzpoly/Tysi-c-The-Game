@@ -9,9 +9,12 @@
     "typegen": "wrangler types",
     "build:core": "tsc -p tsconfig.core.json",
     "build:web": "npm run typegen && tsc -p tsconfig.app.json && tsc -p tsconfig.worker.json && vite build",
+    "preview": "npm run build:web && vite preview",
+    "deploy:dry-run": "wrangler deploy --dry-run",
+    "deploy": "npm run build:web && wrangler deploy",
     "test:core": "npm run build:core && node scripts/core-smoke.mjs && node scripts/product-bot-smoke.mjs",
     "test:worker": "npm run typegen && vitest run --config vitest.config.ts --max-workers=1 --no-isolate",
-    "check": "npm run test:core && npm run test:worker && npm run build:web"
+    "check": "npm run test:core && npm run test:worker && npm run build:web && npm run deploy:dry-run"
   },
   "allowScripts": {
     "esbuild@0.28.1": true,
