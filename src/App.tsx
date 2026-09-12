@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   PLAYOK_3P_800_CANDIDATE,
   actingSeat,
@@ -20,24 +20,23 @@ const HUMAN: Seat = 0;
 const SEAT_NAMES = ['Ty', 'Bot A', 'Bot B'] as const;
 const SUIT_SYMBOL = { spades: '♠', clubs: '♣', diamonds: '♦', hearts: '♥' } as const;
 
-function settleBots(initial: MatchState, maxSteps = 128): MatchState {
-  let state = initial;
-  for (let i = 0; i < maxSteps; i += 1) {
-    if (state.status === 'complete' || state.hand.phase === 'complete') return state;
-    const actor = actingSeat(state);
-    if (actor === null || actor === HUMAN) return state;
-    const result = applyCommand(state, productBotCommand(state, actor));
-    if (!result.ok) throw new Error(`Bot command rejected: ${result.reason}`);
-    state = result.state;
-    assertCoreInvariants(state);
-  }
-  throw new Error('Bot settle loop exceeded safety limit');
-}
-
 function freshMatch(seed = Date.now() >>> 0): MatchState {
   const state = createMatch(PLAYOK_3P_800_CANDIDATE, seed, 0);
   assertCoreInvariants(state);
-  return settleBots(state);
+  return state;
+}
+
+function cardLabel(card: CardId): string {
+  return `${rankOf(card)}${SUIT_SYMBOL[suitOf(card)]}`;
+}
+
+function describeCommand(command: Command): string {
+  if (command.type === 'pass') return 'pas';
+  if (command.type === 'bid') return `licytuje ${command.value}`;
+  if (command.type === 'exchange') return 'oddaje po karcie przeciwnikom';
+  if (command.type === 'contract') return `gra ${command.value}`;
+  if (command.type === 'play') return `${command.declareMarriage ? `melduje ${SUIT_SYMBOL[suitOf(command.card)]} i ` : ''}zagrywa ${cardLabel(command.card)}`;
+  return 'następne rozdanie';
 }
 
 function Card({ card, disabled, selected, onClick }: { card: CardId; disabled?: boolean; selected?: boolean; onClick?: () => void }) {
@@ -61,6 +60,31 @@ function App() {
   const [selectedTransfer, setSelectedTransfer] = useState<CardId[]>([]);
   const [message, setMessage] = useState('Pierwszy grywalny vertical slice — profil PlayOK/Kurnik candidate.');
 
+  useEffect(() => {
+    if (state.status === 'complete' || state.hand.phase === 'complete') return;
+    const actor = actingSeat(state);
+    if (actor === null || actor === HUMAN) return;
+
+    const delay = state.hand.phase === 'trick' ? 520 : 360;
+    const timer = window.setTimeout(() => {
+      try {
+        const command = productBotCommand(state, actor);
+        const result = applyCommand(state, command);
+        if (!result.ok) {
+          setMessage(`${SEAT_NAMES[actor]}: ruch odrzucony (${result.reason})`);
+          return;
+        }
+        assertCoreInvariants(result.state);
+        setState(result.state);
+        setMessage(`${SEAT_NAMES[actor]}: ${describeCommand(command)}`);
+      } catch (error) {
+        setMessage(error instanceof Error ? error.message : String(error));
+      }
+    }, delay);
+
+    return () => window.clearTimeout(timer);
+  }, [state]);
+
   const humanCommands = useMemo(() => legalCommands(state, HUMAN), [state]);
   const humanCards = state.hand.hands[HUMAN];
   const playable = new Set(
@@ -82,11 +106,9 @@ function App() {
     }
     try {
       assertCoreInvariants(result.state);
-      const settled = settleBots(result.state);
-      assertCoreInvariants(settled);
-      setState(settled);
+      setState(result.state);
       setSelectedTransfer([]);
-      setMessage('');
+      setMessage(`Ty: ${describeCommand(command)}`);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : String(error));
     }
@@ -127,6 +149,9 @@ function App() {
     complete: 'Rozdanie zakończone',
   }[state.hand.phase];
 
+  const visibleTrick = state.hand.trick.length > 0 ? state.hand.trick : state.hand.lastCompletedTrick?.plays ?? [];
+  const showingCompletedTrick = state.hand.trick.length === 0 && state.hand.lastCompletedTrick !== null;
+
   return (
     <main className="app-shell">
       <header className="topbar">
@@ -139,7 +164,7 @@ function App() {
           onClick={() => {
             setState(freshMatch());
             setSelectedTransfer([]);
-            setMessage('Nowy seed.');
+            setMessage('Nowa gra.');
           }}
         >
           Nowa gra
@@ -187,11 +212,11 @@ function App() {
             </div>
           )}
 
-          <div className="trick" aria-label="Aktualna lewa">
-            {state.hand.trick.length === 0 ? (
+          <div className={`trick ${showingCompletedTrick ? 'completed' : ''}`} aria-label="Aktualna lewa">
+            {visibleTrick.length === 0 ? (
               <span className="muted">Stół czeka na zagranie</span>
             ) : (
-              state.hand.trick.map((play) => (
+              visibleTrick.map((play) => (
                 <div className="played" key={`${play.seat}-${play.card}`}>
                   <small>{SEAT_NAMES[play.seat]}</small>
                   <Card card={play.card} disabled />
@@ -199,6 +224,11 @@ function App() {
               ))
             )}
           </div>
+          {showingCompletedTrick && state.hand.lastCompletedTrick && (
+            <div className="trick-result">
+              Lewa {state.hand.lastCompletedTrick.index}: {SEAT_NAMES[state.hand.lastCompletedTrick.winner]} · {state.hand.lastCompletedTrick.points} pkt
+            </div>
+          )}
         </div>
 
         <section className="decision" aria-live="polite">
@@ -213,13 +243,13 @@ function App() {
           {state.status === 'playing' && state.hand.phase === 'auction' && actingSeat(state) === HUMAN && (
             <div className="decision-card">
               <h2>Twoja licytacja</h2>
-              <div className="actions">
+              <div className="actions bid-actions">
                 <button onClick={() => commit({ type: 'pass', seat: HUMAN })}>Pas</button>
-                {bids.slice(0, 8).map((bid) => (
+                {bids.map((bid) => (
                   <button className="primary" key={bid.value} onClick={() => commit(bid)}>{bid.value}</button>
                 ))}
               </div>
-              {bids.length > 8 && <small>Pokazuję pierwsze 8 legalnych podbić; zakres wynika z meldunków w ręce.</small>}
+              <small>Wszystkie wartości pokazane tutaj są legalne dla aktualnej ręki.</small>
             </div>
           )}
 
