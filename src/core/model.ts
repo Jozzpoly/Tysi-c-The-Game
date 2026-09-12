@@ -10,6 +10,13 @@ export interface PlayedCard {
   card: CardId;
 }
 
+export interface CompletedTrick {
+  plays: PlayedCard[];
+  winner: Seat;
+  points: number;
+  index: number;
+}
+
 export type Command =
   | { type: 'bid'; seat: Seat; value: number }
   | { type: 'pass'; seat: Seat }
@@ -38,6 +45,7 @@ export interface HandState {
   trickIndex: number;
   trickLeader: Seat | null;
   trick: PlayedCard[];
+  lastCompletedTrick: CompletedTrick | null;
   capturedCardPoints: Scores;
   capturedCards: [CardId[], CardId[], CardId[]];
   marriagePoints: Scores;
@@ -83,6 +91,7 @@ export interface SeatObservation {
   trickIndex: number;
   trickLeader: Seat | null;
   trick: PlayedCard[];
+  lastCompletedTrick: CompletedTrick | null;
   capturedCardPoints: Scores;
   capturedCards: [CardId[], CardId[], CardId[]];
   marriagePoints: Scores;
@@ -119,6 +128,7 @@ export function createHand(dealer: Seat, deck: readonly CardId[], rules: ThreePl
     trickIndex: 0,
     trickLeader: null,
     trick: [],
+    lastCompletedTrick: null,
     capturedCardPoints: [0, 0, 0],
     capturedCards: [[], [], []],
     marriagePoints: [0, 0, 0],
@@ -157,6 +167,12 @@ export function cloneState(state: MatchState): MatchState {
       revealedTalon: hand.revealedTalon?.slice() ?? null,
       auction: { ...hand.auction, active: [...hand.auction.active] as [boolean, boolean, boolean] },
       trick: hand.trick.map((play) => ({ ...play })),
+      lastCompletedTrick: hand.lastCompletedTrick
+        ? {
+            ...hand.lastCompletedTrick,
+            plays: hand.lastCompletedTrick.plays.map((play) => ({ ...play })),
+          }
+        : null,
       capturedCardPoints: [...hand.capturedCardPoints] as Scores,
       capturedCards: hand.capturedCards.map((cards) => cards.slice()) as [CardId[], CardId[], CardId[]],
       marriagePoints: [...hand.marriagePoints] as Scores,
