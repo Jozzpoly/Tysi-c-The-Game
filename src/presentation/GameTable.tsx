@@ -40,9 +40,11 @@ export function GameTable({ projection, seatNames, message = '', onCommand, onNe
   const humanSeat = view.seat;
   const humanCommands = projection.legalCommands;
   const [selectedTransfer, setSelectedTransfer] = useState<CardId[]>([]);
+  const [confirmBomb, setConfirmBomb] = useState(false);
 
   useEffect(() => {
     setSelectedTransfer([]);
+    setConfirmBomb(false);
   }, [view.revision]);
 
   const seatName = (seat: Seat) => seatNames[seat];
@@ -58,6 +60,7 @@ export function GameTable({ projection, seatNames, message = '', onCommand, onNe
   );
   const bids = humanCommands.filter((command): command is Extract<Command, { type: 'bid' }> => command.type === 'bid');
   const pass = humanCommands.find((command): command is Extract<Command, { type: 'pass' }> => command.type === 'pass');
+  const bomb = humanCommands.find((command): command is Extract<Command, { type: 'bomb' }> => command.type === 'bomb');
   const exchanges = humanCommands.filter((command): command is Extract<Command, { type: 'exchange' }> => command.type === 'exchange');
   const contracts = humanCommands.filter((command): command is Extract<Command, { type: 'contract' }> => command.type === 'contract');
   const nextHand = humanCommands.find((command): command is Extract<Command, { type: 'next-hand' }> => command.type === 'next-hand');
@@ -101,25 +104,30 @@ export function GameTable({ projection, seatNames, message = '', onCommand, onNe
   const handStyle = {
     '--hand-spread-count': Math.max(0, humanCards.length - 1),
   } as CSSProperties;
+  const bombCompletion = view.completion?.kind === 'bomb' ? view.completion : null;
 
   return (
     <main className="app-shell">
       <header className="topbar">
         <div>
-          <div className="eyebrow">Tysiąc The Game · foundation slice</div>
+          <div className="eyebrow">Tysiąc The Game · candidate slice</div>
           <h1>{phaseLabel}</h1>
         </div>
         {onNewGame && <button className="ghost" onClick={onNewGame}>Nowa gra</button>}
       </header>
 
       <section className="scoreboard" aria-label="Wynik meczu">
-        {view.scores.map((score, seat) => (
-          <div className={`score ${seat === humanSeat ? 'human' : ''}`} key={seat}>
-            <span>{seatName(seat as Seat)}</span>
-            <strong>{score}</strong>
-            <small>{view.dealer === seat ? 'rozdaje' : view.declarer === seat ? 'gra' : ''}</small>
-          </div>
-        ))}
+        {view.scores.map((score, seat) => {
+          const role = view.dealer === seat ? 'rozdaje' : view.declarer === seat ? 'gra' : '';
+          const bombs = view.bombsUsed[seat] > 0 ? `bomby: ${view.bombsUsed[seat]}` : '';
+          return (
+            <div className={`score ${seat === humanSeat ? 'human' : ''}`} key={seat}>
+              <span>{seatName(seat as Seat)}</span>
+              <strong>{score}</strong>
+              <small>{[role, bombs].filter(Boolean).join(' · ')}</small>
+            </div>
+          );
+        })}
       </section>
 
       <section className="table">
@@ -174,7 +182,7 @@ export function GameTable({ projection, seatNames, message = '', onCommand, onNe
           {view.status === 'complete' && (
             <div className="decision-card">
               <h2>{view.draw ? 'Remis' : `${seatName(view.winner ?? humanSeat)} wygrywa`}</h2>
-              <p>Pełny mecz doszedł do końca na tym samym reducerze co testy headless.</p>
+              <p>Mecz zakończony.</p>
               {onNewGame && <button className="primary" onClick={onNewGame}>Zagraj ponownie</button>}
             </div>
           )}
@@ -192,11 +200,27 @@ export function GameTable({ projection, seatNames, message = '', onCommand, onNe
             </div>
           )}
 
-          {view.status === 'playing' && view.phase === 'exchange' && exchanges.length > 0 && (
+          {view.status === 'playing' && view.phase === 'exchange' && (exchanges.length > 0 || bomb) && (
             <div className="decision-card">
               <h2>Oddaj po jednej karcie</h2>
-              <p>1. wybrana → {seatName(exchanges[0].give[0].to)}, 2. wybrana → {seatName(exchanges[0].give[1].to)}. Widoczność transferu jest na razie jawnym pinem profilu.</p>
-              <button className="primary" disabled={selectedTransfer.length !== 2} onClick={confirmTransfer}>Potwierdź wymianę</button>
+              {exchanges.length > 0 && (
+                <>
+                  <p>1. wybrana → {seatName(exchanges[0].give[0].to)}, 2. wybrana → {seatName(exchanges[0].give[1].to)}. Widoczność transferu jest na razie jawnym pinem profilu.</p>
+                  <button className="primary" disabled={selectedTransfer.length !== 2} onClick={confirmTransfer}>Potwierdź wymianę</button>
+                </>
+              )}
+              {bomb && !confirmBomb && (
+                <button className="ghost" onClick={() => setConfirmBomb(true)}>Bomba — wycofaj się</button>
+              )}
+              {bomb && confirmBomb && (
+                <div className="bomb-confirm">
+                  <p>Bomba natychmiast kończy to rozdanie bez rozgrywania kontraktu. Skutek punktowy zależy od liczby wcześniejszych bomb w tym meczu.</p>
+                  <div className="actions">
+                    <button className="primary" onClick={() => void onCommand(bomb)}>Potwierdź bombę</button>
+                    <button onClick={() => setConfirmBomb(false)}>Anuluj</button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -228,7 +252,11 @@ export function GameTable({ projection, seatNames, message = '', onCommand, onNe
 
           {view.status === 'playing' && view.phase === 'complete' && nextHand && (
             <div className="decision-card">
-              <h2>Rozdanie {view.handNumber} zakończone</h2>
+              <h2>
+                {bombCompletion
+                  ? `${seatName(bombCompletion.seat)} kończy rozdanie bombą nr ${bombCompletion.bombNumber}`
+                  : `Rozdanie ${view.handNumber} zakończone`}
+              </h2>
               <p>
                 Zmiana: {view.handScoreDelta?.map((value, seat) => `${seatName(seat as Seat)} ${value >= 0 ? '+' : ''}${value}`).join(' · ')}
               </p>
