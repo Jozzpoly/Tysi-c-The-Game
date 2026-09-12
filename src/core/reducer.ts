@@ -1,6 +1,6 @@
 import { cardPoints, shuffledDeck, sortHand, suitOf, type CardId } from './cards.js';
 import { roundDefenderScore } from './rules.js';
-import { allowedBidValues, allowedContractValues, canDeclareMarriage, currentWinningPlay, legalCards } from './legality.js';
+import { allowedBidValues, allowedContractValues, canDeclareMarriage, currentWinningPlay, hasFourNines, legalCards } from './legality.js';
 import {
   cloneState,
   createHand,
@@ -215,9 +215,47 @@ export function applyCommand(original: MatchState, command: Command): ApplyResul
       events.push({ type: 'card-received', audience: item.to, from: command.seat, to: item.to, card: item.card });
     }
     hand.hands[command.seat] = sortHand(hand.hands[command.seat]);
-    hand.phase = 'contract';
+    hand.fourNinesSeat = null;
+
+    if (state.rules.fourNines.enabled && state.rules.fourNines.window === 'after-exchange-before-contract') {
+      const eligible = ([0, 1, 2] as Seat[]).find((seat) => hasFourNines(hand.hands[seat]));
+      if (eligible !== undefined) {
+        hand.phase = 'redeal-option';
+        hand.fourNinesSeat = eligible;
+        events.push({ type: 'four-nines-option', audience: eligible, seat: eligible });
+      } else {
+        hand.phase = 'contract';
+      }
+    } else {
+      hand.phase = 'contract';
+    }
+
     events.unshift({ type: 'exchange-completed', audience: 'public', from: command.seat, recipients });
     return success(state, events);
+  }
+
+  if (command.type === 'request-redeal') {
+    if (hand.phase !== 'redeal-option' || hand.fourNinesSeat === null) return failure(original, 'WRONG_PHASE');
+    if (command.seat !== hand.fourNinesSeat) return failure(original, 'NOT_YOUR_TURN');
+    if (!state.rules.fourNines.enabled || !hasFourNines(hand.hands[command.seat])) return failure(original, 'REDEAL_NOT_AVAILABLE');
+
+    const shuffled = shuffledDeck(state.seed);
+    state.seed = shuffled.nextSeed;
+    const dealer = state.rules.fourNines.redealKeepsDealer ? state.dealer : nextSeat(state.dealer);
+    state.dealer = dealer;
+    state.hand = createHand(dealer, shuffled.deck, state.rules);
+    events.push({ type: 'four-nines-redeal', audience: 'public', seat: command.seat, handNumber: state.handNumber, dealer });
+    return success(state, events);
+  }
+
+  if (command.type === 'continue-after-four-nines') {
+    if (hand.phase !== 'redeal-option' || hand.fourNinesSeat === null) return failure(original, 'WRONG_PHASE');
+    if (command.seat !== hand.fourNinesSeat) return failure(original, 'NOT_YOUR_TURN');
+    if (!state.rules.fourNines.optional) return failure(original, 'REDEAL_REQUIRED');
+    if (!hasFourNines(hand.hands[command.seat])) return failure(original, 'REDEAL_NOT_AVAILABLE');
+    hand.fourNinesSeat = null;
+    hand.phase = 'contract';
+    return success(state);
   }
 
   if (command.type === 'contract') {
@@ -303,6 +341,8 @@ export function applyCommand(original: MatchState, command: Command): ApplyResul
 
 export function observe(state: MatchState, seat: Seat): SeatObservation {
   const hand = state.hand;
+  const ownsFourNinesOption = hand.phase === 'redeal-option' && hand.fourNinesSeat === seat;
+  const projectedPhase: SeatObservation['phase'] = hand.phase === 'redeal-option' && !ownsFourNinesOption ? 'contract' : hand.phase;
   return {
     revision: state.revision,
     seat,
@@ -310,13 +350,14 @@ export function observe(state: MatchState, seat: Seat): SeatObservation {
     bombsUsed: [...state.bombsUsed] as SeatObservation['bombsUsed'],
     handNumber: state.handNumber,
     dealer: state.dealer,
-    phase: hand.phase,
+    phase: projectedPhase,
     ownHand: hand.hands[seat].slice(),
     opponentCardCounts: [hand.hands[0].length, hand.hands[1].length, hand.hands[2].length],
     revealedTalon: hand.revealedTalon?.slice() ?? null,
     auction: { ...hand.auction, active: [...hand.auction.active] as [boolean, boolean, boolean] },
     declarer: hand.declarer,
     contract: hand.contract,
+    fourNinesOption: ownsFourNinesOption,
     trump: hand.trump,
     trickIndex: hand.trickIndex,
     trickLeader: hand.trickLeader,
