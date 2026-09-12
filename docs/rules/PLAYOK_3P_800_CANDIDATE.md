@@ -52,7 +52,7 @@ This profile is deliberately narrow. Where Kurnik text is ambiguous or other rea
 - Kurnik documents defender rounding to tens with 5 rounded upward.
 - At 800 or more, a player can increase score only as declarer.
 - Match target is at least 1000.
-- Kurnik documents special simultaneous-win resolution with the declarer taking precedence; exact executable examples belong in fixtures.
+- Kurnik documents special simultaneous-win resolution with the declarer taking precedence; executable coverage exists in the current core smoke suite.
 
 ### Bomb / redeal
 
@@ -74,11 +74,26 @@ Each opponent sees only the card received by that seat; the other transferred ca
 
 Reason: Kurnik documents the transfer but not its visibility. Pagat documents face-down transfer as a common baseline and face-up transfer as a variation. This pin preserves hidden information until PlayOK behavior is black-box checked.
 
+### Final contract ceiling after the musik
+
+`same-marriage-cap-after-exchange`
+
+After taking the musik and transferring two cards, the current implementation allows the final declaration from the winning auction value up to `120 + value of marriages still held`.
+
+Reason: Kurnik explicitly says the final declaration cannot be lower than the winning bid, but the text does not clearly state whether the auction's marriage-capacity ceiling continues to apply after the musik. The implementation needs a finite legality rule now, so this is an explicit reversible pin pending a PlayOK reference probe. It must not be presented as documented PlayOK behavior.
+
 ### Trick obligation
 
 `strict-follow-and-beat / trump-when-void / overtrump-when-possible`
 
 Reason: this is consistent with the strict reading of Kurnik's obligations and with several modern implementations, but Pagat confirms that real Polish tables can differ. Treat it as a candidate behavior to reference-test, not family-core truth.
+
+Current executable scenarios cover:
+
+- following the led suit before considering trump;
+- mandatory stronger card in the led suit when available;
+- mandatory trump when void in the led suit;
+- mandatory overtrump when a higher trump is available.
 
 ### Marriage score without later trick win
 
@@ -93,13 +108,32 @@ The following must remain explicit in tests/docs until resolved:
 1. **Transfer visibility reference check** — confirm PlayOK actually behaves as `recipient-private`.
 2. **Four nines: initial hand** — when exactly may a player request redeal?
 3. **Four nines: received card** — can a transferred fourth nine create eligibility?
-4. **Post-musik contract ceiling** — after seeing the musik, is the final contract constrained by the same marriage-capacity formula as auction bids?
+4. **Post-musik contract ceiling reference check** — validate or replace `same-marriage-cap-after-exchange` against actual PlayOK behavior.
 5. **Bomb availability** — at what exact phase(s) may the declarer bomb?
 6. **Bomb count/penalty** — whether "first free, later +60" has a hard count or any additional constraints.
 7. **800 lock + bomb** — exact score interaction at/above the lock threshold.
-8. **Stronger-card obligation** — precise legal set when following suit and when trump is already winning the trick.
+8. **Stronger-card obligation reference check** — validate the exact strict legal set against actual PlayOK behavior.
 9. **Marriage with zero captured tricks** — black-box check the provisional `declared-marriage-counts` pin.
-10. **Simultaneous >=1000** — executable examples for declarer precedence, higher score and tie behavior.
+
+## Executable scenarios currently present
+
+The core smoke suite now pins and exercises:
+
+- compulsory 100 auction resolution;
+- bidding above 120 bounded by marriage capacity;
+- hidden-state seat projection boundary;
+- strict follow-and-beat behavior;
+- trump when void;
+- overtrump when possible;
+- lead-suit precedence over trump;
+- marriage establishing trump and adding its value;
+- defender 800 lock behavior;
+- simultaneous >=1000 declarer precedence;
+- deterministic complete hand simulations;
+- deterministic complete match simulations;
+- card conservation / uniqueness and captured-point accounting invariants.
+
+These scenarios prove **our candidate implementation behavior**. They do not by themselves prove that every provisional pin matches PlayOK.
 
 ## Not a separate 3P rule
 
@@ -120,4 +154,4 @@ Use these terms in fixtures/reviews:
 - Pagat — 1000 / Polish Tysiąc: https://www.pagat.com/marriage/1000.html
 - Mizerca — Thousand rules: https://mizerca.com/en/thousand-rules
 
-A profile should not move beyond `candidate` merely because the implementation compiles. The material scenarios above need executable fixtures, and the PlayOK-specific ambiguities need reference observation where feasible.
+A profile should not move beyond `candidate` merely because the implementation compiles. The material reference-sensitive questions above still need observation against PlayOK where feasible.
