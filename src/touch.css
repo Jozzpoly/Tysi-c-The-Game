@@ -1,0 +1,53 @@
+/*
+ * Mobile/coarse-pointer interaction contract.
+ *
+ * Keep this layer presentation-only: it improves hit targets and browser touch
+ * behavior without changing game legality or authority.
+ */
+
+button,
+.card {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+button:active:not(:disabled) {
+  filter: brightness(1.12);
+}
+
+@media (pointer: coarse), (max-width: 620px) {
+  button:not(.card) {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  .actions > button,
+  .decision-card > button,
+  .room-actions > button,
+  .join-row > button,
+  .rules-trigger,
+  .mode-card {
+    padding-block: 10px;
+  }
+
+  .topbar-actions button {
+    min-height: 44px;
+    padding: 9px 11px;
+  }
+
+  .card {
+    min-height: 72px;
+  }
+
+  .hand > .card:active:not(:disabled) {
+    z-index: 4;
+    transform: translateY(-4px);
+  }
+
+  .hand > .card.selected:active:not(:disabled) {
+    transform: translateY(-10px);
+  }
+}
