@@ -61,7 +61,7 @@ function fixtureSeat(): Seat {
 function Fixture() {
   const [seat] = useState<Seat>(fixtureSeat);
   const [state, setState] = useState<MatchState>(buildFixtureState);
-  const [message, setMessage] = useState('Kontrolowany fixture: czwarta dziewiątka została otrzymana w wymianie.');
+  const [message, setMessage] = useState('Kontrolowany scenariusz testowy.');
   const names = useMemo(() => {
     const value = ['Gracz 1', 'Gracz 2', 'Gracz 3'] as [string, string, string];
     value[seat] = 'Ty';
