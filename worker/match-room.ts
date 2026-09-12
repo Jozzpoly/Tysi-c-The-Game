@@ -445,7 +445,7 @@ export class MatchRoom extends DurableObject<Env> {
       };
     });
 
-    if (outcome.response.ok && !outcome.response.duplicate) {
+    if (outcome.transitions !== undefined) {
       for (const transition of outcome.transitions) this.broadcastTransition(transition);
     }
     return outcome.response;
