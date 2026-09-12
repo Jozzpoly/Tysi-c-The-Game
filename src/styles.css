@@ -28,10 +28,12 @@ button { touch-action: manipulation; }
 .card-backs { height: 34px; display: flex; justify-content: center; margin-top: 5px; }
 .card-backs i { display: block; width: 20px; height: 30px; border: 1px solid #d6c69d; border-radius: 4px; background: repeating-linear-gradient(45deg, #7d2430 0 3px, #a63d47 3px 6px); margin-left: -9px; }
 
-.center { display: grid; align-content: center; justify-items: center; gap: 14px; min-height: 210px; }
+.center { display: grid; align-content: center; justify-items: center; gap: 10px; min-height: 210px; }
 .status-strip { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 18px; color: #cbdacf; font-size: .86rem; }
 .status-strip strong { color: white; }
-.trick { min-height: 132px; display: flex; align-items: center; justify-content: center; gap: 10px; }
+.trick { min-height: 132px; display: flex; align-items: center; justify-content: center; gap: 10px; transition: opacity .15s ease; }
+.trick.completed { opacity: .84; }
+.trick-result { min-height: 1.15em; color: #d9e6dc; font-size: .8rem; }
 .played { display: grid; justify-items: center; gap: 4px; }
 .played small { color: #d8e6dc; }
 .muted { color: #a6b9ac; }
@@ -44,7 +46,7 @@ button { touch-action: manipulation; }
 .decision-card h2 { margin: 0 0 7px; font-size: 1rem; }
 .decision-card p { margin: 5px 0 10px; color: #b9c9be; font-size: .88rem; }
 .actions { display: flex; flex-wrap: wrap; gap: 7px; justify-content: center; }
-.contract-actions { max-height: 96px; overflow: auto; }
+.bid-actions, .contract-actions { max-height: 104px; overflow: auto; padding: 2px; }
 
 button { color: #f6f5ef; border: 1px solid #ffffff24; background: #14271e; border-radius: 10px; padding: 9px 13px; cursor: pointer; }
 button:hover:not(:disabled) { border-color: #ffffff55; background: #1a3427; }
@@ -75,12 +77,14 @@ button.ghost { background: #ffffff0b; }
   .score strong { font-size: 1.1rem; }
   .table { min-height: 390px; border-radius: 18px; padding: 11px; gap: 9px; }
   .opponents { gap: 8px; }
-  .center { min-height: 160px; gap: 6px; }
+  .center { min-height: 160px; gap: 5px; }
   .trick { min-height: 100px; }
   .trick .card { width: 52px; flex-basis: 52px; }
+  .trick-result { font-size: .72rem; }
   .decision { min-height: 80px; }
   .decision-card { padding: 9px 10px; }
   .decision-card p { font-size: .78rem; }
+  .bid-actions, .contract-actions { max-height: 92px; }
   .hand { justify-content: flex-start; }
   .card { flex-basis: 52px; width: 52px; }
   .footer { justify-content: center; }
