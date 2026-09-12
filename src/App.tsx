@@ -132,6 +132,13 @@ function App() {
   const [busy, setBusy] = useState<RoomMode | 'code' | null>(null);
   const [message, setMessage] = useState('');
 
+  useEffect(() => {
+    if (localQaRequested()) return;
+    const syncFromHistory = () => setRoom(roomFromUrl());
+    window.addEventListener('popstate', syncFromHistory);
+    return () => window.removeEventListener('popstate', syncFromHistory);
+  }, []);
+
   if (localQaRequested()) return <LocalGame />;
 
   function navigateRoom(nextRoom: string | null) {
