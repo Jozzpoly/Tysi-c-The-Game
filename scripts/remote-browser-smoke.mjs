@@ -106,7 +106,7 @@ async function waitForText(session, text, timeoutMs = 20_000) {
 
 async function clickButton(session, text) {
   const clicked = await execute(session, `
-    const button = [...document.querySelectorAll('button')].find((node) => node.textContent?.trim() === ${JSON.stringify(text)} && !node.disabled);
+    const button = [...document.querySelectorAll('button')].find((node) => node.textContent?.trim().startsWith(${JSON.stringify(text)}) && !node.disabled);
     if (!button) return false;
     button.click();
     return true;
