@@ -16,6 +16,10 @@
       {
         "name": "MATCH_CANARY",
         "class_name": "MatchCanary"
+      },
+      {
+        "name": "MATCH_ROOM",
+        "class_name": "MatchRoom"
       }
     ]
   },
@@ -23,6 +27,10 @@
     {
       "tag": "v1",
       "new_sqlite_classes": ["MatchCanary"]
+    },
+    {
+      "tag": "v2",
+      "new_sqlite_classes": ["MatchRoom"]
     }
   ]
 }
