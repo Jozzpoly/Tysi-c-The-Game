@@ -1,257 +1,187 @@
 # Execution state — live truth
 
 Date: 2026-09-12
-Status: **Foundation Run 01 is substantially proven locally; online MatchRoom integration is next**
+Status: **Foundation Run 01 is strongly proven locally; remote deployment and real room lifecycle remain open**
 
-This file is the compact execution truth. Earlier planning/history remains useful but is not authority where it conflicts with executable evidence here.
+This is the compact execution truth. Earlier planning/history is not authority where it conflicts with executable evidence here.
 
-## 1. Product target
+## Product target
 
 Build a small, high-quality browser Tysiąc table that is frictionless to open and good enough to use with real people.
 
-Current target:
+- 3-player auction Tysiąc first.
+- Desktop and mobile are **equal long-term product targets**.
+- Private table by link/code; no mandatory account first.
+- Bots are first-class seats.
+- Human + Bot + Bot must already be worth playing.
+- Refresh, reconnect and mobile suspension are normal lifecycle requirements.
+- Later support several real Tysiąc rule families without becoming a generic rules DSL.
 
-- 3-player auction Tysiąc;
-- desktop and mobile are **equal long-term product targets**;
-- private friend table by link/code, no mandatory account first;
-- bots are first-class seats;
-- Human + Bot + Bot must already be worth playing;
-- refresh, reconnect and mobile suspension must become normal lifecycle;
-- later support several real Tysiąc rule families without becoming a generic card-game engine or arbitrary rules DSL.
+Visual polish is deliberately later. The foundation must support professional card art, animation, sound/haptics and feedback without coupling presentation to hidden state or network internals.
 
-Visual polish is deliberately not the current focus. The foundation must instead let a later professional presentation layer consume clear state, legal choices and domain feedback without coupling to hidden authority/network internals.
+## Rules — candidate, not canonical
 
-## 2. First rules target
+First target: **`PLAYOK_3P_800_CANDIDATE`**.
 
-First profile: **`PLAYOK_3P_800_CANDIDATE`**.
+See `docs/rules/PLAYOK_3P_800_CANDIDATE.md`.
 
-It is source-scoped and intentionally not called canonical "Polish Tysiąc". Real Polish implementations/tables differ materially.
+Material PlayOK-sensitive questions remain explicit: transfer visibility, four-nines timing, post-musik contract ceiling, bomb semantics, strict trump/overtrump interpretation, zero-trick marriage scoring and the unified Kurnik musik wording.
 
-Primary profile document:
+Current executable behavior is evidence for **our candidate implementation**, not proof that every pin matches PlayOK.
 
-- `docs/rules/PLAYOK_3P_800_CANDIDATE.md`
+## Core — PASS
 
-Primary references:
+Pure TypeScript domain core is independent of React and Cloudflare.
 
-- Kurnik / PlayOK: https://www.kurnik.pl/tysiac/zasady.phtml
-- Pagat: https://www.pagat.com/marriage/1000.html
-- Mizerca: https://mizerca.com/en/thousand-rules
+Proven locally:
 
-Material unresolved/reference-sensitive items remain explicit:
+- deterministic seeded shuffle and reproducible matches;
+- complete `deal -> auction -> musik -> exchange -> contract -> 8 tricks -> score -> next hand -> match` state machine;
+- one canonical legality path and rejection reasons;
+- candidate rule scenarios and invariants;
+- card identity/conservation and score accounting;
+- seeded complete hands/matches terminate;
+- every client command now has an explicit `seat`, including `next-hand`;
+- humans and bots use the same commands.
 
-- 3P musik / Kurnik last-trick wording;
-- transfer visibility;
-- four-nines timing;
-- post-musik contract ceiling;
-- bomb timing/count/800 interaction;
-- strict trump/overtrump interpretation;
-- marriage scoring with no captured trick.
+## Projection / feedback boundary — PASS
 
-Important correction: Kurnik really does state that points for cards "from the musiks" go to the last-trick winner. Naively applying that sentence to 3P would double-count cards because all 24 cards enter the eight tricks after exchange. `no-extra-3p-musik-score` is therefore the current project pin/current-best interpretation, **not a PlayOK-observed fact**.
+Human-facing presentation does not need authoritative `MatchState`.
 
-## 3. Domain/core — PASS
+Canonical client boundary:
 
-The implemented core is pure TypeScript and independent of React/Cloudflare.
+`MatchState -> projectSeat(seat) -> SeatProjection { profile, observation, legalCommands }`
 
-Current properties:
+Executable privacy tests serialize the complete projection, including legal commands, and verify that hidden opponent/talon identities do not leak.
 
-- deterministic seeded shuffle;
-- full 3P hand/match state machine;
-- one canonical legality evaluator;
-- auction / musik / exchange / final contract / tricks / marriages / scoring / 800 lock / match end;
-- all actors submit the same domain commands;
-- invariants enforce card identity/conservation/accounting;
-- complete seeded hands and matches execute headlessly;
-- candidate-sensitive scenarios are executable.
+Accepted commands also emit transient typed `GameEvent[]`. Events have `public` or seat-specific audience and are filtered through `eventsForSeat()` before presentation/network delivery.
 
-Core smoke currently covers, among other things:
+These are **presentation/protocol facts, not event sourcing**. Canonical authority remains `MatchState`; reconnect uses a fresh projection.
 
-- compulsory 100;
-- bid ceiling from held marriages;
-- follow-and-beat;
-- trump when void;
-- overtrump;
-- lead-suit precedence;
-- marriage establishes trump and score;
-- 800 lock;
-- simultaneous >=1000 declarer precedence;
-- hidden-card observation boundary;
-- transfer privacy under the current recipient-private pin;
-- full seeded match completion.
+## Local presentation — PASS as foundation
 
-## 4. Presentation/network boundary — PASS
+`src/presentation/GameTable.tsx` is now a pure projection-driven table renderer/controller surface:
 
-Human-facing presentation no longer needs authoritative `MatchState`.
+- input: `SeatProjection`, names, message;
+- output: `onCommand(command)`;
+- no authoritative state, bot logic or Cloudflare knowledge;
+- does not assume the human occupies seat 0.
 
-Canonical boundary:
+`src/App.tsx` is currently only the local Human + Bot + Bot authority adapter around that same table surface.
 
-`MatchState -> projectSeat(seat) -> { profile, observation, legalCommands }`
+Browser CI proves GameTable with the human on both the ordinary seat 0 path and a non-zero absolute seat (`seat=2`). This is enforced on both desktop and mobile.
 
-`SeatProjection` is the intended contract for both local and future online clients.
+## Desktop/mobile browser evidence — PASS as foundation
 
-Executable privacy tests serialize the complete projection — including `legalCommands` — and prove that opponent hand identities and hidden talon identities do not leak.
+Real headless Chrome tests use DevTools device metrics, not a guessed window size.
 
-### Domain feedback events
-
-Accepted commands now emit transient typed `GameEvent[]` such as:
-
-- bid/pass/auction win;
-- talon reveal;
-- exchange;
-- private received card;
-- contract;
-- marriage;
-- card play;
-- completed trick;
-- hand score;
-- match completion.
-
-These events are **not event sourcing**. Canonical state remains `MatchState`; reconnect can use a fresh seat projection.
-
-Events carry an audience (`public` or one seat). `eventsForSeat()` is the visibility filter. Executable tests prove that private transferred-card identities cannot leak through the feedback channel.
-
-This boundary is deliberately suitable for later animation, richer graphics, audio, haptics, history and online synchronization without reverse-engineering state diffs.
-
-## 5. Bot — ADEQUATE foundation, not final skill
-
-The first product bot is deterministic and only receives a seat observation + legal commands + public rules.
-
-A pathological first calibration caused matches to spiral into hundreds of hands and very large negative scores. The test limit was not relaxed; the policy was recalibrated.
-
-Current 40-match survey:
-
-- average match: **32.4 hands**;
-- maximum: **49 hands**;
-- worst observed minimum score: **-630**;
-- average contract: **113.6**;
-- voluntary contract success: **61.3%**;
-- forced-100 success: **39.4%**;
-- winner seats: **16 / 15 / 9** in the current fixed survey;
-- no non-terminating match in the survey.
-
-Further tuning should wait for real human gameplay; self-play optimization now risks overfitting.
-
-## 6. Browser/mobile/desktop evidence — PASS as foundation
-
-Real Chrome/ChromeDriver tests run against the Vite/workerd dev app.
-
-The harness uses Chrome DevTools emulation and asserts the actual document width, `window.innerWidth` and `visualViewport`. Earlier false "mobile" evidence at 500 px was detected and withdrawn.
-
-Current tested viewports:
+Enforced viewports:
 
 - desktop: **1440 x 1000**;
 - mobile: **390 x 844**.
 
-Both run these real interaction paths:
+Both execute real interaction flows:
 
-### Defender path
+- defender: auction -> pass -> legal trick play -> completed trick;
+- declarer: win auction -> musik -> 10-card exchange -> 8-card contract -> lead -> completed trick;
+- non-zero human seat composition.
 
-`auction -> pass -> wait for human trick turn -> click legal card -> completed trick`
+The hand presenter now uses adaptive overlap instead of horizontal scrolling. CI asserts the hand itself has no horizontal overflow. At 390 px, 7-, 8- and 10-card hands all fit within the ~372 px hand container.
 
-### Declarer path
+The current card art/layout is still a foundation placeholder. The important result is that all cards remain visible/interactable and the presentation contract does not constrain later professional graphics.
 
-Using deterministic QA seed 2:
+Marriage actions are explicit (`Melduj Q♦` vs `Melduj K♦`) so distinct legal plays are not visually collapsed.
 
-`win auction at 200 -> musik -> 10-card exchange -> select two cards -> confirm -> 8-card final contract -> first lead -> completed trick`
+## Bot — ADEQUATE foundation
 
-The browser test asserts no page-level horizontal overflow at every checked phase and stores screenshots as CI artifacts.
+The product heuristic only receives its seat observation, legal commands and public rules.
 
-### Presentation debt deliberately left open
+Current fixed 40-match survey:
 
-The temporary hand presenter horizontally scrolls when the row no longer fits. On the current 390 px viewport:
+- average 32.4 hands;
+- maximum 49;
+- voluntary contract success 61.3%;
+- forced-100 success 39.4%;
+- no non-terminating match.
 
-- available hand width: ~372 px;
-- 7-card row: ~391 px;
-- 8-card row: ~447 px;
-- 10-card exchange row: ~559 px.
+Further tuning should be driven by human gameplay, not self-play overfitting.
 
-This is **not** a long-term mobile design decision. Future card presentation should support adaptive fit/fan/overlap/hit areas while preserving full interaction quality. Do not polish the placeholder into an architectural constraint.
+## MatchRoom / Worker — LOCAL PASS
 
-Another small semantic UX debt: a marriage currently offers two visually identical meld buttons when both K and Q can legally be led; future UI must distinguish the card choice.
+There is now exactly one room authority model: **`MatchRoom`**. The temporary `MatchCanary` implementation, tests, routes and binding have been removed.
 
-Normal product startup is random. `?seed=N` exists only as a reproducible QA hook.
+`MatchRoom`:
 
-## 7. Cloudflare infrastructure — local/runtime PASS, remote NOT YET PROVEN
+- stores canonical `MatchState` in SQLite-backed Durable Object storage;
+- calls the same core `applyCommand()` and invariants used locally;
+- accepts `{ clientCommandId, expectedRevision, command }`;
+- persists bounded command receipts for retry idempotency;
+- detects command-id reuse;
+- enforces seat context for every command;
+- sends only per-seat `SeatProjection + eventsForSeat()`;
+- survives DO eviction;
+- uses hibernating WebSockets with serialized seat attachment;
+- resyncs from current projection rather than requiring packet replay.
 
-Current canary uses:
+Worker routes are executable under workerd/Vitest:
 
-- Worker + Vite integration;
-- one SQLite-backed Durable Object per named room;
-- persisted revision;
-- transaction-based expected-revision gate;
-- hibernating WebSockets;
-- HTTP and WebSocket routing.
+- `GET /api/match/:room?seat=N` -> seat projection;
+- `POST /api/match/:room?seat=N` -> same core command path;
+- `/api/match/:room/ws?seat=N` -> WebSocket to the named MatchRoom.
 
-Current workerd/Vitest evidence: **5/5 PASS**, covering:
+Tests cover hidden-state privacy, persistence after eviction, duplicate retry behavior, command-id misuse, seat authorization, stale/concurrent revision races, per-seat WebSocket updates across eviction, router validation and HTTP/WS forwarding.
 
-- room isolation;
-- persistence after Durable Object eviction;
-- optimistic revision race (one stale command rejected);
-- routing;
-- an existing WebSocket remaining usable across DO eviction/hibernation.
+`wrangler deploy --dry-run` is green with only `MATCH_ROOM` bound.
 
-Production build is green.
+### NOT YET PROVEN
 
-`wrangler deploy --dry-run` is green and uses the Vite-generated deployment config, client assets and Durable Object binding.
+- real Cloudflare deployment / `workers.dev` execution;
+- production seat identity/authentication;
+- create/join/invite lifecycle;
+- reconnect credential lifecycle;
+- online bot-seat orchestration;
+- a real browser client connected to MatchRoom rather than the local adapter.
 
-**Not yet proven:** an actual remote `workers.dev` deployment. No Cloudflare account connector is available in the current agent environment; do not claim remote evidence before it exists.
+Current `?seat=` transport context is explicitly **test/foundation identity**, not shipping authentication.
 
-## 8. Toolchain — PASS / reproducible
+## Architecture to preserve
 
-- Node 24 in CI;
-- npm 11.19.0;
-- committed `package-lock.json`;
-- CI uses `npm ci` + cache;
-- workflow token is read-only;
-- install-script approvals are pinned only for the current `esbuild` and `workerd` versions;
-- generated Vite/Wrangler artifacts are ignored.
+Keep:
 
-A Node 22/npm 10 install failure was traced to the npm/Arborist `edgesOut` crash rather than hidden dependency conflict; the same graph installs correctly under the current toolchain.
-
-## 9. Current architecture
-
-### Keep
-
-- pure TypeScript core;
-- React + Vite presentation;
-- DOM/CSS/SVG-first cards rather than a game engine/canvas requirement;
-- `SeatProjection` as client data boundary;
-- typed scoped domain feedback events;
-- same commands for human and bot actors;
+- pure domain core;
+- React/Vite + DOM/CSS/SVG-first presentation;
+- `SeatProjection` as the only human client game-state boundary;
+- typed scoped feedback events;
+- `GameTable` independent of local/remote authority;
+- same command model for humans/bots;
 - server-authoritative hidden state online;
 - one Durable Object per table;
-- SQLite-backed DO + hibernating WebSockets;
 - snapshot/revision reconnect model.
 
-### Avoid for now
+Avoid for now:
 
-- generic rules DSL;
-- fixed polymorphic policy hierarchy;
+- generic rules DSL/policy framework;
 - event sourcing;
-- D1/accounts/ranking before product need;
+- D1/accounts/ranking without product need;
 - client prediction;
-- separate mobile rules/UI data model;
-- separate server implementation of game rules.
+- separate mobile game-state model;
+- duplicated server rules implementation.
 
-## 10. Immediate next work
+## Immediate next work
 
-Evolve the proven infrastructure canary into a real **local MatchRoom** before any remote deployment.
+Design and implement **room lifecycle + seat identity + reconnect as one bounded subsystem**, rather than attaching a token to the current `?seat=` canary semantics.
 
-Hard requirement:
+Required product properties:
 
-`MatchRoom` must store/use the same canonical `MatchState`, call the same core reducer, and send each seat the same `SeatProjection + eventsForSeat` contract already used locally.
+- frictionless create/share/join;
+- no account required;
+- explicit human/bot seat ownership;
+- opaque unguessable reconnect credential for a human seat;
+- no long-lived seat secret in a shareable room URL;
+- credentials survive refresh/mobile suspension naturally;
+- MatchRoom remains the only match authority;
+- GameTable remains unaware of authentication/network details.
 
-First protocol must include:
+Then build a remote client adapter using exactly the existing `SeatProjection + onCommand` interface and perform the first real deployment when credentials/tooling permit.
 
-- `clientCommandId`;
-- `expectedRevision`;
-- idempotent duplicate handling;
-- seat-bound command authorization;
-- persistent accepted state;
-- per-seat projections/events;
-- reconnect snapshot;
-- WebSocket hibernation.
-
-Do not let `next-hand` accidentally become arbitrary client authority. The current domain command has no seat; online hand advancement needs an explicit server/system policy before exposing it remotely.
-
-After MatchRoom passes local workerd tests, reassess the smallest safe route to a real Cloudflare deployment. Further rule research remains demand-driven by concrete unresolved scenarios or failing tests.
+Further rule research stays demand-driven by a concrete scenario or failing test.
