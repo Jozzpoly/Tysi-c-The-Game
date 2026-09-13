@@ -11,6 +11,14 @@
   font-size: .72rem;
 }
 
+.remote-room-active .footer > span:not(.message) {
+  display: none;
+}
+
+.remote-room-active .footer {
+  justify-content: center;
+}
+
 @media (max-width: 620px) {
   .remote-room-active > .connection-banner {
     top: 6px;

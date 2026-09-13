@@ -17,9 +17,14 @@ export function describeFeedback(
 ): string {
   if (events.length === 0) return '';
 
+  const forSeat = (seat: Seat, you: string, thirdPerson: string) => {
+    const name = nameForSeat(seat);
+    return name === 'Ty' ? you : `${name} ${thirdPerson}`;
+  };
+
   const match = events.find((event) => event.type === 'match-completed');
   if (match?.type === 'match-completed') {
-    return match.draw ? 'Mecz zakończony remisem.' : `${nameForSeat(match.winner ?? 0)} wygrywa mecz.`;
+    return match.draw ? 'Mecz zakończony remisem.' : forSeat(match.winner ?? 0, 'Wygrywasz mecz.', 'wygrywa mecz.');
   }
 
   const redeal = events.find((event) => event.type === 'four-nines-redeal');
@@ -33,28 +38,40 @@ export function describeFeedback(
       .map((value, seat) => value === 0 ? null : `${nameForSeat(seat as Seat)} +${value}`)
       .filter(Boolean)
       .join(' · ');
+    const suffix = changes ? ` ${changes}.` : ' Bez zmiany wyniku.';
     return bomb.bombNumber === 1
-      ? `${nameForSeat(bomb.seat)} daje pierwszą bombę. Rozdanie kończy się bez zmiany wyniku.`
-      : `${nameForSeat(bomb.seat)} daje bombę nr ${bomb.bombNumber}.${changes ? ` ${changes}.` : ' Bez zmiany wyniku.'}`;
+      ? forSeat(bomb.seat, 'Dajesz pierwszą bombę. Rozdanie kończy się bez zmiany wyniku.', 'daje pierwszą bombę. Rozdanie kończy się bez zmiany wyniku.')
+      : `${forSeat(bomb.seat, `Dajesz bombę nr ${bomb.bombNumber}.`, `daje bombę nr ${bomb.bombNumber}.`)}${suffix}`;
   }
 
   const hand = events.find((event) => event.type === 'hand-scored');
   if (hand?.type === 'hand-scored') {
-    const result = hand.contractMade ? 'realizuje' : 'nie realizuje';
-    return `${nameForSeat(hand.declarer)} ${result} kontrakt ${hand.contract}.`;
+    return hand.contractMade
+      ? forSeat(hand.declarer, `Realizujesz kontrakt ${hand.contract}.`, `realizuje kontrakt ${hand.contract}.`)
+      : forSeat(hand.declarer, `Nie realizujesz kontraktu ${hand.contract}.`, `nie realizuje kontraktu ${hand.contract}.`);
   }
 
   const trick = events.find((event) => event.type === 'trick-completed');
   if (trick?.type === 'trick-completed') {
-    return `${nameForSeat(trick.trick.winner)} bierze lewę ${trick.trick.index} · ${trick.trick.points} pkt`;
+    return forSeat(
+      trick.trick.winner,
+      `Bierzesz lewę ${trick.trick.index} · ${trick.trick.points} pkt`,
+      `bierze lewę ${trick.trick.index} · ${trick.trick.points} pkt`,
+    );
   }
 
   const marriage = events.find((event) => event.type === 'marriage-declared');
   const play = events.find((event) => event.type === 'card-played');
   if (marriage?.type === 'marriage-declared' && play?.type === 'card-played' && marriage.seat === play.seat) {
-    return `${nameForSeat(play.seat)} melduje ${SUIT_SYMBOL[marriage.suit]} i zagrywa ${cardLabel(play.card)}`;
+    return forSeat(
+      play.seat,
+      `Meldujesz ${SUIT_SYMBOL[marriage.suit]} i zagrywasz ${cardLabel(play.card)}`,
+      `melduje ${SUIT_SYMBOL[marriage.suit]} i zagrywa ${cardLabel(play.card)}`,
+    );
   }
-  if (play?.type === 'card-played') return `${nameForSeat(play.seat)} zagrywa ${cardLabel(play.card)}`;
+  if (play?.type === 'card-played') {
+    return forSeat(play.seat, `Zagrywasz ${cardLabel(play.card)}`, `zagrywa ${cardLabel(play.card)}`);
+  }
 
   const received = events.find((event) => event.type === 'card-received');
   if (received?.type === 'card-received') {
@@ -62,19 +79,27 @@ export function describeFeedback(
   }
 
   const contract = events.find((event) => event.type === 'contract-set');
-  if (contract?.type === 'contract-set') return `${nameForSeat(contract.seat)} gra ${contract.value}.`;
+  if (contract?.type === 'contract-set') {
+    return forSeat(contract.seat, `Grasz ${contract.value}.`, `gra ${contract.value}.`);
+  }
 
   const auction = events.find((event) => event.type === 'auction-won');
-  if (auction?.type === 'auction-won') return `${nameForSeat(auction.seat)} wygrywa licytację za ${auction.value}.`;
+  if (auction?.type === 'auction-won') {
+    return forSeat(auction.seat, `Wygrywasz licytację za ${auction.value}.`, `wygrywa licytację za ${auction.value}.`);
+  }
 
   const exchange = events.find((event) => event.type === 'exchange-completed');
-  if (exchange?.type === 'exchange-completed') return `${nameForSeat(exchange.from)} kończy wymianę kart.`;
+  if (exchange?.type === 'exchange-completed') {
+    return forSeat(exchange.from, 'Kończysz wymianę kart.', 'kończy wymianę kart.');
+  }
 
   const bid = events.find((event) => event.type === 'bid-placed');
-  if (bid?.type === 'bid-placed') return `${nameForSeat(bid.seat)} licytuje ${bid.value}.`;
+  if (bid?.type === 'bid-placed') {
+    return forSeat(bid.seat, `Licytujesz ${bid.value}.`, `licytuje ${bid.value}.`);
+  }
 
   const passed = events.find((event) => event.type === 'player-passed');
-  if (passed?.type === 'player-passed') return `${nameForSeat(passed.seat)} pasuje.`;
+  if (passed?.type === 'player-passed') return forSeat(passed.seat, 'Pasujesz.', 'pasuje.');
 
   const handStarted = events.find((event) => event.type === 'hand-started');
   if (handStarted?.type === 'hand-started') return `Rozdanie ${handStarted.handNumber}.`;

@@ -50,6 +50,7 @@ export function GameTable({ projection, seatNames, message = '', onCommand, onNe
   }, [view.revision]);
 
   const seatName = (seat: Seat) => seatNames[seat];
+  const seatAction = (seat: Seat, you: string, thirdPerson: string) => seat === humanSeat ? you : `${seatName(seat)} ${thirdPerson}`;
   const opponentSeats = ALL_SEATS.filter((seat) => seat !== humanSeat);
   const humanCards = view.ownHand;
   const playable = new Set(
@@ -106,6 +107,7 @@ export function GameTable({ projection, seatNames, message = '', onCommand, onNe
   const showingCompletedTrick = view.trick.length === 0 && view.lastCompletedTrick !== null;
   const handStyle = { '--hand-spread-count': Math.max(0, humanCards.length - 1) } as CSSProperties;
   const bombCompletion = view.completion?.kind === 'bomb' ? view.completion : null;
+  const winnerSeat = view.winner ?? humanSeat;
 
   return (
     <main className="app-shell">
@@ -183,7 +185,7 @@ export function GameTable({ projection, seatNames, message = '', onCommand, onNe
         <section className="decision" aria-live="polite">
           {view.status === 'complete' && (
             <div className="decision-card">
-              <h2>{view.draw ? 'Remis' : `${seatName(view.winner ?? humanSeat)} wygrywa`}</h2>
+              <h2>{view.draw ? 'Remis' : seatAction(winnerSeat, 'Wygrywasz', 'wygrywa')}</h2>
               {projection.scoreSummary ? (
                 <ScoreSummary summary={projection.scoreSummary} nameForSeat={seatName} />
               ) : (
@@ -279,7 +281,7 @@ export function GameTable({ projection, seatNames, message = '', onCommand, onNe
 
           {view.status === 'playing' && view.phase === 'complete' && nextHand && (
             <div className="decision-card">
-              <h2>{bombCompletion ? `${seatName(bombCompletion.seat)} kończy rozdanie bombą nr ${bombCompletion.bombNumber}` : `Rozdanie ${view.handNumber} zakończone`}</h2>
+              <h2>{bombCompletion ? seatAction(bombCompletion.seat, `Kończysz rozdanie bombą nr ${bombCompletion.bombNumber}`, `kończy rozdanie bombą nr ${bombCompletion.bombNumber}`) : `Rozdanie ${view.handNumber} zakończone`}</h2>
               {projection.scoreSummary ? (
                 <ScoreSummary summary={projection.scoreSummary} nameForSeat={seatName} />
               ) : (
