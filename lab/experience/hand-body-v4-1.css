@@ -1,0 +1,59 @@
+/* V4.1 overlays V4 without mutating the frozen V4 evidence.
+   Scope: edge-safe touch visibility assistance + compressed reorder seam. */
+
+.hand-card.placeholder {
+  --placeholder-basis: calc(var(--card-w) * .42);
+  flex: 0 0 var(--placeholder-basis);
+  width: var(--placeholder-basis);
+  height: var(--card-h);
+  margin-left: 0;
+  opacity: 1;
+  border: 0;
+  background: transparent;
+  transition: flex-basis .09s ease, width .09s ease;
+}
+
+.hand-card.placeholder::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 12%;
+  width: 1px;
+  height: 66%;
+  border-radius: 999px;
+  background: rgba(196, 220, 205, .24);
+  box-shadow: 0 0 12px rgba(180, 213, 193, .06);
+  transform: translateX(-50%);
+}
+
+body[data-play-intent="legal"] .hand-card.placeholder,
+body[data-play-intent="illegal"] .hand-card.placeholder {
+  --placeholder-basis: calc(var(--card-w) * .56);
+}
+
+body[data-play-intent="legal"] .hand-card.placeholder::after,
+body[data-play-intent="illegal"] .hand-card.placeholder::after {
+  width: 15px;
+  height: 70%;
+  border: 1px solid rgba(196, 220, 205, .20);
+  background: rgba(196, 220, 205, .025);
+}
+
+body[data-play-intent="illegal"] .hand-card.placeholder::after {
+  border-color: rgba(217, 141, 132, .23);
+  background: rgba(217, 141, 132, .025);
+}
+
+.hand-card.held {
+  transform: translate3d(
+    calc(var(--hold-left, 0px) + var(--assist-x, 0px)),
+    calc(var(--hold-top, 0px) + var(--assist-y, 0px)),
+    0
+  ) rotate(var(--hold-rot, 0deg));
+}
+
+.contact-thread {
+  width: 1px;
+  height: 1px;
+  transform-origin: top center;
+}
