@@ -150,8 +150,8 @@ async function uiState(session) {
     return {
       heading: document.querySelector('.decision-card h2')?.textContent?.trim() ?? '',
       revision: revText ? Number(revText.slice(4)) : null,
-      handCount: document.querySelectorAll('.hand .card').length,
-      playable: document.querySelectorAll('.hand .card:not(:disabled)').length,
+      handCount: document.querySelectorAll('.hand > .hand-slot > .card').length,
+      playable: document.querySelectorAll('.hand > .hand-slot > .card:not(:disabled)').length,
     };
   `);
 }
@@ -281,9 +281,9 @@ async function run() {
       throw new Error(`local order did not survive authority revisions: ${JSON.stringify({ reorderedLabels, retainedOrder })}`);
     }
 
-    await execute(session, `document.querySelectorAll('.hand .card:not(:disabled)')[0]?.click();`);
-    await execute(session, `document.querySelectorAll('.hand .card:not(:disabled)')[1]?.click();`);
-    await waitFor('two exchange selections', () => execute(session, `return document.querySelectorAll('.hand .card.selected').length === 2;`));
+    await execute(session, `document.querySelectorAll('.hand > .hand-slot > .card:not(:disabled)')[0]?.click();`);
+    await execute(session, `document.querySelectorAll('.hand > .hand-slot > .card:not(:disabled)')[1]?.click();`);
+    await waitFor('two exchange selections', () => execute(session, `return document.querySelectorAll('.hand > .hand-slot > .card.selected').length === 2;`));
     const exchangeRevision = (await uiState(session)).revision;
     await clickButton(session, 'Potwierdź wymianę');
     await waitRevisionAdvance(session, exchangeRevision, 'exchange accepted');
@@ -298,7 +298,7 @@ async function run() {
       return current.heading === 'Twój ruch' && current.playable > 0 ? current : false;
     }, 10_000);
 
-    await execute(session, `document.querySelector('.hand .card:not(:disabled)')?.scrollIntoView({ block: 'center', inline: 'center' });`);
+    await execute(session, `document.querySelector('.hand > .hand-slot > .card:not(:disabled)')?.scrollIntoView({ block: 'center', inline: 'center' });`);
     await sleep(100);
     const playableCards = (await handSnapshot(session)).filter((card) => !card.disabled);
     if (!playableCards.length) throw new Error('no playable card geometry');
@@ -316,14 +316,35 @@ async function run() {
     const commitReady = await waitFor('throw commit affordance', () => execute(session, `
       const zone = document.querySelector('.tactile-commit-zone.ready');
       const floating = document.querySelector('.tactile-card-float.commit-ready');
-      return zone && floating ? { text: zone.textContent?.trim() ?? '', floating: true } : false;
+      if (!zone || !floating) return false;
+      const rect = floating.getBoundingClientRect();
+      const style = getComputedStyle(floating);
+      return {
+        text: zone.textContent?.trim() ?? '',
+        position: style.position,
+        left: rect.left,
+        top: rect.top,
+        right: rect.right,
+        bottom: rect.bottom,
+        width: rect.width,
+        height: rect.height,
+        inViewport: rect.width > 40
+          && rect.height > 60
+          && rect.right > 0
+          && rect.bottom > 0
+          && rect.left < window.innerWidth
+          && rect.top < window.innerHeight,
+      };
     `), 2_000);
+    if (commitReady.position !== 'fixed' || !commitReady.inViewport) {
+      throw new Error(`held-card feedback is not visibly attached to the pointer: ${JSON.stringify(commitReady)}`);
+    }
     await screenshot(session, 'mobile-tactile-hand-throw-ready');
     await touchEnd(session);
 
     const afterThrow = await waitRevisionAdvance(session, playableState.revision, 'thrown card accepted');
     if (afterThrow.handCount !== beforeThrowCount - 1) {
-      throw new Error(`throw did not remove exactly one card: ${beforeThrowCount} -> ${afterThrow.handCount}`);
+      throw new Error(`throw did not remove exactly one canonical hand slot: ${beforeThrowCount} -> ${afterThrow.handCount}`);
     }
 
     const selection = await execute(session, `return window.getSelection()?.toString() ?? '';`);
@@ -335,6 +356,8 @@ async function run() {
       reorderedOrder: reordered.map((card) => card.label),
       orderSurvivedRevisions: true,
       throwCommitText: commitReady.text,
+      heldCardPosition: commitReady.position,
+      heldCardInViewport: commitReady.inViewport,
       throwRevision: `${playableState.revision}->${afterThrow.revision}`,
       handCount: `${beforeThrowCount}->${afterThrow.handCount}`,
     };
