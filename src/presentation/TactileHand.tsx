@@ -8,11 +8,20 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from 'react';
 import { rankOf, suitOf, type CardId } from '../core/index.js';
+import {
+  TACTILE_RELEASE_MS,
+  TACTILE_RETURN_MS,
+  advanceTactilePointer,
+  beginTactilePointer,
+  classifyTactileRelease,
+  moveCardInOrder,
+  reconcileHandOrder,
+  shouldReorderFromPointer,
+  tactileTiltDegrees,
+  type TactilePointerState,
+} from './tactileInteraction.js';
 
 const SUIT_SYMBOL = { spades: '♠', clubs: '♣', diamonds: '♦', hearts: '♥' } as const;
-const DRAG_SLOP = 6;
-const RELEASE_MS = 190;
-const RETURN_MS = 210;
 
 interface TactileHandProps {
   cards: readonly CardId[];
@@ -21,23 +30,6 @@ interface TactileHandProps {
   actionableCards: ReadonlySet<CardId>;
   throwableCards: ReadonlySet<CardId>;
   onActivate: (card: CardId) => void;
-}
-
-interface DragState {
-  card: CardId;
-  pointerId: number;
-  startX: number;
-  startY: number;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  offsetX: number;
-  offsetY: number;
-  moved: boolean;
-  throwIntent: boolean;
-  commitReady: boolean;
-  zoneTop: number;
 }
 
 interface ReleaseGhost {
@@ -50,7 +42,7 @@ interface ReleaseGhost {
 }
 
 type FloatingCardProps =
-  | { ghost: DragState; dragging: true }
+  | { ghost: TactilePointerState; dragging: true }
   | { ghost: ReleaseGhost; dragging: false };
 
 type SlotStyle = CSSProperties & {
@@ -71,13 +63,6 @@ function cardFace(card: CardId) {
   return { suit, rank, symbol, red };
 }
 
-function reconcileOrder(order: readonly CardId[], cards: readonly CardId[]): CardId[] {
-  const incoming = new Set(cards);
-  const kept = order.filter((card) => incoming.has(card));
-  const keptSet = new Set(kept);
-  return [...kept, ...cards.filter((card) => !keptSet.has(card))];
-}
-
 function FloatingCard(props: FloatingCardProps) {
   let left: number;
   let top: number;
@@ -89,7 +74,7 @@ function FloatingCard(props: FloatingCardProps) {
     const ghost = props.ghost;
     left = ghost.x - ghost.offsetX;
     top = ghost.y - ghost.offsetY;
-    tilt = Math.max(-12, Math.min(12, (ghost.x - ghost.startX) / 10));
+    tilt = tactileTiltDegrees(ghost);
     commitReady = ghost.commitReady;
     throwIntent = ghost.throwIntent;
   } else {
@@ -115,21 +100,13 @@ function FloatingCard(props: FloatingCardProps) {
       style={style}
       data-rank={rank}
       data-suit={symbol}
+      data-gesture-phase={props.dragging ? ghost.phase : 'releasing'}
       aria-hidden="true"
     >
       <span className="rank" data-suit={symbol}>{rank}</span>
       <span className="suit">{symbol}</span>
     </div>
   );
-}
-
-function moveCard(order: readonly CardId[], card: CardId, targetIndex: number): CardId[] {
-  const sourceIndex = order.indexOf(card);
-  if (sourceIndex < 0 || sourceIndex === targetIndex) return [...order];
-  const next = [...order];
-  next.splice(sourceIndex, 1);
-  next.splice(Math.max(0, Math.min(targetIndex, next.length)), 0, card);
-  return next;
 }
 
 export function TactileHand({
@@ -141,7 +118,7 @@ export function TactileHand({
   onActivate,
 }: TactileHandProps) {
   const [order, setOrder] = useState<CardId[]>(() => [...cards]);
-  const [drag, setDrag] = useState<DragState | null>(null);
+  const [drag, setDrag] = useState<TactilePointerState | null>(null);
   const [releaseGhost, setReleaseGhost] = useState<ReleaseGhost | null>(null);
   const handRef = useRef<HTMLDivElement>(null);
   const previousHandNumber = useRef(handNumber);
@@ -153,12 +130,12 @@ export function TactileHand({
   // Local order may remember preference, but it never gets to keep a card that
   // the canonical SeatProjection no longer contains.
   const visibleOrder = previousHandNumber.current === handNumber
-    ? reconcileOrder(order, cards)
+    ? reconcileHandOrder(order, cards)
     : [...cards];
 
   useEffect(() => {
     setOrder((current) => previousHandNumber.current === handNumber
-      ? reconcileOrder(current, cards)
+      ? reconcileHandOrder(current, cards)
       : [...cards]);
     previousHandNumber.current = handNumber;
   }, [cardsKey, handNumber]);
@@ -220,7 +197,7 @@ export function TactileHand({
     const sourceIndex = visibleOrder.indexOf(card);
     if (nearestIndex < 0 || nearestIndex === sourceIndex) return;
     beforeRects.current = readSlotRects();
-    setOrder((current) => moveCard(reconcileOrder(current, cards), card, nearestIndex));
+    setOrder((current) => moveCardInOrder(reconcileHandOrder(current, cards), card, nearestIndex));
   }
 
   function beginDrag(event: ReactPointerEvent<HTMLDivElement>, card: CardId) {
@@ -231,45 +208,38 @@ export function TactileHand({
     const handRect = handRef.current?.getBoundingClientRect() ?? rect;
     event.currentTarget.setPointerCapture(event.pointerId);
     if (button instanceof HTMLButtonElement && !button.disabled) button.focus({ preventScroll: true });
-    setDrag({
+    setDrag(beginTactilePointer({
       card,
       pointerId: event.pointerId,
-      startX: event.clientX,
-      startY: event.clientY,
       x: event.clientX,
       y: event.clientY,
+      timeMs: event.timeStamp,
       width: rect.width,
       height: rect.height,
       offsetX: event.clientX - rect.left,
       offsetY: event.clientY - rect.top,
-      moved: false,
-      throwIntent: false,
-      commitReady: false,
       zoneTop: Math.max(14, handRect.top - 76),
-    });
+    }));
   }
 
   function moveDrag(event: ReactPointerEvent<HTMLDivElement>) {
     if (!drag || event.pointerId !== drag.pointerId) return;
-    const distance = Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY);
-    const moved = drag.moved || distance >= DRAG_SLOP;
-    const commitDistance = Math.max(62, drag.height * 0.72);
-    const throwIntent = moved && event.clientY <= drag.startY - commitDistance;
-    const commitReady = throwIntent && throwableCards.has(drag.card);
+    const next = advanceTactilePointer(drag, {
+      x: event.clientX,
+      y: event.clientY,
+      timeMs: event.timeStamp,
+      canCommit: throwableCards.has(drag.card),
+    });
 
-    if (moved) {
+    if (next.moved) {
       event.preventDefault();
-      // Reordering remains free while the card is near the hand. Once the card
-      // is pulled decisively toward the table, stop shuffling slots underneath it.
-      if (!throwIntent) reorderFromPointer(drag.card, event.clientX, event.clientY);
+      if (shouldReorderFromPointer(next)) reorderFromPointer(next.card, next.x, next.y);
     }
 
-    setDrag((current) => current && current.pointerId === event.pointerId
-      ? { ...current, x: event.clientX, y: event.clientY, moved, throwIntent, commitReady }
-      : current);
+    setDrag((current) => current?.pointerId === event.pointerId ? next : current);
   }
 
-  function animateReturnToHand(state: DragState) {
+  function animateReturnToHand(state: TactilePointerState) {
     const slot = handRef.current?.querySelector<HTMLElement>(`:scope > .hand-slot[data-card="${state.card}"]`);
     if (!slot) return;
     const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
@@ -280,7 +250,7 @@ export function TactileHand({
     const currentTop = state.y - state.offsetY;
     const dx = currentLeft - rect.left;
     const dy = currentTop - rect.top;
-    const tilt = Math.max(-12, Math.min(12, (state.x - state.startX) / 10));
+    const tilt = tactileTiltDegrees(state);
     slot.getAnimations().forEach((animation) => animation.cancel());
     slot.animate(
       [
@@ -288,7 +258,7 @@ export function TactileHand({
         { transform: `translate(${dx * .16}px, ${Math.min(8, dy * .04)}px) rotate(${tilt * .08}deg) scale(1.012)`, offset: .78 },
         { transform: 'translate(0, 0) rotate(0deg) scale(1)', offset: 1 },
       ],
-      { duration: RETURN_MS, easing: 'cubic-bezier(.18,.78,.25,1)' },
+      { duration: TACTILE_RETURN_MS, easing: 'cubic-bezier(.18,.78,.25,1)' },
     );
   }
 
@@ -296,7 +266,11 @@ export function TactileHand({
     if (!drag || event.pointerId !== drag.pointerId) return;
     if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
 
-    const shouldCommit = !cancelled && drag.moved && drag.commitReady && throwableCards.has(drag.card);
+    const outcome = classifyTactileRelease(drag, {
+      cancelled,
+      canCommit: throwableCards.has(drag.card),
+    });
+
     if (drag.moved && actionableCards.has(drag.card)) {
       suppressClick.current = drag.card;
       window.setTimeout(() => {
@@ -304,20 +278,19 @@ export function TactileHand({
       }, 0);
     }
 
-    if (shouldCommit) {
-      const tilt = Math.max(-12, Math.min(12, (drag.x - drag.startX) / 10));
+    if (outcome === 'commit') {
       setReleaseGhost({
         card: drag.card,
         left: drag.x - drag.offsetX,
         top: drag.y - drag.offsetY,
         width: drag.width,
         height: drag.height,
-        tilt,
+        tilt: tactileTiltDegrees(drag),
       });
       if (releaseTimer.current !== null) window.clearTimeout(releaseTimer.current);
-      releaseTimer.current = window.setTimeout(() => setReleaseGhost(null), RELEASE_MS);
+      releaseTimer.current = window.setTimeout(() => setReleaseGhost(null), TACTILE_RELEASE_MS);
       onActivate(drag.card);
-    } else if (drag.moved) {
+    } else if (outcome === 'return') {
       // A free throw is not a failed action. Let the physical card settle back
       // into the player's chosen hand order without error colour or rejection copy.
       animateReturnToHand(drag);
@@ -343,6 +316,7 @@ export function TactileHand({
       ref={handRef}
       className="hand tactile-hand"
       style={handStyle}
+      data-gesture-phase={drag?.phase ?? 'idle'}
       aria-label="Twoje karty. Każdą możesz chwycić i przełożyć; stół podpowie, kiedy gest może stać się ruchem."
     >
       {visibleOrder.map((card, index) => {
