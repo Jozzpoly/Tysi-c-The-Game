@@ -261,6 +261,52 @@ A card that cannot legally be committed should not necessarily become a grey dea
 
 The player still owns it, can inspect it and may need it to understand *why* another card is legal.
 
+## Capability layering
+
+A new synthesis finding from the current production `GameTable` is that **operation-specific illegality must not erase unrelated object capabilities**.
+
+Current foundation UI models cards primarily as buttons. During trick play, a card that is not in the legal `play` command set is effectively disabled. That was a reasonable foundation implementation because click-to-play was the only important card operation.
+
+It is not a sufficient model for a living hand.
+
+A card can simultaneously be:
+
+- **owned** by the player;
+- **inspectable**;
+- **reorderable** inside private workspace;
+- **groupable** or spatially organizable;
+- **movable within a reversible manipulation envelope**;
+- but **not currently commit-eligible for `play`**.
+
+Therefore the experience layer should reason in terms of capabilities/relations rather than one binary `enabled/disabled` property.
+
+Conceptual example:
+
+`card capability set = { inspect, reorder, group, probe-play-relation }`
+
+while:
+
+`commit relation: play(card -> trick) = domain-illegal`
+
+The object stays alive. The forbidden relation does not become receptive.
+
+This distinction is especially important for self-teaching: the user can test the world without losing access to the object merely because one semantic action is unavailable.
+
+### Donor implication
+
+The same distinction applies outside cards:
+
+- a JV component may be movable/inspectable even when a particular topology connection is invalid;
+- a JES object may remain manipulable even when one tool operation is unavailable;
+- a Multi World object may be held/rotated while a placement/ownership action is rejected;
+- an NPC debug entity may remain inspectable while one command is unavailable due to authority or state.
+
+### Failure mode
+
+Capability layering must not become an excuse to let users accidentally commit forbidden actions.
+
+The point is **preserve unrelated agency**, not blur the commit boundary.
+
 ## Error elimination versus error recovery
 
 Research on ecological interface design and minimalist instruction supports a useful correction:
@@ -346,6 +392,10 @@ A local reason shown after an invalid commit probe produces stronger rule unders
 
 Recovery that preserves unrelated hand topology reduces disorientation versus global hand rebuild.
 
+### C-H5 — capability layering
+
+Preserving unrelated object capabilities while blocking only the invalid semantic relation improves agency and learnability without increasing accidental commits, compared with globally disabling the object.
+
 ## Failure conditions
 
 Narrow this taxonomy if:
@@ -354,7 +404,8 @@ Narrow this taxonomy if:
 - the taxonomy causes gratuitous visual variation;
 - provenance is expensive to maintain and does not improve diagnosis/recovery;
 - explicit text consistently outperforms behavior for a particular rule;
-- separate treatments make the product feel inconsistent rather than causally clear.
+- separate treatments make the product feel inconsistent rather than causally clear;
+- capability layering creates ambiguous commit boundaries or increases unintended actions.
 
 The purpose is not one visual effect per class.
 
@@ -365,6 +416,8 @@ The purpose is to avoid **semantically different causes becoming perceptually in
 Constraint truth is part of interaction truth.
 
 The interface should communicate not only `no`, but where useful **what kind of no this is** — body, mechanism, rule, authority, privacy or safety — without forcing the user to read developer diagnostics.
+
+Objects should also retain unrelated valid capabilities when one specific relation is unavailable.
 
 This is a strong candidate donor concept, but remains SEED until real experiments show value.
 
