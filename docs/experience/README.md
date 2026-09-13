@@ -1,406 +1,346 @@
-# Experience Foundation — canonical research state
+# Experience Foundation — canonical state
 
-This directory is the canonical entry point for the Tysiac Experience Foundation track.
+This file is the compact source of truth for the current Experience Foundation track.
 
-The track is no longer primarily a card-game redesign. Tysiac is being used as a compact laboratory for **embodied, truthful interaction** that may later donate into Jozz Vehicle, JES, Multi World, LLM Live NPC and other Owner projects.
+Tysiac is no longer being treated only as a card-game redesign. It is a bounded laboratory for improving a broader weakness across the Owner's projects: **living, embodied, causally truthful, high-quality interaction and interface design**.
 
-## Live status
+Deep documents below this file are supporting research. Progress is measured by reduced uncertainty and better design decisions, not document count.
 
-- production gameplay/rules/core: **unchanged**;
-- production `GameTable`: **unchanged**;
-- branch: `run03/experience-foundation-reset`;
-- PR: #17, draft research PR;
-- latest confirmed Foundation before this README update: **PASS** on `f845100676a64acbe40bfb9f959a471f98ecebc7` (#255);
-- next Owner-facing Card Embodiment prototype: **NOT READY**;
-- current phase: low-level control-law research + research-method design + multiscale scope protection;
-- previous Run 02 labs: historical evidence only, not product truth.
+## Owner target
 
-## Core thesis
+The program must preserve the following intent:
 
-The working causal chain is:
+- cards should feel like objects that can be touched, moved and physically understood;
+- the private hand should receive exceptional focus, feedback and manipulation quality;
+- personal card ordering/rearrangement is important and may become part of the player's thinking;
+- a newcomer should learn routine interaction through visual/behavioral language rather than large tutorial banners/arrows;
+- feedback should feel alive and materially responsive without lying about game state or authority;
+- desktop and mobile are equally serious long-term platforms, with shared semantics but platform-specific embodiment;
+- visual polish alone is insufficient; the game needs recognizable interaction character and strong product identity;
+- many internal iterations, adversarial reviews and falsification passes should happen before spending Owner attention on another test;
+- UX/UI, system truth, physical/causal feedback and perceived consequence are treated as one continuous design problem;
+- the useful result should become donor knowledge for other Owner projects, not merely a pleasant Tysiac skin.
 
-`human intention -> contact -> manipulation/instrument -> constraint -> commit -> authority -> consequence -> perceivable feedback -> readable new state`
+## Current verdict after Owner-alignment audit
 
-The target is not literal realism. It is **meaningful causal coupling**: the user can act, understand what the system did with that action, retain agency, distinguish reversible exploration from authoritative consequence and recover from failure without the interface fabricating history.
+**Directionally correct, materially imbalanced.**
 
-`Interaction Physics` remains a working metaphor, not a universal ontology.
+Run 03 should not be reset again.
 
-## Demonstrated project evidence
+The branch has become strong in low-level interaction truth, authority boundaries, controller falsification, cognition, testing methodology and anti-dogma safeguards.
 
-Direct project evidence remains intentionally small.
+It is comparatively weak in:
 
-Owner Mobile Recording 001 demonstrated that:
+- whole-product interaction character;
+- visual/semantic composition;
+- audiovisual/haptic materiality as a designed system;
+- desktop embodiment at the same depth as mobile;
+- opponent/social presence;
+- scene/round/match dramaturgy;
+- persistent consequence;
+- integration of all channels into one recognizable product language.
 
-- the private hand attracted repeated spontaneous card manipulation/reordering;
-- direct manipulation crossed the minimum threshold where the Owner wanted to keep touching the cards;
-- the first lab was still far below target quality;
-- reordering remained slot-like;
-- PAPER/WEIGHT/MAGNETIC were shallow bundles rather than understood mechanisms;
+The next correction is therefore **portfolio rebalancing**, not another low-level reset.
+
+## Four coupled disciplines
+
+### 1. Interaction truth
+
+Current maturity: **STRONG RESEARCH FOUNDATION**.
+
+Questions:
+
+- what did the user intend?
+- what is still reversible?
+- when did commit happen?
+- what did authority accept/reject?
+- what caused the visible consequence?
+- how do latency, interruption and recovery remain truthful?
+
+Key model:
+
+`intention -> contact -> manipulation/instrument -> constraint -> commit -> authority -> consequence -> perceivable feedback -> readable new state`
+
+### 2. Embodied control and workspace
+
+Current maturity: **INTERNAL ACTIVE**.
+
+Questions:
+
+- how does an object remain motorically owned while gaining material character?
+- how should grab point, rotation, resistance, cancellation and release behave?
+- how does a private hand reorganize continuously without becoming a generic sortable list?
+- how much collective hand response is useful before spatial landmarks become unstable?
+- how do mobile and desktop bodies differ?
+
+Current internal apparatus:
+
+- Card Control P0–P3 bench + checker;
+- Hand Field H0–H2 bench + checker;
+- mobile-body / occlusion / input-pipeline research.
+
+These instruments can reject mechanically bad candidates. They cannot certify good feel.
+
+### 3. Experience character and sensory composition
+
+Current maturity: **UNDERDEVELOPED — NOW HIGH PRIORITY**.
+
+Questions:
+
+- what should interaction feel like as a complete product?
+- how do visual depth, card anatomy, spacing, typography, motion, sound and optional haptics form one character?
+- how can the game feel inhabited while resting quietly?
+- which sensory channels carry contact, slide, insertion, commit, transfer, impact, rejection and resolution?
+- what makes the experience recognizably ours rather than generic `premium card UI`?
+
+Important rule:
+
+Truthful and legible interaction can still be sterile. Correctness is necessary but not sufficient.
+
+### 4. Gameplay dramaturgy and attention
+
+Current maturity: **EARLY — NOW HIGH PRIORITY**.
+
+Questions:
+
+- how does attention move through an action/scene without banners?
+- how do opponents become perceptible sources of action rather than event emitters?
+- how does a trick become a coherent scene rather than three event animations?
+- how do auction pressure, marriage/trump transformation, score resolution and rare events differ in intensity?
+- what perceptible residue remains after important actions?
+- how does repeated play stay fast without becoming flat or exhausting?
+
+## Demonstrated Owner evidence
+
+Owner Mobile Recording 001 remains the main direct perceptual evidence.
+
+It demonstrated that:
+
+- the private hand attracted repeated spontaneous manipulation/reordering;
+- direct card manipulation crossed the minimum threshold where the Owner wanted to keep touching it;
+- the prototype remained far below the desired quality bar;
+- reorder behavior was too slot-like;
+- named material presets were shallow bundles rather than understood mechanisms;
 - finger occlusion was under-modelled;
-- accepted cards moved into an abstract central target;
-- the resting hand did not yet function as a living cognitive workspace.
+- accepted cards entered an abstract destination rather than a living game world;
+- the resting hand was not yet a convincing cognitive/embodied workspace.
 
-This supports the direction. It does not prove final mechanics.
+This supports continued Card/Hand research. It does not prove a final gesture, material law, hand geometry or style.
 
-See `evidence/OWNER_MOBILE_RECORDING_001.md`.
+## Important distinctions retained
 
-## Current external knowledge base
+### Three kinds of directness
 
-Research currently draws from, without treating any school as doctrine:
+- **motor directness** — body/input to represented movement;
+- **semantic directness** — action to intended operation;
+- **causal directness** — visible cause to consequence.
 
-- direct manipulation and semantic/articulatory distance;
-- instrumental interaction and useful indirection;
-- distributed cognition / epistemic action;
-- spatial organization as external cognition;
-- tangible and embodied interaction;
-- inherent feedback/feedforward and action-function coupling;
-- Ecological Interface Design;
-- game-feel research separating physicality, support and amplification;
-- Reality-Based Interaction and realism tradeoffs;
-- sense-of-agency research;
-- shared-control / automation-agency tradeoffs;
-- touch occlusion and thumb/body ergonomics;
-- control/display gain and visuomotor adaptation;
-- pseudo-haptics;
-- Fitts/Steering and corrective-submovement research;
-- calm/peripheral attention;
-- psychophysical paired comparison / staircase / JND-style methods;
-- strong concepts as intermediate-level donor knowledge.
-
-See `FOUNDATIONAL_INTERACTION_RESEARCH.md` and `THEORY_LANDSCAPE_AND_BOUNDARIES.md`.
-
-## Current major distinctions
-
-### Three directnesses
-
-- **motor directness** — how body/input maps to represented movement;
-- **semantic directness** — how directly the action expresses intended operation;
-- **causal directness** — how clearly consequence follows from cause.
-
-More direct motor control is not always more semantically direct.
+These can conflict.
 
 ### Four outcomes previously collapsed into `feel`
 
-`HUMAN_IN_LOOP_CONTROL_AND_MEASUREMENT.md` now separates:
+- motor performance;
+- sense of agency/action ownership;
+- perceived materiality;
+- interaction aesthetics / pleasure / expressive value.
 
-1. motor performance;
-2. sense of agency/action ownership;
-3. perceived materiality;
-4. interaction aesthetics / pleasure / expressive value.
+A system may improve one while degrading another.
 
-These can disagree.
+### Constraint causes must remain distinguishable
 
-A system can improve task performance while reducing agency. A user can also adapt to a poor mapping, so late performance does not prove good first-contact design.
+Do not use one sensory language for every `no`.
 
-### User variability is not automatically noise
+Relevant classes include:
 
-Current research explicitly warns against machine-perfect smoothing as a default. Natural variation may carry agency and personal control. Stabilize what harms intent; do not automatically erase individual movement structure.
+- body/input constraint;
+- interaction-mechanism constraint;
+- workspace/presentation constraint;
+- domain/game legality;
+- authority/state constraint;
+- privacy constraint;
+- genuine safety/stability constraint;
+- strategic mistake, which is not a constraint at all.
 
-## Current Card Embodiment target
+## Self-teaching interaction target
 
-The first low-level research question is now:
+The target is not `zero text` and not `hide complexity from beginners`.
 
-> How much and what kind of transformation can occur between human motion and card response before the interaction stops feeling owned, precise and trustworthy — and which transformations add useful material character rather than mere lag?
+Working sequence:
 
-This comes before hand-wide physics, reorder/play intent and target magnetism because all of those depend on a defensible user↔object control relationship.
+`affordance -> feedforward -> safe reversible probing -> meaningful constraint -> local feedback -> explicit explanation only when useful`
 
-See `FIRST_INTERNAL_RESEARCH_TARGET.md`.
+Strongly embody causal/spatial operations.
 
-## P0–P3 control-law families
+Use behavior to support discovery of legality where appropriate.
 
-`CARD_CONTROL_LAW_MINIMAL_SPEC.md` now defines actual mechanism families rather than named feel presets:
+Explain arbitrary conventions directly instead of inventing fake physical laws for them.
 
-- **P0 — rigid grab-point baseline:** exact acquired point follows the input;
-- **P1 — rigid grab point + inertial rotational body:** primary contact remains exact, mass appears through rotation around the grab point;
-- **P2 — bounded acceleration-sensitive positional distortion:** small pseudo-haptic displacement under strong acceleration/reversal, returning toward direct control during precision;
-- **P3 — competent damped positional spring:** classic trailing `weight`, retained as a real falsification candidate rather than strawman.
+Never confuse strategy with legality.
 
-The first comparison intentionally excludes target assistance, game rules, sound, haptics and hand-field physics.
+## Card Control state
 
-## Observable parameterization
+Mechanism families:
 
-`CONTROL_LAW_OBSERVABLE_PARAMETERIZATION.md` avoids donor knowledge such as `spring = 0.82`.
+- **P0** exact rigid grab-point baseline;
+- **P1** exact grab point + secondary inertial rotation;
+- **P2** bounded acceleration-sensitive positional discrepancy;
+- **P3** competent damped positional spring/trailing contrast.
 
-Research should describe control laws using observable consequences such as:
+Internal bench self-check validates apparatus invariants only.
 
-- grab-point error normalized by object size;
-- peak rotation under a canonical movement;
-- recovery time after reversal;
-- path distortion;
-- overshoot;
-- precision-phase correction burden;
-- settle duration.
+Current conceptual preference must remain falsifiable: materiality that preserves primary contact ownership is promising, but Owner perception is still required before any product conclusion.
 
-Expected result is a **useful operating region**, not a false universal optimum.
+Stop condition for deeper low-level work:
 
-## Internal research bench
+Continue only if another iteration eliminates a meaningful candidate, exposes a causal mechanism, protects a future perceptual test from a real confound, constrains Hand/Scene integration, or creates credible donor knowledge.
 
-`INTERNAL_CONTROL_BENCH_DESIGN.md` defines a future internal-only two-lane apparatus.
+Do not improve measurement precision merely because more precision is possible.
 
-### Lane I — stripped synthetic/mechanical
+## Hand Workspace state
 
-Canonical slow/fast/reversal/zig-zag/precision/cancel trajectories reject unstable laws and cadence-dependent artifacts.
+Current mechanism families:
 
-### Lane II — minimal ecological bridge
+- **H0** discrete slot/index threshold baseline;
+- **H1** continuous local neighbor response;
+- **H2** broader continuous hand-field response.
 
-A surviving law is driven manually in a tiny hand context to verify it remains coherent when the card is an owned object among neighbors.
+Important current correction:
 
-Lane I can reject mechanisms. It cannot certify experience.
+`returned while still held` is not the same semantic state as `cancelled/released`.
 
-`CONTROL_BENCH_ADVERSARIAL_REVIEW.md` explicitly attacks the bench to prevent synthetic metrics from becoming an automatic winner score.
+The Hand Field bench now represents those separately; the checker has been updated to the same semantics.
 
-## Browser runtime research
+Current stronger hypothesis:
 
-`WEB_INTERACTION_RUNTIME_FOUNDATION.md` treats web input/rendering as part of the apparatus.
+> preserve task-relevant identity, relationships and useful landmarks unless a larger reconfiguration creates greater semantic value.
 
-Key principle:
+Do not turn `minimum movement` into dogma. Evidence from dynamic-layout research is mixed, and Tysiac-specific cognitive benefit remains unproven.
 
-`input samples -> control/material model -> rendering`
+## Owner collaboration
 
-not:
+Owner attention is high-value perceptual evidence.
 
-`pointermove -> component state -> CSS magic`.
+The Owner is primary evidence for:
 
-Coalesced/raw/predicted Pointer Events are distinguished. Predicted input can never become gameplay authority.
+- feel;
+- liveliness/deadness;
+- visual hierarchy;
+- interaction character;
+- responsiveness;
+- perceived causality;
+- frustration/pleasure;
+- repetition fatigue;
+- whether something feels physically owned, plastic, floaty, heavy, intrusive or natural.
 
-`TRAJECTORY_SIGNAL_AND_FILTERING.md` adds another constraint: do not smooth the primary position merely because derivative signals are noisy. Filter the secondary velocity/acceleration signal separately where possible.
+The Owner is not expected to certify Tysiac strategy/rule authenticity, network correctness or privacy/security.
 
-## Mobile embodiment
+Raw wording should be preserved before technical interpretation.
 
-`MOBILE_BODY_INTERACTION_MODEL.md` rejects `mobile = 390×844` as the interaction model.
+## Readiness is per track, not one global label
 
-Mobile includes:
+| Track | Status |
+| --- | --- |
+| Card Control mechanics | **INTERNAL ACTIVE** |
+| Hand Field mechanics | **INTERNAL ACTIVE** |
+| Card/Hand Owner perception | **NOT READY** |
+| Self-teaching language | **RESEARCH ACTIVE** |
+| Action Scene grammar | **RESEARCH EARLY** |
+| Experience Character / sensory direction | **RESEARCH EARLY / priority gap** |
+| Desktop Embodiment | **RESEARCH EARLY / priority gap** |
+| Opponent presence / social action | **RESEARCH EARLY** |
+| Integrated product candidate | **NOT READY** |
+| Production `GameTable` promotion | **NOT JUSTIFIED** |
 
-- hand size;
-- one/two-handed grip;
-- thumb reach;
-- direction/distance;
-- finger contact/occlusion;
-- device stabilization;
-- touch-specific precision and optional haptics.
+## Immediate program correction
 
-A full long drag is not automatically more embodied than a shorter semantic commit. Motor, semantic and causal directness may disagree.
+1. keep Card Control mechanically healthy, but stop open-ended micro-tuning;
+2. continue Hand Workspace through falsifiable mechanism questions rather than effect presets;
+3. develop a serious **Experience Character / Sensory Composition** track;
+4. develop a serious **Desktop Embodiment** track to restore platform parity;
+5. deepen Action Scene, persistent consequence and opponent/action-source presence;
+6. audit full-game visual information architecture and attention flow;
+7. keep self-teaching grounded in real Tysiac commands/rules rather than generic UX philosophy;
+8. periodically consolidate/retire superseded frameworks instead of continuously creating adjacent documents;
+9. do not redesign production `GameTable` until these tracks produce a coherent internal candidate;
+10. do not spend Owner attention until the remaining uncertainty is genuinely perceptual and the fixture is worth touching.
 
-## Owner evidence method
-
-`OWNER_PERCEPTUAL_CALIBRATION_PROTOCOL.md` treats Owner attention as a measurement resource without pretending one person is a population study.
-
-Two modes are separated:
-
-- **natural first contact** for spontaneous behavior, discoverability and product character;
-- **perceptual calibration** for already-isolated variables.
+## Research discipline
 
-Potential future tools include:
+The branch is already large. Additional documents need a distinct research/decision role.
 
-- anonymous pairwise comparisons;
-- order randomization;
-- occasional identical/sham comparisons to detect expectation noise;
-- lightweight adaptive staircase for one-dimensional boundaries;
-- distinction between detection, tolerance, preference and repeated-use thresholds.
+Prefer:
 
-Raw Owner language is preserved before interpretation.
+- update/consolidate existing material;
+- bounded experiments;
+- evidence records;
+- explicit rejected hypotheses;
+- concise canonical state.
 
-## Multiscale scope guard
+Avoid:
 
-`MULTISCALE_EXPERIENCE_MODEL.md` prevents low-level Card Object research from consuming the whole Experience Foundation.
+- adjacent frameworks describing the same distinction;
+- document count as progress;
+- turning methodology into its own product;
+- synthetic metrics becoming a product score;
+- polishing research fixtures beyond the question they answer.
 
-Current scale map runs from:
+## Current production boundary
 
-- sensing/contact;
-- object embodiment;
-- local workspace;
-- action sentence;
-- scene/encounter;
-- repeated-loop rhythm;
-- hand/round arc;
-- match/session arc;
-- social/agent presence;
-- system truth/recovery;
-- learning/mastery;
-- product identity;
-- accessibility/alternate embodiment.
+Production gameplay/rules/core and production `GameTable` remain intentionally unchanged by Run 03.
 
-Lower scales enable higher ones but do not determine them. Macro rhythm can also force restraint on rich microinteractions.
+The research branch may finish a major phase with zero production UI changes and still be successful.
 
-Once low-level Card/Hand primitives become meaningful, research must deliberately reopen Trick Scene, opponent presence, rhythm, persistent consequence and product identity.
+Promotion happens only when a bounded primitive/contract has earned it through evidence.
 
-## Interaction fidelity
+## Key supporting material
 
-`INTERACTION_FIDELITY_MODEL.md` remains a diagnostic framework covering relevant combinations of:
+### Owner/process
 
-- contact;
-- control;
-- intent;
-- constraint;
-- authority;
-- state;
-- causality;
-- temporal ordering;
-- identity;
-- ownership;
-- uncertainty;
-- workspace;
-- attention;
-- sensory coherence;
-- recovery;
-- privacy.
-
-Use only dimensions that clarify the current problem. Never as ritual checklist.
-
-## Donor discipline
-
-`DONOR_CONCEPT_REGISTRY.md` tracks candidate strong concepts. No concept is currently a proven DONOR.
-
-Current examples include:
-
-- reversible manipulation envelope;
-- progressive commitment;
-- constraint-as-behavior;
-- user-owned cognitive workspace;
-- locally immediate / globally honest interaction;
-- before/event/after causal choreography;
-- semantic/motor/causal directness;
-- failure dignity;
-- quiet-life feedback;
-- persistent causal traces;
-- semantic parity with platform-specific embodiment.
-
-A principle becomes donor-worthy only after surviving evidence and re-embodiment in a materially different domain.
-
-## Anti-dogma safeguards
-
-Current explicit corrections:
-
-- truth is not realism;
-- physicality is a tool, not the goal;
-- direct manipulation is not universally superior to instruments;
-- stronger automation can improve performance while reducing agency;
-- weight must not secretly mean input lag;
-- 1:1 touch mapping can be poor when occlusion dominates;
-- constraint-as-behavior can become coercive or mysterious;
-- less chrome is not always better;
-- continuity can lie when discontinuity is semantically real;
-- rich embodiment can become too slow/distracting in full gameplay;
-- synthetic bench quality is not game feel;
-- research frameworks are disposable if they stop predicting useful distinctions.
-
-See `INTERACTION_ANTI_DOGMA.md`, `INTERACTION_PHYSICS_SELF_CRITIQUE.md`, `CARD_EMBODIMENT_ADVERSARIAL_REVIEW.md`, and `CONTROL_BENCH_ADVERSARIAL_REVIEW.md`.
-
-## Current readiness
-
-### Owner-facing test
-
-**NOT READY.**
-
-### Internal implementation
-
-Closer, but not automatically authorized by document count.
-
-The conceptual prerequisites have substantially advanced:
-
-- phenomenon decomposition: advanced;
-- competing mechanism families: explicit;
-- exact conceptual control laws: explicit;
-- observable metrics: explicit;
-- two-lane bench design: explicit;
-- browser pipeline constraints: explicit;
-- mobile-body constraints: explicit;
-- adaptation/agency confounds: explicit;
-- Owner perceptual calibration strategy: explicit;
-- adversarial review: performed at theory and experiment-design levels.
-
-Still required before INTERNAL fixture implementation is considered grounded:
-
-1. choose numerical **exploration bands** rather than final parameters;
-2. specify derivative estimator/integration implementation details;
-3. define logging schema concretely enough for reproducible probe output;
-4. ensure neutral visuals do not create a candidate-specific bias;
-5. define how delayed-P0 is used as a diagnostic against fake materiality;
-6. decide internal progression criteria from Lane I to Lane II;
-7. run one final adversarial review asking whether the apparatus is now adding information or becoming engineering theater.
-
-## Current high-value unknowns
-
-### Low-level control
-
-- Can P1 rotational response create materiality without stealing contact ownership?
-- Is there any useful P2 discrepancy band, or is it merely stylized lag?
-- Can a well-designed P3 spring survive precision/reversal without excessive correction?
-- How much later performance is adaptation rather than genuinely good mapping?
-
-### Touch/body
-
-- How should real finger occlusion alter visual card position without breaking ownership?
-- Does one-hand versus two-hand use require meaningfully different movement semantics?
-- Is full-card transport physically appropriate on mobile at all?
-
-### Hand/workspace
-
-- Is `meatiness` primarily in the card or relational deformation of the hand?
-- Does personal ordering become actual cognitive structure over a match?
-- How should new/removed cards alter layout without erasing spatial memory?
-
-### Macro experience
-
-- What should remain after actions so the board carries history/consequence?
-- How should opponent presence emerge spatially and temporally?
-- How much microinteraction richness survives repeated game rhythm?
-- What is the eventual recognizable interaction character of this product?
-
-## Next movement
-
-Continue narrowing the INTERNAL control bench until implementation is justified, but do not let the microtrack consume the whole campaign.
-
-The next meaningful transition is:
-
-`research model -> internally falsifiable instrument -> internal mechanical evidence -> minimal ecological bridge -> only then Owner perception`.
-
-No production UI promotion is currently justified.
-
-## Document map
-
-### Canonical evidence
 - `evidence/OWNER_MOBILE_RECORDING_001.md`
-
-### Program / quality / process
-- `EXPERIENCE_FOUNDATION_RESET.md`
-- `EXPERIENCE_RESEARCH_PROGRAM.md`
-- `DONOR_QUALITY_BAR.md`
-- `PRE_TEST_RESEARCH_GATE.md`
 - `OWNER_COLLABORATION_PROTOCOL.md`
 - `OWNER_PERCEPTUAL_CALIBRATION_PROTOCOL.md`
-- `DONOR_CONCEPT_REGISTRY.md`
+- `PRE_TEST_RESEARCH_GATE.md`
+- `DONOR_QUALITY_BAR.md`
 
-### Theory and synthesis
-- `FOUNDATIONAL_INTERACTION_RESEARCH.md`
-- `THEORY_LANDSCAPE_AND_BOUNDARIES.md`
+### Interaction truth / theory
+
 - `UNIFIED_INTERACTION_PHYSICS.md`
 - `INTERACTION_FIDELITY_MODEL.md`
-- `CROSS_PROJECT_INTERACTION_FAILURE_MODEL.md`
-- `INTERACTION_AESTHETICS_AND_SKILL.md`
-- `ATTENTION_AND_QUIET_LIFE.md`
 - `TEMPORAL_INTEGRITY_AND_AUTHORITY.md`
-- `SPATIAL_COGNITION_AND_WORKSPACE.md`
-- `HUMAN_IN_LOOP_CONTROL_AND_MEASUREMENT.md`
-- `MULTISCALE_EXPERIENCE_MODEL.md`
+- `CONSTRAINT_SEMANTICS_AND_RECOVERY.md`
+- `THEORY_LANDSCAPE_AND_BOUNDARIES.md`
+- `INTERACTION_ANTI_DOGMA.md`
 
-### Current Card Embodiment track
-- `CARD_EMBODIMENT_PHENOMENA_MAP.md`
-- `CARD_EMBODIMENT_HYPOTHESIS_MATRIX.md`
-- `FIRST_INTERNAL_RESEARCH_TARGET.md`
-- `CARD_CONTROL_LAW_CONCEPTS.md`
+### Card / hand mechanics
+
 - `CARD_CONTROL_LAW_MINIMAL_SPEC.md`
 - `CONTROL_LAW_OBSERVABLE_PARAMETERIZATION.md`
 - `INTERNAL_CONTROL_BENCH_DESIGN.md`
-- `WEB_INTERACTION_RUNTIME_FOUNDATION.md`
-- `TRAJECTORY_SIGNAL_AND_FILTERING.md`
-- `MOBILE_BODY_INTERACTION_MODEL.md`
+- `HAND_WORKSPACE_AND_PERIPHERAL_MASTERY.md`
+- `HAND_FIELD_HYPOTHESIS_MATRIX.md`
+- `HAND_WORKSPACE_STABILITY_ADVERSARIAL_REVIEW.md`
 
-### Adversarial safeguards
-- `INTERACTION_ANTI_DOGMA.md`
-- `INTERACTION_PHYSICS_SELF_CRITIQUE.md`
-- `CARD_EMBODIMENT_ADVERSARIAL_REVIEW.md`
-- `CONTROL_BENCH_ADVERSARIAL_REVIEW.md`
+### Higher-scale experience
 
-### Cross-project bridge
+- `INTERACTION_AESTHETICS_AND_SKILL.md`
+- `ATTENTION_AND_QUIET_LIFE.md`
+- `MULTISCALE_EXPERIENCE_MODEL.md`
+- `ACTION_SCENE_GRAMMAR.md`
+- `SELF_TEACHING_INTERACTION_LANGUAGE.md`
+- `SELF_TEACHING_DOMAIN_AUDIT.md`
+- `SEMANTIC_CONTRACT_AND_ALTERNATE_EMBODIMENT.md`
+
+### Cross-project transfer
+
 - `CROSS_PROJECT_DONOR_BRIDGE.md`
+- `DONOR_CONCEPT_REGISTRY.md`
+
+## Current bottom line
+
+The foundation is no longer too shallow.
+
+The new danger is **being deep in the wrong proportions**.
+
+The next phase should preserve our new rigor while expanding it from low-level interaction truth into equally serious work on character, sensory composition, visual language, scene dramaturgy, desktop embodiment and social/gameplay presence.
+
+The goal is not the most researched drag interaction. The goal is a coherent, living interaction system worth donating beyond Tysiac.
