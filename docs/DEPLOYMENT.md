@@ -1,8 +1,8 @@
 # Foundation public deployment
 
-This document describes the first real Cloudflare deployment boundary for Tysiąc The Game.
+This document describes the current Cloudflare deployment boundary for Tysiąc The Game.
 
-The repository is already proven locally through core, workerd, desktop/mobile Chrome, remote room/reconnect Chrome, production build and Wrangler dry-run. A public deployment is a new evidence class and must not be inferred from those local results.
+The repository is proven locally through core, workerd, desktop/mobile Chrome, remote room/reconnect Chrome, production build and Wrangler dry-run. A public deployment is a separate evidence class and must not be inferred from those local results.
 
 ## Target
 
@@ -15,11 +15,11 @@ The repository is already proven locally through core, workerd, desktop/mobile C
 
 Normal pushes and pull requests do not deploy.
 
-## Preferred first evidence: temporary preview
+## Preferred bounded evidence: temporary preview
 
-Cloudflare Wrangler 4.102+ supports unauthenticated `wrangler deploy --temporary`. Cloudflare currently documents temporary accounts as supporting Workers Static Assets and Durable Objects with bindings/migrations, which matches this Foundation stack.
+Cloudflare Wrangler 4.102+ supports unauthenticated `wrangler deploy --temporary`. Temporary accounts support the Foundation stack used here, including Workers Static Assets and Durable Objects.
 
-The temporary workflow intentionally avoids permanent account credentials and is useful for the first public-runtime proof.
+The temporary workflow intentionally avoids permanent account credentials and is useful for bounded public-runtime and Owner-preview checks.
 
 In GitHub:
 
@@ -45,11 +45,25 @@ The workflow:
 
 `temporary-deploy.mjs` captures Wrangler output rather than streaming it. The Cloudflare claim URL is treated as a bearer credential and is redacted rather than printed or stored as a CI artifact. The preview is intentionally left unclaimed and should expire automatically with the temporary account.
 
-A successful temporary upload without successful public browser verification is **not** a Foundation PASS.
+A successful temporary upload without successful public browser verification is **not** a public-runtime PASS.
+
+## Temporary-preview freshness contract
+
+A historical successful preview run proves that the public boundary worked **at that time**. It does not prove the unclaimed URL still exists later.
+
+Therefore:
+
+- never present an old temporary URL as the current playable build merely because its workflow run is green;
+- before giving a temporary preview to the Owner, prefer a freshly created run for the intended `main` SHA;
+- if reusing an existing URL, verify that it is still reachable immediately before presenting it;
+- record which commit SHA the preview actually represents;
+- if the current `main` has meaningful presentation/runtime changes after the preview SHA, create a new preview rather than silently asking the Owner to test the stale build.
+
+A dead expired preview is expected lifecycle for this deployment mode, not a game outage. Repeated Owner/friend testing is evidence that a durable public deployment may now be worth the operational setup.
 
 ## Permanent deployment
 
-Use this after temporary public evidence succeeds, or directly if the Owner prefers a permanent target.
+Use this after temporary public evidence succeeds and repeated sessions justify a stable target, or directly if the Owner prefers a permanent target.
 
 ### One-time Owner setup
 
@@ -78,7 +92,7 @@ The workflow is intentionally ordered as a transaction-like evidence gate:
 1. install dependencies;
 2. verify both Cloudflare secrets exist;
 3. run the complete `npm run check` Foundation gate;
-4. deploy through Cloudflare's Wrangler Action using Wrangler `4.131.1`;
+4. deploy through Cloudflare's Wrangler Action using the pinned Wrangler version;
 5. require a public deployment URL;
 6. run `scripts/public-deploy-smoke.mjs` against that real URL;
 7. upload public desktop/mobile screenshots.
@@ -97,7 +111,7 @@ Both deployment paths use the same post-deploy smoke. Real headless Chrome sessi
 - mobile page/hand do not horizontally overflow;
 - reconnect tokens do not appear in ordinary URLs or rendered UI.
 
-Only after this passes may the public MatchRoom/browser boundary be marked proven.
+Only after this passes may that exact deployed build's public MatchRoom/browser boundary be marked proven.
 
 ## Failure handling
 
@@ -105,6 +119,7 @@ Do not weaken local gates or public smoke to make a deployment green.
 
 Classify failures first:
 
+- expired historical temporary URL: expected temporary-preview lifecycle;
 - temporary provisioning rejected/rate-limited: Cloudflare temporary-account boundary, not a game defect;
 - missing permanent secrets / invalid token / wrong account: authorization setup;
 - missing permanent `workers.dev` subdomain: one-time Cloudflare account setup;
@@ -117,12 +132,14 @@ The public smoke retries health for a bounded period rather than treating the fi
 
 ## What this does not prove
 
-Even a green first public deploy does not prove:
+Even a green public deploy does not prove:
 
+- that an unclaimed temporary URL will still exist later;
 - long-duration production soak;
 - arbitrary mobile suspension/resume conditions;
 - all WAN/network transitions;
 - gameplay quality with real humans;
-- exact PlayOK rule identity.
+- exact PlayOK rule identity;
+- subjective visual/interaction quality.
 
-Those remain later evidence, not reasons to keep Foundation Run 01 indefinitely open once the explicit public deployment criterion is satisfied.
+Those require their own evidence sources.
