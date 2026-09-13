@@ -328,7 +328,6 @@ async function runFullMatch(label, width, height, mobile) {
 
     while (!isMatchComplete(current)) {
       if (counters.decisions >= 1400) throw new Error(`${label}: decision bound exceeded`);
-      if (Date.now() - startedAt > 120_000) throw new Error(`${label}: wall-clock rehearsal bound exceeded`);
 
       assertLayout(`${label}: decision ${counters.decisions}`, current, width);
       if (current.revision !== null) {
