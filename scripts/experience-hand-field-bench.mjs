@@ -9,10 +9,12 @@ function basePositions(n, spacing) {
   return Array.from({ length: n }, (_, i) => (i - center) * spacing);
 }
 
-function positions(model, heldX, { n = 8, heldIndex = 3, spacing = 0.58, globalAmp = 0.12 } = {}) {
+function positions(model, heldX, { n = 8, heldIndex = 3, spacing = 0.58, globalAmp = 0.12, engaged = true } = {}) {
   const base = basePositions(n, spacing);
   const origin = base[heldIndex];
   const out = base.slice();
+
+  if (!engaged) return { base, out };
 
   if (heldX >= origin) {
     for (let j = heldIndex + 1; j < n; j += 1) {
@@ -63,7 +65,7 @@ function sweep(model, { n = 8, heldIndex = 3, spacing = 0.58 } = {}) {
   const forward = linspace(start, end, 501);
   const back = linspace(end, start, 501).slice(1);
   const heldPath = [...forward, ...back];
-  const rows = heldPath.map((heldX) => positions(model, heldX, { n, heldIndex, spacing }).out);
+  const rows = heldPath.map((heldX) => positions(model, heldX, { n, heldIndex, spacing, engaged: true }).out);
   const neighbors = Array.from({ length: n }, (_, i) => i).filter((i) => i !== heldIndex);
 
   let maxStepW = 0;
@@ -94,14 +96,20 @@ function sweep(model, { n = 8, heldIndex = 3, spacing = 0.58 } = {}) {
   const threshold = base[Math.min(n - 1, heldIndex + 1)];
   const jitterPath = Array.from({ length: 400 }, (_, i) =>
     threshold + 0.02 * spacing * Math.sin((i / 399) * 16 * Math.PI));
-  const jitterRows = jitterPath.map((heldX) => positions(model, heldX, { n, heldIndex, spacing }).out);
+  const jitterRows = jitterPath.map((heldX) => positions(model, heldX, { n, heldIndex, spacing, engaged: true }).out);
   const watchedIndex = Math.min(n - 1, heldIndex + 1);
   const jitterTotalVariationW = sum(
     jitterRows.slice(1).map((row, i) => Math.abs(row[watchedIndex] - jitterRows[i][watchedIndex])),
   );
 
-  const final = rows.at(-1);
-  const returnErrorW = max(neighbors.map((i) => Math.abs(final[i] - base[i])));
+  // Returning the held card to its origin is not yet cancellation: while the
+  // card remains actively held, a collective model may legitimately remain
+  // deformed. Measure that separately from the actual release/cancel state.
+  const returnedWhileHeld = rows.at(-1);
+  const returnWhileHeldErrorW = max(neighbors.map((i) => Math.abs(returnedWhileHeld[i] - base[i])));
+
+  const cancelled = positions(model, start, { n, heldIndex, spacing, engaged: false }).out;
+  const cancelReleaseErrorW = max(neighbors.map((i) => Math.abs(cancelled[i] - base[i])));
 
   const endState = rows[forward.length - 1];
   const totalDisturbanceW = sum(neighbors.map((i) => Math.abs(endState[i] - base[i])));
@@ -115,7 +123,8 @@ function sweep(model, { n = 8, heldIndex = 3, spacing = 0.58 } = {}) {
     inversions,
     inactiveDriftW,
     jitterTotalVariationW,
-    returnErrorW,
+    returnWhileHeldErrorW,
+    cancelReleaseErrorW,
     totalDisturbanceW,
   };
 }
@@ -136,7 +145,7 @@ for (const model of models) {
 }
 
 console.log(JSON.stringify({
-  version: 1,
+  version: 2,
   status: 'INTERNAL hand-field mechanical falsification instrument',
   warning: 'This instrument tests continuity, order and disturbance. It cannot establish cognition, pleasure, ownership or the preferred product hand.',
   models: {
