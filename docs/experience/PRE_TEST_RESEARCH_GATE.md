@@ -2,187 +2,219 @@
 
 ## Purpose
 
-Owner testing is expensive attention and high-value evidence. Do not spend it on immature experiments merely because a prototype is easy to build.
+Owner attention is expensive, high-value perceptual evidence.
 
-The default in Run 03 is therefore **research before Owner testing**.
+The gate exists to prevent two opposite failures:
 
-A test should be presented only when it can answer a question that prior analysis cannot answer reliably.
+1. sending immature prototypes because implementation is easy;
+2. hiding from perception forever behind more analysis.
 
-## What must happen before the next Owner-facing interaction prototype
+Readiness is now **per research track**, not one global project state.
 
-### 1. Phenomenon decomposition
+## Core rule
 
-The target phenomenon must be decomposed below feature language.
+Use the cheapest source of reliable evidence first.
 
-For `card feel`, examples include:
+If a question can still be resolved credibly through:
 
-- acquisition / pickup threshold;
-- visual offset from the finger;
-- grab-point preservation;
-- translation directness;
-- rotational response;
-- acceleration response;
-- damping;
-- neighbor displacement;
-- insertion pressure;
-- cancellation trajectory;
-- release interpretation;
-- object continuity after authority update;
-- sensory synchrony.
+- code inspection;
+- domain analysis;
+- external research;
+- synthetic/mechanical probes;
+- internal browser rehearsal;
+- adversarial review;
 
-A prototype that simply offers named presets such as `heavy` or `magnetic` is too early unless those presets are themselves the research question.
+then do that before consuming Owner attention.
 
-### 2. Competing hypotheses
+When the remaining uncertainty is genuinely tactile, perceptual, attentional, temporal or aesthetic, another theory document is not progress. Human testing becomes the correct instrument.
 
-There should be at least two credible explanations or design models when the question admits alternatives.
+## Readiness classes
 
-Example:
+### RESEARCH EARLY
 
-Perceived weight might come primarily from pointer lag, from angular lag around the grab point, from neighbor resistance, from release behavior, or from sound. Those hypotheses should not be collapsed into one bundle before they are understood.
+The phenomenon is still being discovered or decomposed.
 
-### 3. Failure prediction
+### INTERNAL ACTIVE
 
-Before testing, state what would make each hypothesis fail.
-
-A design that cannot be falsified is a taste demo, not a research instrument.
-
-### 4. Transfer question
-
-State what knowledge would remain useful if the Tysiac-specific implementation were discarded.
-
-If the answer is `none`, the experiment may still be worthwhile for the product, but it is not donor research.
-
-### 5. Truth-boundary review
-
-Verify that the prototype does not blur:
-
-- reversible local manipulation;
-- inferred intent;
-- command commit;
-- authoritative acceptance;
-- canonical consequence.
-
-### 6. Interaction-body review
-
-Before mobile tests, reason explicitly about:
-
-- finger occlusion;
-- grip/thumb reach;
-- touch target vs visual geometry;
-- cancellation escape path;
-- device-edge behavior.
-
-Before desktop tests, reason explicitly about:
-
-- hover;
-- precise acquisition;
-- pointer speed;
-- spatial use of width;
-- keyboard/mouse combinations if relevant.
-
-### 7. Ordinary-use torture plan
-
-The experiment must define how it will be stressed beyond first impression:
-
-- repeated action;
-- rapid reversal;
-- slow deliberate manipulation;
-- messy imprecise manipulation;
-- cancel;
-- invalid attempt;
-- latency;
-- interruption;
-- reconnect/correction where relevant.
-
-### 8. Evidence capture plan
-
-Decide before testing what evidence matters:
-
-- Owner raw language;
-- screen recording;
-- interaction sequence;
-- ignored controls;
-- repeated behaviors;
-- mis-taps;
-- hesitation;
-- retries;
-- abandonment;
-- spontaneous play with the system beyond the requested task.
-
-Do not infer unseen finger position from screen capture without acknowledging the limitation.
-
-## Test readiness classes
-
-### NOT READY
-
-The idea is still being decomposed, or the experiment mainly demonstrates implementation enthusiasm.
-
-### INTERNAL READY
-
-The experiment is useful for technical/design self-audit but does not yet justify Owner attention.
+Competing mechanisms exist and can be falsified/rehearsed without Owner attention.
 
 ### OWNER READY
 
-The experiment isolates meaningful questions, has plausible alternatives, can fail, and Owner perception/behavior is the missing evidence.
+Internal work has removed obvious implementation/tooling uncertainty and the remaining question requires real human perception/behavior.
+
+### INTEGRATION READY
+
+A primitive survived isolated Owner evidence plus repetition/torture and is ready for a bounded authentic-runtime trial.
 
 ### PROMOTION READY
 
-Owner evidence plus torture evidence support integration into authentic runtime for a bounded trial.
+Integrated evidence supports production adoption for a specific reason.
 
-## Stop condition
+These classes apply to individual tracks/primitives, not the entire Experience Foundation at once.
 
-The research phase should not become endless avoidance of contact with reality.
+## General requirements before OWNER READY
 
-Owner testing becomes mandatory when:
+A candidate perceptual test should have:
 
-- analysis is cycling without producing new distinctions;
-- competing hypotheses remain plausible and can only be separated by perception/use;
-- the remaining uncertainty is specifically tactile, attentional, temporal or aesthetic;
-- an isolated prototype can answer that uncertainty without forcing product commitment.
+1. **an explicit question** — not `does this feel good?` as the only target;
+2. **credible alternatives** — at least two mechanisms or a useful baseline where comparison makes sense;
+3. **failure predictions** — what evidence would narrow/reject each candidate;
+4. **truth-boundary integrity** — reversible manipulation, inferred intent, commit, authority and consequence are not blurred;
+5. **interaction-body reasoning** — touch/occlusion/grip on mobile, pointer/hover/precision/width on desktop as relevant;
+6. **ordinary-use torture plan** — repetition, slow/fast manipulation, reversal, cancel, invalid attempt, latency/interruption where relevant;
+7. **evidence capture plan** — raw Owner wording, behavior, hesitation, ignored controls, retries, spontaneous exploration;
+8. **neutral framing** — avoid persuasive variant names/order priming when subtle comparison matters;
+9. **visual/tooling adequacy** — the fixture must not look or behave so obviously like debug tooling that implementation artifacts dominate judgement;
+10. **a reason Owner evidence is now necessary** — not merely desirable.
 
-The gate exists to prevent **premature tests**, not testing itself.
+## Owner evidence is strongest for
 
-## Current Run 03 status
+- feel;
+- responsiveness;
+- liveliness/deadness;
+- perceived materiality;
+- visual hierarchy;
+- interaction character;
+- attention flow;
+- frustration/pleasure;
+- repetition fatigue;
+- sense of control/ownership;
+- whether an interaction invites further exploration.
 
-The next Owner-facing Card Embodiment test remains **NOT READY**, but the reason has changed.
+Owner evidence does not certify:
 
-The broad decomposition phase has materially advanced. We now have:
+- Tysiac rule authenticity;
+- strategy quality;
+- network correctness;
+- privacy/security;
+- deterministic core invariants.
 
-- a Card Embodiment phenomena map;
-- explicit finger/occlusion and control/display tradeoffs;
-- directness-vs-mass analysis;
-- grab-point/pivot decomposition;
-- hand-neighbor coupling models;
-- separate cancel/reject/pending-authority semantics;
-- temporal authority/reconnect model;
-- cross-project donor mapping;
-- interaction-fidelity and attention frameworks;
-- adversarial reviews of both the overall `Interaction Physics` thesis and the Card Embodiment focus;
-- an initial competing-hypothesis matrix covering mass, occlusion, hand-field coupling, reorder/play intent and assistance/agency.
+## Current per-track state
 
-The research has therefore moved from **phenomenon discovery** into **hypothesis narrowing**.
+### Card Control
 
-### Remaining work before INTERNAL READY
+Status: **INTERNAL ACTIVE**.
 
-1. choose the first one or two research families with the highest information value;
-2. narrow each to the smallest set of variables that can distinguish competing explanations;
-3. define plausible parameter ranges and obvious technical instability limits;
-4. decide which visual/sensory treatment must be held constant so it does not dominate judgement;
-5. decide which confounds need explicit control and which can be deferred;
-6. define lightweight behavioral instrumentation for internal rehearsal;
-7. design mobile/body conditions, including how to account for the real finger not visible in screen recording;
-8. map each candidate to the donor concepts it could advance, narrow or reject;
-9. perform another adversarial review of the **experimental design**, not just the theory.
+Available:
 
-### Remaining work before OWNER READY
+- P0–P3 mechanism families;
+- exact conceptual control laws;
+- normalized observables;
+- Card Control synthetic bench;
+- apparatus self-check;
+- render/input/controller cadence separation;
+- mobile-body and occlusion research;
+- adversarial review.
 
-After an internal fixture exists:
+Not OWNER READY yet because:
 
-1. technically rehearse it without Owner attention;
-2. remove obvious implementation artifacts, jank and accidental visual bias;
-3. verify that each candidate can genuinely fail;
-4. ensure neutral naming/order and an evidence-capture plan;
-5. define first-contact and repetition/torture phases separately;
-6. verify the question is now perceptual/behavioral and cannot be answered credibly by further analysis alone.
+- no ecological/manual Lane II fixture exists yet;
+- actual touch occlusion is not represented in a perceptual fixture;
+- sensory treatment is intentionally stripped;
+- the remaining useful candidate region has not yet been translated into a clean human-facing comparison;
+- Card Control should be tested together with enough Hand context to avoid optimizing a cursor-object in a vacuum.
 
-No Owner-facing prototype should be produced merely to demonstrate progress. Equally, once the remaining uncertainty becomes genuinely perceptual, further theory must not be used as an excuse to avoid contact with reality.
+### Hand Field / Workspace mechanics
+
+Status: **INTERNAL ACTIVE**.
+
+Available:
+
+- H0 discrete threshold baseline;
+- H1 continuous local field;
+- H2 broader continuous field;
+- synthetic density/continuity bench;
+- explicit distinction between `returned while held` and `cancelled/released`;
+- checker aligned with those semantics;
+- cognition/spatial-memory research and adversarial critique.
+
+Not OWNER READY yet because:
+
+- the bench only measures continuity/order/disturbance, not cognition or pleasure;
+- actual card geometry/overlap/occlusion is not represented;
+- reorder vs play/inspect intent has not yet been integrated;
+- no authentic touch/pointer embodiment exists;
+- visual character is still too underdeveloped to prevent a debug-tool first impression.
+
+### Self-teaching interaction language
+
+Status: **RESEARCH ACTIVE**.
+
+Available:
+
+- affordance/feedforward/probing/constraint/explanation model;
+- audit against real Tysiac command families;
+- separation of domain legality, authority, privacy and other constraint causes.
+
+Not ready for isolated Owner test yet. It should first be embodied in a bounded real action family such as card play, exchange or trick interaction rather than tested as generic tutorial UI.
+
+### Action Scene / persistent consequence
+
+Status: **RESEARCH EARLY**.
+
+Current work defines scene grammar conceptually but has not yet produced a sufficiently grounded integrated scene candidate.
+
+### Experience Character / sensory composition
+
+Status: **RESEARCH EARLY — PRIORITY GAP**.
+
+This track now needs serious work before an integrated Owner-facing fixture. Otherwise future Card/Hand tests risk measuring debug-tool aesthetics instead of the intended product character.
+
+### Desktop Embodiment
+
+Status: **RESEARCH EARLY — PRIORITY GAP**.
+
+Mobile/body work is currently more mature. Desktop must receive equivalent attention before any claim of cross-platform experience quality.
+
+### Integrated Tysiac experience candidate
+
+Status: **NOT READY**.
+
+No production `GameTable` redesign is justified yet.
+
+## Stop conditions for analysis
+
+A research track should move from analysis into INTERNAL implementation when:
+
+- competing mechanisms are explicit;
+- another document is unlikely to separate them;
+- known confounds can be instrumented or bounded;
+- a small implementation can produce new evidence without implying product commitment.
+
+A track should move from INTERNAL to OWNER READY when:
+
+- mechanical/tooling errors have been removed;
+- candidates are genuinely distinct for the intended reason;
+- remaining uncertainty is human perception/use;
+- fixture quality is high enough that obvious jank/debug styling will not dominate;
+- first-contact and repetition evidence can be captured without overexplaining the target.
+
+## Stop conditions for low-level microresearch
+
+Do not deepen a control law merely because more parameters can be measured.
+
+Continue only if the next iteration is likely to:
+
+- eliminate/narrow a meaningful candidate;
+- expose a causal mechanism;
+- remove a real confound from future human evidence;
+- constrain Hand/Scene integration;
+- or produce credible cross-project donor knowledge.
+
+Otherwise move up a scale.
+
+## Owner testing posture
+
+The Owner explicitly requested substantial real work, many iterations, falsification and verification before the next test.
+
+That remains binding.
+
+The correct interpretation is **high information value before testing**, not a fixed count of conversations or documents.
+
+When Card Control + Hand Field + enough visual/sensory character converge into a credible narrow instrument, another Owner test should become mandatory rather than indefinitely postponed.
+
+## Final rule
+
+The gate protects evidence quality.
+
+It does not protect our favorite hypotheses from being touched, disliked or destroyed by reality.
