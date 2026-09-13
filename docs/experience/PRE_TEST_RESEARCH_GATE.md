@@ -144,19 +144,45 @@ The gate exists to prevent **premature tests**, not testing itself.
 
 ## Current Run 03 status
 
-The next Card Embodiment test is **NOT READY**.
+The next Owner-facing Card Embodiment test remains **NOT READY**, but the reason has changed.
 
-Required work before it becomes Owner-ready:
+The broad decomposition phase has materially advanced. We now have:
 
-1. deeper decomposition of perceived object physicality;
-2. finger/card geometry and occlusion model;
-3. directness-vs-mass analysis;
-4. grab-point and pivot model;
-5. hand-neighbor coupling model;
-6. cancel/release semantics;
-7. latency/authority behavior;
-8. candidate sensory mappings;
-9. cross-project transfer analysis;
-10. adversarial review of the whole model.
+- a Card Embodiment phenomena map;
+- explicit finger/occlusion and control/display tradeoffs;
+- directness-vs-mass analysis;
+- grab-point/pivot decomposition;
+- hand-neighbor coupling models;
+- separate cancel/reject/pending-authority semantics;
+- temporal authority/reconnect model;
+- cross-project donor mapping;
+- interaction-fidelity and attention frameworks;
+- adversarial reviews of both the overall `Interaction Physics` thesis and the Card Embodiment focus;
+- an initial competing-hypothesis matrix covering mass, occlusion, hand-field coupling, reorder/play intent and assistance/agency.
 
-No new Owner-facing card prototype should be produced merely to show progress before these questions have materially advanced.
+The research has therefore moved from **phenomenon discovery** into **hypothesis narrowing**.
+
+### Remaining work before INTERNAL READY
+
+1. choose the first one or two research families with the highest information value;
+2. narrow each to the smallest set of variables that can distinguish competing explanations;
+3. define plausible parameter ranges and obvious technical instability limits;
+4. decide which visual/sensory treatment must be held constant so it does not dominate judgement;
+5. decide which confounds need explicit control and which can be deferred;
+6. define lightweight behavioral instrumentation for internal rehearsal;
+7. design mobile/body conditions, including how to account for the real finger not visible in screen recording;
+8. map each candidate to the donor concepts it could advance, narrow or reject;
+9. perform another adversarial review of the **experimental design**, not just the theory.
+
+### Remaining work before OWNER READY
+
+After an internal fixture exists:
+
+1. technically rehearse it without Owner attention;
+2. remove obvious implementation artifacts, jank and accidental visual bias;
+3. verify that each candidate can genuinely fail;
+4. ensure neutral naming/order and an evidence-capture plan;
+5. define first-contact and repetition/torture phases separately;
+6. verify the question is now perceptual/behavioral and cannot be answered credibly by further analysis alone.
+
+No Owner-facing prototype should be produced merely to demonstrate progress. Equally, once the remaining uncertainty becomes genuinely perceptual, further theory must not be used as an excuse to avoid contact with reality.
