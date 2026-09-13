@@ -1,10 +1,10 @@
 /*
  * Run 02 — tactile hand recovery.
  *
- * The hand is an interaction surface, not a row of buttons. Cards can be held
- * and rearranged regardless of play legality; legal cards may additionally be
- * committed to the table by throwing them upward. This remains presentation-
- * only state and never changes the canonical hand/order in game authority.
+ * The hand is a permissive physical surface, not a row of enabled/disabled
+ * controls. Every card stays visually alive and manipulable. Game legality is
+ * communicated only as additional positive feedback on useful possibilities.
+ * Presentation state never changes canonical hand contents or authority.
  */
 
 /* Undo the boxed "control rail" feeling from the first visual pass. */
@@ -74,25 +74,35 @@
   cursor: grab;
 }
 
-/* A non-playable card is still a physical card and may still be rearranged. */
+/* `disabled` is retained internally for the old legality/test contract only.
+ * To the player this is still a full physical card, not a greyed-out control. */
 .hand-slot > .card:disabled {
   pointer-events: none;
-  opacity: .84;
-  filter: saturate(.82) brightness(.97);
-  border-color: #ded5c3;
+  opacity: 1;
+  filter: none;
+  border-color: var(--card-edge, #e2d9c7);
   box-shadow:
-    0 6px 13px #00042,
-    0 1px 1px #00055,
-    inset 0 0 0 1px #fff8;
+    0 7px 15px #0004,
+    0 1px 1px #0006,
+    inset 0 0 0 1px #fff9;
 }
 
-/* Legality is a secondary visual cue, not permission to touch the object. */
-.hand-slot > .card:not(:disabled) {
-  border-color: #efd073;
+/* Positive language: useful cards gain something; other cards lose nothing. */
+.hand-slot.is-actionable > .card {
+  border-color: #e7cf88;
   box-shadow:
-    0 10px 21px #00058,
-    0 0 0 1px #efd0738f,
-    0 0 20px #e8c66f1c,
+    0 9px 19px #00052,
+    0 0 0 1px #e7cf8866,
+    0 0 16px #e8c66f12,
+    inset 0 0 0 1px #fff;
+}
+
+.hand-slot.is-throwable > .card {
+  border-color: #f1d681;
+  box-shadow:
+    0 11px 22px #00058,
+    0 0 0 1px #f1d6818c,
+    0 -8px 28px #e8c66f20,
     inset 0 0 0 1px #fff;
 }
 
@@ -106,6 +116,17 @@
     0 18px 28px #00068,
     0 0 0 1px #fff5d0a6,
     0 0 24px #e8c66f1f,
+    inset 0 0 0 1px #fff;
+}
+
+/* A legal play gets a warmer response only when the player actually engages it. */
+.hand-slot.is-throwable:hover > .card,
+.hand-slot.is-throwable.is-held > .card {
+  border-color: #ffe29a;
+  box-shadow:
+    0 20px 31px #00068,
+    0 0 0 2px #f0cf73aa,
+    0 -10px 34px #e8c66f35,
     inset 0 0 0 1px #fff;
 }
 
@@ -133,7 +154,7 @@
   pointer-events: none;
   transform: rotate(var(--drag-tilt)) scale(1.055);
   transform-origin: 50% 68%;
-  opacity: .98;
+  opacity: .99;
   filter: none !important;
   box-shadow:
     0 26px 42px #0008,
@@ -143,16 +164,22 @@
   transition:
     transform .1s ease,
     box-shadow .1s ease,
-    filter .1s ease;
+    filter .1s ease,
+    border-color .1s ease;
+}
+
+/* Throwing any card remains physical. Only a useful throw receives extra light. */
+.tactile-card-float.throw-intent {
+  transform: rotate(var(--drag-tilt)) translateY(-2px) scale(1.07);
 }
 
 .tactile-card-float.commit-ready {
-  transform: rotate(var(--drag-tilt)) translateY(-4px) scale(1.09);
+  transform: rotate(var(--drag-tilt)) translateY(-5px) scale(1.1);
   border-color: #ffe69c;
   box-shadow:
     0 30px 48px #0008,
     0 0 0 3px #f3cc61,
-    0 0 42px #e8c66f55,
+    0 0 44px #e8c66f66,
     inset 0 0 0 1px #fff;
 }
 
@@ -160,41 +187,36 @@
   animation: tactile-card-release .19s cubic-bezier(.15,.76,.3,1) forwards;
 }
 
-.tactile-red-marker,
-.tactile-dark-marker {
-  display: none;
-}
-
 .tactile-commit-zone {
   position: fixed;
   left: 50%;
   z-index: 1190;
   transform: translate(-50%, -50%) scale(.96);
-  min-width: 170px;
+  min-width: 190px;
   padding: 8px 14px;
-  border: 1px solid #ffffff1c;
+  border: 1px solid #f1d47752;
   border-radius: 999px;
-  background: #03150edc;
-  color: #c6d7cc;
-  box-shadow: 0 10px 30px #0005, inset 0 1px #ffffff0c;
+  background: #0a2016df;
+  color: #eadcae;
+  box-shadow: 0 10px 30px #0005, 0 0 22px #e8c66f13, inset 0 1px #ffffff0c;
   text-align: center;
   font-size: .78rem;
   font-weight: 700;
   letter-spacing: .02em;
   pointer-events: none;
-  transition: transform .11s ease, color .11s ease, border-color .11s ease, background .11s ease;
+  transition: transform .11s ease, color .11s ease, border-color .11s ease, background .11s ease, box-shadow .11s ease;
 }
 
 .tactile-commit-zone.ready {
-  transform: translate(-50%, -50%) scale(1.04);
-  border-color: #f1d4778f;
-  background: #1e2814ed;
-  color: #ffe8a2;
-  box-shadow: 0 12px 34px #0006, 0 0 28px #e8c66f2b, inset 0 1px #fff4c024;
+  transform: translate(-50%, -50%) scale(1.06);
+  border-color: #f7dc82c7;
+  background: #28331bed;
+  color: #fff0b5;
+  box-shadow: 0 12px 34px #0006, 0 0 34px #e8c66f42, inset 0 1px #fff4c024;
 }
 
-/* Preserve the lighter in-table instruction while the hand itself is active. */
-.app-shell:has(.hand > .hand-slot > .card:not(:disabled)) .decision-card.compact {
+/* Preserve the lighter in-table instruction while the hand itself is actionable. */
+.app-shell:has(.hand > .hand-slot.is-actionable) .decision-card.compact {
   width: min(680px, 100%);
   padding: 5px 10px 2px;
   border-color: transparent;
@@ -203,26 +225,26 @@
   backdrop-filter: none;
 }
 
-.app-shell:has(.hand > .hand-slot > .card:not(:disabled)) .decision-card.compact h2 {
+.app-shell:has(.hand > .hand-slot.is-actionable) .decision-card.compact h2 {
   margin-bottom: 5px;
   font-size: 1.04rem;
   text-shadow: 0 2px 8px #00190f;
 }
 
-.app-shell:has(.hand > .hand-slot > .card:not(:disabled)) .decision-card.compact .decision-help {
+.app-shell:has(.hand > .hand-slot.is-actionable) .decision-card.compact .decision-help {
   max-width: 580px;
   margin-top: 6px;
   color: #b8cbbf;
 }
 
-.app-shell:has(.hand > .hand-slot > .card:not(:disabled)) .decision:has(.decision-card.compact) {
+.app-shell:has(.hand > .hand-slot.is-actionable) .decision:has(.decision-card.compact) {
   min-height: 66px;
 }
 
 @keyframes tactile-card-release {
   from {
-    opacity: .98;
-    transform: rotate(var(--drag-tilt)) scale(1.08);
+    opacity: .99;
+    transform: rotate(var(--drag-tilt)) scale(1.1);
   }
   to {
     opacity: 0;
@@ -296,22 +318,22 @@
     min-height: 44px;
   }
 
-  .app-shell:has(.hand > .hand-slot > .card:not(:disabled)) .decision:has(.decision-card.compact) {
+  .app-shell:has(.hand > .hand-slot.is-actionable) .decision:has(.decision-card.compact) {
     min-height: 56px;
   }
 
-  .app-shell:has(.hand > .hand-slot > .card:not(:disabled)) .decision-card.compact {
+  .app-shell:has(.hand > .hand-slot.is-actionable) .decision-card.compact {
     padding: 2px 5px 0;
   }
 
-  .app-shell:has(.hand > .hand-slot > .card:not(:disabled)) .decision-card.compact .decision-help {
+  .app-shell:has(.hand > .hand-slot.is-actionable) .decision-card.compact .decision-help {
     margin-top: 4px;
     padding-inline: 7px;
     font-size: .7rem;
   }
 
   .tactile-commit-zone {
-    min-width: 154px;
+    min-width: 176px;
     padding: 7px 11px;
     font-size: .72rem;
   }
