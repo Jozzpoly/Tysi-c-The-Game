@@ -4,6 +4,7 @@ import App from './App.js';
 import './touch.css';
 import './visual-language.css';
 import './visual-language-02.css';
+import './visual-language-03.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

@@ -23,16 +23,20 @@ export interface GameTableProps {
 
 function Card({ card, disabled, selected, onClick }: { card: CardId; disabled?: boolean; selected?: boolean; onClick?: () => void }) {
   const suit = suitOf(card);
+  const rank = rankOf(card);
+  const symbol = SUIT_SYMBOL[suit];
   const red = suit === 'hearts' || suit === 'diamonds';
   return (
     <button
       className={`card ${red ? 'red' : ''} ${selected ? 'selected' : ''}`}
       disabled={disabled}
       onClick={onClick}
-      aria-label={`${rankOf(card)} ${suit}`}
+      aria-label={`${rank} ${suit}`}
+      data-rank={rank}
+      data-suit={symbol}
     >
-      <span className="rank">{rankOf(card)}</span>
-      <span className="suit">{SUIT_SYMBOL[suit]}</span>
+      <span className="rank" data-suit={symbol}>{rank}</span>
+      <span className="suit">{symbol}</span>
     </button>
   );
 }
@@ -52,6 +56,7 @@ export function GameTable({ projection, seatNames, message = '', onCommand, onNe
   const seatName = (seat: Seat) => seatNames[seat];
   const seatAction = (seat: Seat, you: string, thirdPerson: string) => seat === humanSeat ? you : `${seatName(seat)} ${thirdPerson}`;
   const opponentSeats = ALL_SEATS.filter((seat) => seat !== humanSeat);
+  const playPosition = (seat: Seat) => seat === humanSeat ? 'self' : seat === opponentSeats[0] ? 'left' : 'right';
   const humanCards = view.ownHand;
   const playable = new Set(
     humanCommands.filter((command): command is Extract<Command, { type: 'play' }> => command.type === 'play').map((command) => command.card),
@@ -170,7 +175,7 @@ export function GameTable({ projection, seatNames, message = '', onCommand, onNe
               <span className="muted">Stół czeka na zagranie</span>
             ) : (
               visibleTrick.map((play) => (
-                <div className="played" key={`${play.seat}-${play.card}`}>
+                <div className={`played played-${playPosition(play.seat)}`} key={`${play.seat}-${play.card}`}>
                   <small>{seatName(play.seat)}</small>
                   <Card card={play.card} disabled />
                 </div>
