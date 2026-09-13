@@ -1,9 +1,9 @@
 # Execution state — live truth
 
-Date: 2026-09-12
-Status: **Foundation Run 01 complete. Run 02 is ready for first serious human Owner play.**
+Date: 2026-09-13
+Status: **Foundation Run 01 complete. Run 02 now uses two parallel evidence tracks: game truth and Owner-led experience truth.**
 
-This is the compact execution truth. Earlier plans/history are not authority where they conflict with executable evidence here.
+This is the compact execution authority. Earlier plans/handoffs are historical where they conflict with this file or executable evidence.
 
 ## Product target
 
@@ -16,48 +16,93 @@ Build a small, high-quality browser Tysiąc table that is frictionless to open a
 - Refresh/reconnect/mobile suspension are normal lifecycle requirements.
 - Later support several real Tysiąc rule families without becoming a generic rules DSL.
 
-Current visuals remain deliberately provisional. The main product question is now whether the game is understandable and enjoyable to a real human through complete matches.
+The presentation is still provisional, but experience work is **not deferred** until every gameplay/rule uncertainty is solved.
+
+## Evidence model — live contract
+
+The project no longer uses the linear model:
+
+`automation -> Owner validates gameplay -> visual polish`
+
+That model was invalid because the Owner does not know Tysiąc well enough to judge rule identity, strategic bot quality or authentic gameplay.
+
+### Track A — game truth
+
+Questions:
+
+- are rules, legality and scoring right for the named profile?
+- does authority preserve hidden information and lifecycle invariants?
+- are bots strategically credible enough?
+- does the game feel authentic to knowledgeable Tysiąc players?
+
+Evidence:
+
+- documented sources;
+- reference implementation probes;
+- explicit reversible project pins;
+- executable scenarios/invariants/simulations;
+- knowledgeable Tysiąc-player/domain sessions.
+
+Owner approval, silence or enjoyment does **not** certify this track.
+
+### Track B — experience truth
+
+Questions:
+
+- is information visually clear and well composed?
+- do mouse/touch interactions feel reliable and intentional?
+- are actions and consequences perceptible?
+- does pacing/motion/feedback feel right?
+- do desktop and mobile each feel natural?
+- does onboarding communicate enough?
+- does the product progressively feel professional?
+
+The Owner is the primary judgement source here. Natural reactions, recordings and screenshots are first-class evidence.
+
+Owner confusion is UX evidence, but first classify whether it is domain unfamiliarity, communication failure, interaction failure or presentation judgement.
+
+Automation may defend measurable UX mechanics; it cannot certify taste, clarity or feel.
+
+Both tracks may advance concurrently as long as presentation remains downstream of canonical game projections/events and does not duplicate authority or hard-code uncertain rule semantics irreversibly.
 
 ## Rules — candidate, not canonical
 
-First target: **`PLAYOK_3P_800_CANDIDATE` v3**. See `docs/rules/PLAYOK_3P_800_CANDIDATE.md`.
+First target remains **`PLAYOK_3P_800_CANDIDATE` v3**. See `docs/rules/PLAYOK_3P_800_CANDIDATE.md`.
 
-Executable behavior proves our candidate implementation, not exact PlayOK identity. Evidence labels remain: `documented` / `reference-observed` / `pinned` / `executable`.
+Executable behavior proves our candidate implementation, not exact PlayOK identity. Evidence labels remain `documented` / `reference-observed` / `pinned` / `executable`.
 
-### Defended Run 02 rule slices
+### Defended candidate slices
 
 **Bomb — PASS as candidate implementation**
 
-- declarer may bomb in the pinned post-talon / pre-exchange window;
-- first bomb per player is free; later bombs award +60 to eligible opponents;
+- pinned post-talon / pre-exchange window;
+- first bomb per player free; later bombs award +60 to eligible opponents;
 - ordinary 800-lock currently applies to those awards;
 - bomb count persists across hands;
-- causal completion/event/UI path exists;
-- desktop and 390 px mobile Chrome coverage is mandatory.
+- causal completion/event/UI path exists.
 
-Exact PlayOK timing, counter scope and 800 interaction remain reference-sensitive pins.
+Exact reference timing/counter/800 details remain evidence-sensitive.
 
 **Four nines — PASS as candidate implementation**
 
 - evaluated after exchange and before final contract;
 - a fourth nine received from the declarer counts;
 - eligible seat privately chooses redeal or continue;
-- continuing does not explicitly reveal the four nines or choice to other seats;
+- continuing does not explicitly reveal the hand/choice;
 - redeal preserves score, bomb counters, hand number and same dealer;
-- desktop/mobile privacy and interaction coverage is mandatory;
-- persisted pre-four-nines snapshots do not retroactively gain the rule.
+- historical snapshots remain compatible.
 
-Timing/received-card/same-dealer details remain PlayOK-reference-sensitive until directly observed.
+Several details remain reference-sensitive.
 
 **Trick legality — PASS as reversible candidate behavior**
 
-Current candidate remains strict:
+Current pin:
 
 `follow suit -> beat in led suit when possible -> trump when void -> overtrump when required and possible`.
 
-This is still a project pin, not PlayOK black-box confirmation. These obligations are explicit executable rule fields; falsification coverage proves looser documented variants can be represented without rewriting the legality engine.
+This is executable and explicitly configurable where documented variants differ; it is not yet black-box PlayOK confirmation.
 
-### Material rule probes still open
+### Material game-truth probes still open
 
 - exact PlayOK confirmation of strict trump / overtrump behavior;
 - post-musik final-contract ceiling (current pin: `120 + marriages still held`);
@@ -66,13 +111,13 @@ This is still a project pin, not PlayOK black-box confirmation. These obligation
 - Kurnik's unified musik/last-trick wording in 3P;
 - remaining bomb/four-nines reference validation.
 
-These no longer justify postponing human gameplay. New evidence may change a pin; the architecture is ready for that without broad redesign.
+These do not block Owner-led experience work.
 
 ## Core / authority foundation — PASS
 
-Pure TypeScript core is independent of React and Cloudflare.
+Pure TypeScript core remains independent of React and Cloudflare.
 
-Proven:
+Defended:
 
 - deterministic seeded shuffle and reproducible complete matches;
 - complete `deal -> auction -> musik -> exchange -> contract -> 8 tricks -> score -> next hand -> match` state machine;
@@ -81,33 +126,19 @@ Proven:
 - humans, local bots and server bots use the same command model;
 - bot policy sees only its seat observation, legal commands and public rules.
 
-Mandatory 40-match bot survey remains terminating: average 32.5 hands, maximum 55, voluntary contract success 61.6%, forced-100 success 39.9%, no non-terminating match.
+The 40-match product-bot survey remains terminating and useful as automation evidence. It proves legality/termination characteristics, **not** strategic credibility or fun.
 
-Bot quality is **ADEQUATE for Owner testing**, not declared final or fun.
-
-## Projection / feedback — PASS
+## Projection / feedback boundary — PASS
 
 Canonical human-facing boundary:
 
-`MatchState -> projectSeat(seat) -> SeatProjection`.
+`MatchState -> projectSeat(seat) -> SeatProjection`
 
-Executable privacy tests prove hidden opponent/talon identities do not leak. Accepted commands emit audience-filtered typed `GameEvent[]`; these are presentation/protocol facts, not event sourcing.
+Accepted commands emit audience-filtered typed `GameEvent[]`. These are presentation/protocol facts, not event sourcing.
 
-### Causal scoring — PASS
+Causal scoring summaries, first-play guidance and authoritative transition playback remain downstream of this boundary and reconnect-safe.
 
-Completed normal hands expose a derived public `scoreSummary` through `SeatProjection` rather than duplicating persisted scoring state.
-
-It explains card/marriage points, raw hand points, score delta, defender rounding, 800-lock, declarer contract and success/failure. Reconnect reconstructs the same explanation. Bombs retain separate bomb-specific semantics. Desktop and true 390 x 844 mobile Chrome coverage is mandatory.
-
-### First-play guidance — PASS as product readiness layer
-
-Normal player-facing UI now has one shared **`Tysiąc w 60 sekund`** guide available from both home and the active table.
-
-It covers the minimum mental model needed for intentional first play: target 1000, card strength and points, auction/musik/contract, current strict trick obligations, marriages/trump and the 800 lock. Auction, exchange, final-contract and trick/marriage decisions also carry short contextual explanations.
-
-The guide does not implement legality or a second tutorial state machine. Legal commands remain authoritative. Opening/closing help does not mutate match revision or consume the human decision.
-
-Chrome coverage defends 1440 x 1000 and true 390 x 844 layouts, including no horizontal overflow. A real human still needs to prove that this amount and wording of help are actually useful rather than merely present.
+Preserve this separation while the presentation becomes more sophisticated.
 
 ## Remote MatchRoom / identity — PASS
 
@@ -115,95 +146,126 @@ One SQLite-backed Durable Object `MatchRoom` is authoritative online state.
 
 It persists canonical state + bounded idempotency receipts, invokes the same reducer/invariants, rejects stale/misbound commands, sends only seat projections + scoped events, survives eviction with hibernating WebSockets and settles bot-owned seats server-side.
 
-Accountless room lifecycle is defended for solo / duo / trio. Room code is not seat authority; human seats use opaque reconnect capabilities whose hashes are persisted. Share URLs contain only the room code and same-origin WebSocket origin is enforced.
+Accountless solo / duo / trio room lifecycle is defended. Room code is not seat authority; human seats use opaque reconnect capabilities whose hashes are persisted. Share URLs contain only the room code and same-origin WebSocket origin is enforced.
 
-### Remote transition playback — PASS
+Server authority stays fast; client presentation queues already-authoritative frames for observable bot actions. No server sleeps, client prediction or reconstructed state-diff authority.
 
-Server bot settling remains immediate. The client queues already-authoritative projection/event frames so bot moves remain visible at human speed.
-
-Current first-pass pacing: ordinary transition ~480 ms, marriage ~680 ms, completed trick ~900 ms. Input is locked while rendered state trails authority. Reconnect/snapshot cancels historical playback and snaps to current authority.
-
-Chrome timing evidence proves separately visible revisions and no stale-input window. No server-side sleeps, client prediction or reconstructed state diffs were introduced.
-
-## Persisted historical matches — PASS compatibility boundary
-
-Profile snapshots remain pinned to the rules version with which a match started. Pre-bomb / pre-four-nines states can still project, reconnect and accept normal commands without retroactively gaining newer rules. Missing later structural fields normalize to neutral defaults.
-
-This is structural compatibility, not migration of old matches to current rules.
-
-## Browser / Cloudflare evidence
-
-### Local real browser -> MatchRoom — PASS
+## Browser / long-path foundation — PASS
 
 Normal `/` uses the real remote room flow; deterministic local authority remains QA-only.
 
-Mandatory browser CI covers desktop 1440 x 1000 and true mobile 390 x 844, solo/duo identity paths, hidden hands, authoritative revisions, auction/exchange/contract/trick, bomb, four nines, causal scoring, first-play guidance, transition pacing, navigation/reconnect and guarded horizontal layout safety.
+Mandatory Foundation CI covers:
 
-### Complete remote solo rehearsal — PASS
+- core/rule smoke + worker tests;
+- desktop 1440×1000 and mobile 390×844 Chrome;
+- solo/duo identity and hidden hands;
+- auction/exchange/contract/trick;
+- bomb/four-nines/scoring/first-play guidance;
+- transition pacing;
+- full remote solo matches on desktop and mobile;
+- reconnect/navigation;
+- build + Wrangler deploy dry-run.
 
-PR #8 added a production-shaped long-path browser gate using only currently enabled human UI actions. It does not call the core directly or inspect hidden state. Presentation timers are accelerated only inside this harness; real pacing remains independently tested.
+Public Cloudflare edge feasibility is also proven through temporary preview workflows with desktop↔mobile room sync and reconnect smoke. Temporary previews are deliberately ephemeral; they are not a durable production surface.
 
-Defending Foundation #180 (`34717657974`) completed both full matches:
+## Experience track — first Owner-derived slice PASS
 
-- **desktop 1440 x 1000:** revision 1061, 35 completed hands, 369 human decisions, 288 card plays, 6 marriages, 1 mid-match reconnect, final `480 / 1060 / 810`;
-- **mobile 390 x 844:** revision 1120, 37 completed hands, 384 human decisions, 304 card plays, 5 marriages, 1 mid-match reconnect, final `870 / 840 / 1020`.
+### Mobile touch hardening
 
-Both reached genuine match-complete UI at >=1000, preserved monotonic visible authority, survived reconnect and stayed within guarded horizontal layout bounds.
+Owner play exposed a high-signal experience defect: mobile taps felt unreliable/unintuitive and browser text selection could happen instead of the intended action.
 
-This proves **long-path executable play**, not human comprehension, strategy quality or fun.
+PR #11 converted that reaction into a bounded presentation-only change:
 
-### Cloudflare public edge — PASS as feasibility proof
+- coarse-pointer buttons/cards disable accidental text selection/callout and use manipulation touch behavior;
+- mobile controls defend >=44 px touch targets;
+- dense auction/contract choices remain directly available;
+- temporary 10-card exchange hand uses a 5×2 composition rather than tiny overlapping hit regions;
+- the empty trick area compresses during exchange so both rows remain directly visible/hittable;
+- real CDP touch exercises auction -> exchange -> contract -> card play;
+- hit-testing verifies every exchange-card center addresses the intended card.
 
-Temporary Foundation Preview run `34701391964` tested commit `6420423870e2905b63673c656a755ee3363f8cee` on the real Cloudflare edge with desktop + mobile Chrome, duo room, private credentials, command synchronization and refresh/reconnect.
+Defending PR run **Foundation #200** (`34730562259`) on head `85cd128…`:
 
-The deployment was intentionally temporary/unclaimed. This proves the Worker + Durable Object + assets + WebSocket boundary outside local workerd, not long-duration production operations.
+- full Foundation gate: **PASS**;
+- mobile touch browser smoke: **PASS**;
+- 10 exchange cards;
+- minimum card geometry: `52 × 76.47 px`;
+- minimum same-row center spacing: `60 px`;
+- `exchangeCentersHitCorrectCard = true`.
 
-The current `main` has not yet received a fresh public-edge Owner Preview after the Run 02 gameplay/readiness slices.
+Squash merged as:
 
-## CI / latest defended main
-
-Normal Foundation gate now includes:
-
-`core -> worker -> local browser -> remote browser -> real playback timing -> full remote solo desktop+mobile rehearsal -> navigation -> bomb/four-nines/scoring/first-play browser -> deploy-helper smoke -> production build -> wrangler deploy --dry-run`.
-
-The long-path rehearsal currently adds about 70 seconds for two complete matches. Keep it mandatory while regression value exceeds iteration cost; split it deliberately later if it becomes a material drag.
-
-No automatic push-to-production path exists.
-
-Latest defended `main`:
-
-- squash commit: **`e3ab0f77b2c664fa8b8394c8d039ee1e66518b87`**;
-- post-merge Foundation run: **`34720433366` / #190**;
+- `main`: **`5cf323b673ae4f8c2586645c3501ddd2bc1c58c4`**;
+- post-merge Foundation run: **`34730732345` / #201**;
 - result: **PASS**.
 
-## Still NOT proven
+A parallel PR run #199 failed once because the long rehearsal observed a desktop `innerWidth` of 1425 instead of an exact expected 1440. The identical head passed the complete rehearsal in #200 and post-merge #201. Treat exact viewport equality as possible harness/flakiness debt if it recurs; there is no current product-regression finding from that event.
 
-- real Owner/human gameplay quality through complete matches;
-- whether the new first-play guide/context is actually sufficient and well worded for a person unfamiliar with Tysiąc;
-- whether current transition delays feel right rather than merely being observable;
-- whether current bot is enjoyable/credible under human play;
+## What remains unproven
+
+### Game truth
+
 - exact PlayOK identity for remaining reference-sensitive pins;
-- real-human full duo/trio gameplay quality;
+- strategic credibility/enjoyment of the bot to knowledgeable Tysiąc players;
+- authentic complete-match gameplay quality;
+- real-human knowledgeable duo/trio gameplay quality.
+
+### Experience truth
+
+- whether current visual hierarchy/composition is good enough rather than merely functional;
+- whether transition timing actually feels right to the Owner;
+- whether causal explanations are useful in real use rather than merely present;
+- professional card/table art direction;
+- motion/animation/audio/haptics quality;
+- broader accessibility quality;
+- physical-device ergonomics beyond browser emulation.
+
+### Operations/integration
+
 - long-duration room soak;
-- actual physical phone suspension/backgrounding and weak/mobile-network transitions;
-- permanent Cloudflare deployment/operational lifecycle;
-- final visual quality, animation, audio/haptics and accessibility polish.
+- actual phone suspension/backgrounding and weak/mobile-network transitions;
+- durable public deployment lifecycle;
+- repeated real-human sessions through the public product path.
 
 ## Architecture to preserve
 
-Keep the pure deterministic core, one legality/reducer, `SeatProjection` human boundary, scoped feedback events, one `GameTable` for local/remote authority, server-authoritative hidden state, one Durable Object per table, pinned rule snapshots, snapshot/revision reconnect, accountless capability identity, equal desktop/mobile targets and fast server authority with client-side presentation pacing.
+Keep:
 
-Avoid generic rules DSL, event sourcing, accounts/rankings without need, client prediction, server sleeps for visuals, separate mobile state and duplicated server rules.
+- pure deterministic core;
+- one legality/reducer;
+- `SeatProjection` human boundary;
+- scoped feedback events;
+- one `GameTable` across local/remote authority;
+- server-authoritative hidden state;
+- one Durable Object per table;
+- pinned rule snapshots;
+- snapshot/revision reconnect;
+- accountless capability identity;
+- equal desktop/mobile product priority;
+- fast authority + client-side presentation pacing.
 
-## Run 02 — immediate direction
+Avoid generic rules DSL, event sourcing, duplicated server/client rules, client prediction, server sleeps for visuals and a separate mobile game state.
 
-**Automated readiness and basic first-play comprehension support are defended. The next evidence must come from the Owner actually playing.**
+Professional presentation may become substantially richer without weakening these boundaries.
 
-1. Publish the current defended `main` as a short-lived public Owner Preview through the existing manual temporary-preview path; do not create a new deployment architecture for this test.
-2. Play the same remote product path on desktop and on a real phone/mobile browser. A complete match is useful, but early confusion or frustration is already evidence worth recording.
-3. Treat observed decision confusion, pacing, bot behavior, score comprehension and mobile ergonomics as primary findings. Do not pre-emptively redesign around imagined problems.
-4. Preserve unresolved rule pins explicitly and change them only from stronger reference or gameplay evidence.
-5. Move to real-human duo/trio once solo feedback is about the game itself rather than missing explanation/basic UX.
-6. Keep visual polish deliberately secondary until the interaction/gameplay feedback identifies where professional graphics, animation, audio and haptics will add the most value.
+## Immediate direction
 
-The project no longer needs another proof that a full match can run. It now needs the Owner to **play the defended build and tell us what the game actually feels like**.
+Run 02 is now explicitly dual-track.
+
+### Experience loop
+
+1. Publish the latest defended `main` to a fresh temporary Owner Preview when the next test is needed.
+2. Let the Owner use desktop and real phone naturally and judge **visuals, interaction, feedback, hierarchy, motion/pacing and overall feel**.
+3. Do not ask the Owner to certify Tysiąc rules or bot strategy.
+4. Translate high-signal reactions into small reversible experience slices with mechanical tests where appropriate.
+5. Begin raising presentation quality continuously; do not wait for complete rule certainty before improving the experience foundation.
+6. Avoid expensive/final art commitments where open game semantics could make them premature.
+
+### Game-truth loop
+
+1. Continue resolving or bounding the material reference-sensitive rule probes independently of Owner play.
+2. Design stronger bot/gameplay evaluation that does not mistake self-play legality for strategic quality.
+3. Bring knowledgeable Tysiąc players/domain feedback into the questions that genuinely require human game expertise.
+4. Use real-human duo/trio sessions when they can evaluate gameplay rather than infrastructure.
+
+The next major evidence should therefore come from **both** loops, not from pretending one Owner play session can validate the entire game.
