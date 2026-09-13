@@ -1,0 +1,94 @@
+/*
+ * Positive affordance layer for the tactile-hand experiment.
+ *
+ * The table should *respond* when a held card can become a game action. We keep
+ * the DOM cue for measurable/accessibility-oriented evidence, but stop using a
+ * sentence-shaped pill as the primary teaching mechanism.
+ */
+
+.tactile-commit-zone {
+  min-width: 0;
+  width: 58px;
+  height: 4px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: #f0d7836b;
+  color: transparent;
+  font-size: 0;
+  box-shadow:
+    0 0 12px #e8c66f28,
+    0 0 28px #e8c66f12;
+  opacity: .68;
+  transform: translate(-50%, -50%) scale(.9);
+}
+
+.tactile-commit-zone.ready {
+  width: 118px;
+  height: 6px;
+  border: 0;
+  background: #ffe59d;
+  color: transparent;
+  box-shadow:
+    0 0 10px #fff1bfaa,
+    0 0 28px #e8c66f88,
+    0 0 54px #e8c66f42;
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+/* The central table surface becomes the actual affordance. */
+.app-shell:has(.tactile-card-float.commit-ready) .center::before {
+  border-color: #efd57d73;
+  background:
+    radial-gradient(ellipse, #ffe9a51f 0%, #e9d17b13 38%, #ffffff05 56%, transparent 73%);
+  box-shadow:
+    0 0 34px #e8c66f20,
+    inset 0 0 28px #ffe6a20d;
+  animation: tactile-table-catch .72s ease-in-out infinite alternate;
+}
+
+.app-shell:has(.tactile-card-float.commit-ready) .table {
+  border-color: #e7ce7954;
+  box-shadow:
+    inset 0 0 0 1px #0004,
+    inset 0 0 115px #00180b99,
+    inset 0 -24px 64px #e8c66f0c,
+    0 22px 70px #0007;
+}
+
+.app-shell:has(.tactile-card-float.commit-ready) .trick {
+  filter: drop-shadow(0 0 14px #e8c66f1f);
+}
+
+@keyframes tactile-table-catch {
+  from {
+    transform: translate(-50%, -50%) scale(.985);
+    opacity: .82;
+  }
+  to {
+    transform: translate(-50%, -50%) scale(1.025);
+    opacity: 1;
+  }
+}
+
+@media (pointer: coarse), (max-width: 620px) {
+  .tactile-commit-zone {
+    min-width: 0;
+    width: 48px;
+    height: 4px;
+    padding: 0;
+    font-size: 0;
+  }
+
+  .tactile-commit-zone.ready {
+    width: 98px;
+    height: 6px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-shell:has(.tactile-card-float.commit-ready) .center::before {
+    animation: none;
+  }
+}
