@@ -156,7 +156,8 @@ async function view(session) {
       enabledHandCards: document.querySelectorAll('.hand .card:not(:disabled)').length,
       handCards: document.querySelectorAll('.hand .card').length,
       scores,
-      width: document.documentElement.clientWidth,
+      width: window.innerWidth,
+      contentWidth: document.documentElement.clientWidth,
       scrollWidth: document.documentElement.scrollWidth,
       handClientWidth: hand?.clientWidth ?? 0,
       handScrollWidth: hand?.scrollWidth ?? 0,
@@ -189,8 +190,8 @@ function isMatchComplete(current) {
 
 function assertLayout(label, current, width) {
   if (current.width !== width) throw new Error(`${label}: viewport ${current.width}, expected ${width}`);
-  if (current.scrollWidth > current.width + 1) {
-    throw new Error(`${label}: horizontal overflow ${current.scrollWidth} > ${current.width}`);
+  if (current.scrollWidth > current.contentWidth + 1) {
+    throw new Error(`${label}: horizontal overflow ${current.scrollWidth} > ${current.contentWidth}`);
   }
   if (current.handClientWidth && current.handScrollWidth > current.handClientWidth + 1) {
     throw new Error(`${label}: hand overflow ${current.handScrollWidth} > ${current.handClientWidth}`);
