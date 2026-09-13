@@ -19,6 +19,11 @@ function median(values: readonly number[]) {
     : sorted[middle];
 }
 
+function signedShift(stepPx: number, progress: number, direction: -1 | 1) {
+  const amount = stepPx * clamp(progress, 0, 1);
+  return amount === 0 ? 0 : amount * direction;
+}
+
 export function estimateHandStep(centers: readonly number[]): number {
   const positive = centers
     .slice(1)
@@ -64,11 +69,11 @@ export function computeHandInsertionPreview(input: {
     if (index === safeSource || stepPx <= 0) return 0;
 
     if (position > safeSource && index > safeSource) {
-      return -stepPx * clamp(position - (index - 1), 0, 1);
+      return signedShift(stepPx, position - (index - 1), -1);
     }
 
     if (position < safeSource && index < safeSource) {
-      return stepPx * clamp((index + 1) - position, 0, 1);
+      return signedShift(stepPx, (index + 1) - position, 1);
     }
 
     return 0;
