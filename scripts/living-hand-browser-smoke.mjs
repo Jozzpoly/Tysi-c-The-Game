@@ -105,6 +105,7 @@ async function handState(session) {
     });
     return {
       revision: revText ? Number(revText.slice(4)) : null,
+      heading: document.querySelector('.decision-card h2')?.textContent?.trim() ?? '',
       phase: hand?.dataset.gesturePhase ?? '',
       insertionPosition: Number(hand?.dataset.insertionPosition || NaN),
       insertionTarget: Number(hand?.dataset.insertionTarget || NaN),
@@ -125,9 +126,11 @@ async function run() {
       method: 'POST', body: JSON.stringify({ url: `${BASE_URL}?seed=2&seat=0` }),
     });
 
-    const initial = await waitFor('opening hand', async () => {
+    const initial = await waitFor('stable opening auction', async () => {
       const state = await handState(session);
-      return state.slots.length === 7 ? state : false;
+      return state.heading === 'Twoja licytacja' && state.slots.length === 7 && state.revision !== null
+        ? state
+        : false;
     });
     const openingLabels = initial.slots.map((slot) => slot.label);
     const source = initial.slots[0];
