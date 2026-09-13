@@ -118,21 +118,35 @@ This preserves action-source attribution without requiring fixed triangle geomet
 
 Meaning:
 
-Persistent/semi-persistent ownership region for trick/captured value belonging to a seat.
+Ownership region for cards/tricks captured by a seat.
 
 It may be abstract or partially visible in final art direction.
 
 It exists semantically so collection has a destination tied to winner ownership rather than disappearing into nowhere.
 
+### `captured-value:{seat}`
+
+Meaning:
+
+The seat's current raw/publicly representable value accumulated during the **current hand** from captured card points and, where separately represented, other hand-local value sources.
+
+For an ordinary trick, `trick.points` belongs causally here — not directly to the persistent match score.
+
+The final product may combine or separate captured-card value and marriage value depending on what proves clearest, but the presentation must preserve the distinction between **hand-local value accumulation** and **match-score resolution**.
+
 ### `score:{seat}`
 
 Meaning:
 
-Persistent public value/score state for a seat.
+Persistent **match score** for a seat.
 
-Score change should be reachable causally from the event that produced it.
+This anchor changes causally when canonical hand scoring changes `scores`, not every time a trick produces raw points.
 
-This does not require a permanent equal-width scoreboard box.
+At hand end, the eventual causal sentence may be:
+
+`captured value + marriage value + contract result -> hand score delta -> match score`
+
+Do not teach the false model `trick points -> match score` through animation.
 
 ### `initiative:{seat}`
 
@@ -190,9 +204,11 @@ Conceptual scene plan for local third-card closure:
 3. **authority acceptance** — canonical `card-played` confirms public arrival;
 4. **closure** — `trick-completed` closes `trick:shared` using canonical winner/points;
 5. **ownership transfer** — the three public trick cards transition toward `captured:{winner}`;
-6. **value consequence** — trick value becomes associated with `score:{winner}` / captured-value state as appropriate;
+6. **hand-local value consequence** — `trick.points` becomes associated with `captured-value:{winner}`;
 7. **initiative transfer** — `initiative:{winner}` becomes the next active locus;
 8. **settle** — transient overlays disappear and stable presentation converges to authoritative after-state.
+
+The persistent `score:{winner}` does **not** change merely because this ordinary trick completed.
 
 Several steps may overlap. The sequence expresses causality, not a mandatory duration ladder.
 
@@ -273,8 +289,8 @@ Only viewer-safe/public information can influence public choreography.
 After an action finishes, the actor may remain perceptually present through persistent game truth:
 
 - public card count;
-- captured-value ownership;
-- score;
+- captured-card ownership/value;
+- match score;
 - contract/declarer role;
 - current initiative;
 - other public persistent state.
@@ -332,6 +348,10 @@ More expressive opponent presentation creates more channels through which hidden
 
 Variable connection delay must not accidentally communicate fake psychology.
 
+### Score-causality collapse
+
+If ordinary trick points animate directly into persistent match score, the interface teaches the wrong scoring model even if all numbers are individually correct later.
+
 ## Internal research questions
 
 ### AP1 — minimum source attribution
@@ -358,6 +378,10 @@ Can source/action/collection remain readable after many tricks without becoming 
 
 Can the same grammar make bots and humans legible actors without fake-human timing?
 
+### AP7 — value-layer comprehension
+
+Can the scene communicate `trick points -> hand-local captured value` without implying an immediate match-score change?
+
 ## Failure conditions
 
 Narrow this model if:
@@ -368,7 +392,8 @@ Narrow this model if:
 - opponent presence requires richer identity cues than the slice can support;
 - scene grammar becomes slow under repetition;
 - privacy-safe source representation feels too abstract or mechanical;
-- mobile constraints make stable actor geography impractical.
+- mobile constraints make stable actor geography impractical;
+- hand-local value and match-score layers remain perceptually confusable.
 
 ## Current conclusion
 
@@ -379,3 +404,5 @@ For the First Living Slice, opponent presence should be tested first as **causal
 Avatar personality is intentionally deferred.
 
 The semantic anchor registry is deliberately small. Add another anchor only when a concrete scene cannot preserve truth/causality without it.
+
+The score/value correction is now explicit: ordinary trick points accumulate as hand-local captured value; persistent match score belongs to hand-resolution causality.
