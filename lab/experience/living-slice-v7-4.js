@@ -126,6 +126,7 @@
       revealGap,
       sizeGap,
       visibleCopies:visibleCopies(h.card),
+      transitionDuration:h.transitionDuration,
     };
     log('authority-handoff-settled',{
       card:h.card,
@@ -133,6 +134,7 @@
       revealGap:revealGap == null ? null : +revealGap.toFixed(2),
       sizeGap:Number.isFinite(sizeGap) ? +sizeGap.toFixed(2) : null,
       visibleCopies:lastHandoff.visibleCopies,
+      transitionDuration:h.transitionDuration,
       reason,
     });
     activeHandoff = null;
@@ -177,6 +179,7 @@
     const sx = targetRect.width/startRect.width;
     const sy = targetRect.height/startRect.height;
     const authorityTravel = dist(startRect,targetRect);
+    const transitionDuration = getComputedStyle(ghost).transitionDuration;
 
     activeHandoff = {
       card,
@@ -188,12 +191,14 @@
       startGap,
       authorityTravel,
       dx,dy,sx,sy,
+      transitionDuration,
     };
     log('authority-handoff-established',{
       card,
       startGap:+startGap.toFixed(2),
       authorityTravel:+authorityTravel.toFixed(2),
       visibleCopies:visibleCopies(card),
+      transitionDuration,
     });
 
     const onTransformEnd = (event) => {
@@ -208,10 +213,10 @@
       ghost.dataset.handoffStage = 'moving';
       ghost.style.transform = `translate3d(${dx}px,${dy}px,0) scale(${sx},${sy})`;
       activeHandoff.phase = 'moving';
-      log('authority-handoff-moving',{ card, visibleCopies:visibleCopies(card) });
+      log('authority-handoff-moving',{ card, visibleCopies:visibleCopies(card), transitionDuration });
+      clearTimeout(handoffFallback);
+      handoffFallback = window.setTimeout(() => finishHandoff('fallback'),300);
     }));
-
-    handoffFallback = window.setTimeout(() => finishHandoff('fallback'),165);
   }
 
   function forceSettleBeforeResolution() {
@@ -265,6 +270,7 @@
         startGap:activeHandoff.startGap,
         authorityTravel:activeHandoff.authorityTravel,
         visibleCopies:visibleCopies(activeHandoff.card),
+        transitionDuration:activeHandoff.transitionDuration,
       } : null;
       return {
         ...snap,
