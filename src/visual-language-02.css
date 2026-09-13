@@ -1,0 +1,114 @@
+/*
+ * Render-driven refinement after inspecting Foundation browser screenshots.
+ * Kept separate so this second judgement slice can be reverted independently.
+ */
+
+/* The first pass made opponents read too much like floating mini-panels. */
+.opponent {
+  background: radial-gradient(ellipse at 50% 65%, #001d1270 0%, #00170d32 48%, transparent 74%);
+  box-shadow: none;
+}
+
+.table::before {
+  opacity: .11;
+}
+
+/* Keep the hand visually alive even while it is not currently actionable. */
+.hand > .card:disabled {
+  opacity: .82;
+  filter: saturate(.82) brightness(.97);
+  box-shadow:
+    0 5px 11px #00042,
+    inset 0 0 0 1px #fff8;
+}
+
+/*
+ * In ordinary trick play the cards themselves are the primary control.
+ * The compact "Twój ruch" block should behave like table feedback rather than
+ * a modal panel. Exchange/auction/contract decisions intentionally keep their
+ * stronger surfaces.
+ */
+.app-shell:has(.hand > .card:not(:disabled)) .decision-card.compact {
+  width: min(680px, 100%);
+  padding: 5px 10px 2px;
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.app-shell:has(.hand > .card:not(:disabled)) .decision-card.compact h2 {
+  margin-bottom: 5px;
+  font-size: 1.04rem;
+  text-shadow: 0 2px 8px #00190f;
+}
+
+.app-shell:has(.hand > .card:not(:disabled)) .decision-card.compact .decision-help {
+  max-width: 580px;
+  margin-top: 6px;
+  color: #b8cbbf;
+}
+
+.app-shell:has(.hand > .card:not(:disabled)) .decision:has(.decision-card.compact) {
+  min-height: 66px;
+}
+
+/* Pull the active hand slightly into the table's near edge. */
+.app-shell:has(.hand > .card:not(:disabled)) .hand-area {
+  margin-top: -12px;
+  border-top-color: #e8c66f20;
+}
+
+/* Legal cards should be unmistakable without making the rest look disabled. */
+.hand > .card:not(:disabled) {
+  background: linear-gradient(145deg, #fffefa 0%, #fff8e9 58%, #f3e8d4 100%);
+  border-color: #f1d37a;
+  box-shadow:
+    0 10px 20px #00055,
+    0 0 0 1px #f0d47ea0,
+    0 0 24px #e5c36e24,
+    inset 0 0 0 1px #fff;
+}
+
+/* Completed trick feedback gets a little more event weight than idle text. */
+.trick.completed {
+  opacity: .92;
+}
+
+.trick-result {
+  border: 1px solid #ffffff0f;
+  box-shadow: inset 0 1px #ffffff08;
+}
+
+@media (max-width: 620px) {
+  .opponent {
+    background: transparent;
+  }
+
+  .app-shell:has(.hand > .card:not(:disabled)) .decision:has(.decision-card.compact) {
+    min-height: 56px;
+  }
+
+  .app-shell:has(.hand > .card:not(:disabled)) .decision-card.compact {
+    padding: 2px 5px 0;
+  }
+
+  .app-shell:has(.hand > .card:not(:disabled)) .decision-card.compact .decision-help {
+    margin-top: 4px;
+    padding-inline: 7px;
+    font-size: .7rem;
+  }
+
+  .app-shell:has(.hand > .card:not(:disabled)) .hand-area {
+    margin-top: -9px;
+  }
+
+  /* Keep coarse-pointer transforms bounded so hit centres stay defended. */
+  .hand > .card:not(:disabled) {
+    box-shadow:
+      0 7px 14px #00050,
+      0 0 0 1px #f0d47e99,
+      0 0 18px #e5c36e1d,
+      inset 0 0 0 1px #fff;
+  }
+}
