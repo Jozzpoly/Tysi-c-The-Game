@@ -1,0 +1,402 @@
+/*
+ * Run 02 — visual language experiment 01.
+ *
+ * Presentation-only overrides. This layer deliberately stays downstream of
+ * SeatProjection/GameEvents and must not become game authority. It is kept
+ * separate from the defended baseline so the Owner can judge/reject the visual
+ * direction without entangling rule or lifecycle work.
+ */
+
+:root {
+  --felt-deep: #08271b;
+  --felt-mid: #0d4a31;
+  --felt-light: #176745;
+  --ink-warm: #fff8e9;
+  --gold: #e8c66f;
+  --gold-soft: #f4dda0;
+  --line-soft: #ffffff18;
+  --panel-deep: #04120dc7;
+  --card-paper: #fffaf0;
+  --card-edge: #e2d9c7;
+}
+
+body {
+  background:
+    radial-gradient(circle at 50% -15%, #20563f 0, #0b2a1d 35%, #04120d 78%),
+    #04120d;
+}
+
+/* Reduce the feeling of three independent dashboard tiles. */
+.scoreboard {
+  gap: 5px;
+  padding: 0 6px;
+}
+
+.scoreboard .score {
+  border-color: #ffffff12;
+  border-radius: 10px 10px 4px 4px;
+  background: linear-gradient(180deg, #071a12d9, #04110bd1);
+  box-shadow: inset 0 -1px #ffffff08;
+}
+
+.scoreboard .score.human {
+  border-color: #9bd6ad40;
+  background: linear-gradient(180deg, #0b2418e8, #06160fe0);
+}
+
+/* The table should read as the primary physical surface, not another panel. */
+.table {
+  position: relative;
+  overflow: hidden;
+  border-color: #d9c78a24;
+  background:
+    radial-gradient(ellipse at 50% 42%, #1a704b 0%, #105338 35%, #0b3c29 68%, #082e20 100%);
+  box-shadow:
+    inset 0 0 0 1px #0004,
+    inset 0 0 115px #00180b99,
+    0 22px 70px #0007;
+}
+
+.table::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: .19;
+  background-image:
+    radial-gradient(circle at 25% 20%, #fff 0 1px, transparent 1.4px),
+    radial-gradient(circle at 75% 60%, #fff 0 1px, transparent 1.4px);
+  background-size: 31px 37px, 43px 47px;
+  mix-blend-mode: soft-light;
+}
+
+.table > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* Opponents become places at the table instead of loose labels. */
+.opponents {
+  align-items: start;
+}
+
+.opponent {
+  width: min(260px, 92%);
+  justify-self: center;
+  padding: 7px 12px 10px;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #02120c6e, #02100a24);
+  box-shadow: inset 0 1px #ffffff0b;
+}
+
+.opponent strong {
+  font-size: .98rem;
+  letter-spacing: .01em;
+}
+
+.card-backs {
+  margin-top: 7px;
+  filter: drop-shadow(0 5px 5px #0006);
+}
+
+.card-backs i {
+  border-color: #f1dcaa8c;
+  background:
+    linear-gradient(135deg, #ffffff10 25%, transparent 25%) 0 0 / 8px 8px,
+    repeating-linear-gradient(45deg, #6f1f2c 0 3px, #a63d47 3px 6px);
+  box-shadow: inset 0 0 0 1px #4c1018aa;
+}
+
+/* Central game facts become compact table markers. */
+.status-strip {
+  gap: 7px;
+}
+
+.status-strip span {
+  padding: 5px 9px;
+  border: 1px solid #ffffff15;
+  border-radius: 999px;
+  background: #02130d73;
+  color: #bcd4c4;
+  box-shadow: inset 0 1px #ffffff08;
+}
+
+.status-strip strong {
+  color: var(--ink-warm);
+}
+
+.center {
+  position: relative;
+}
+
+.center::before {
+  content: '';
+  position: absolute;
+  width: min(440px, 72vw);
+  aspect-ratio: 1.8;
+  left: 50%;
+  top: 52%;
+  transform: translate(-50%, -50%);
+  border: 1px solid #ffffff0d;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, #ffffff08 0%, #ffffff025 48%, transparent 70%);
+  pointer-events: none;
+}
+
+.trick {
+  position: relative;
+  z-index: 1;
+}
+
+.trick .played {
+  animation: played-card-arrive .22s cubic-bezier(.2, .82, .28, 1) both;
+}
+
+.trick .played:nth-child(2) { animation-delay: .025s; }
+.trick .played:nth-child(3) { animation-delay: .05s; }
+
+.trick-result {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #04170fa8;
+  color: #e8f1eb;
+}
+
+.muted {
+  color: #b0c9b9;
+  opacity: .72;
+}
+
+.talon > span {
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: #04170f99;
+  font-weight: 700;
+  letter-spacing: .04em;
+}
+
+/* Decisions remain readable but stop looking like a modal pasted onto the felt. */
+.decision-card {
+  border-color: #e8d8a925;
+  background: linear-gradient(180deg, #03140ddd, #020e09cf);
+  box-shadow:
+    0 10px 30px #0004,
+    inset 0 1px #ffffff0c;
+  backdrop-filter: blur(3px);
+}
+
+.decision-card h2 {
+  color: var(--ink-warm);
+  letter-spacing: .012em;
+}
+
+button {
+  transition:
+    transform .12s ease,
+    background-color .12s ease,
+    border-color .12s ease,
+    box-shadow .12s ease,
+    filter .12s ease;
+}
+
+button:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+button.primary {
+  background: linear-gradient(180deg, #f0cf76, #dcb45c);
+  border-color: #f7e0a4;
+  box-shadow: inset 0 1px #fff7cf88, 0 5px 15px #0003;
+}
+
+button.primary:hover:not(:disabled) {
+  background: linear-gradient(180deg, #f5da91, #e3bd64);
+  box-shadow: inset 0 1px #fffbe0aa, 0 7px 18px #0004;
+}
+
+/* Make the hand feel like the near edge of the same table. */
+.hand-area {
+  position: relative;
+  margin-top: -8px;
+  padding: 12px 12px 4px;
+  border: 1px solid #ffffff10;
+  border-top-color: #d9c78a1c;
+  border-radius: 0 0 22px 22px;
+  background:
+    radial-gradient(ellipse at 50% 0%, #0d3a28 0%, #071d14 58%, #04120d 100%);
+  box-shadow: 0 18px 44px #0005;
+}
+
+.hand-heading {
+  padding-inline: 5px;
+  color: #adc5b6;
+}
+
+.hand-heading strong {
+  color: #edf5ef;
+  font-size: .82rem;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.hand {
+  perspective: 900px;
+}
+
+.card {
+  background:
+    linear-gradient(145deg, #fffdf8 0%, var(--card-paper) 55%, #f2eadc 100%);
+  border-color: var(--card-edge);
+  border-radius: 10px;
+  box-shadow:
+    0 7px 15px #0004,
+    0 1px 1px #0006,
+    inset 0 0 0 1px #fff9;
+  transition:
+    transform .15s cubic-bezier(.2, .8, .25, 1),
+    box-shadow .15s ease,
+    filter .15s ease,
+    opacity .15s ease,
+    border-color .15s ease;
+}
+
+.hand > .card {
+  transform-origin: 50% 100%;
+}
+
+/* Disabled cards remain legible; legal cards carry the positive affordance. */
+.hand > .card:disabled {
+  opacity: .68;
+  filter: saturate(.72) brightness(.91);
+  box-shadow: 0 4px 9px #00035;
+}
+
+.hand > .card:not(:disabled) {
+  border-color: #f0d47e;
+  box-shadow:
+    0 10px 20px #00055,
+    0 0 0 1px #f0d47e88,
+    0 0 22px #e5c36e1f,
+    inset 0 0 0 1px #fff9;
+}
+
+.hand > .card:hover:not(:disabled),
+.hand > .card:focus-visible {
+  transform: translateY(-12px) scale(1.025);
+  box-shadow:
+    0 18px 28px #0006,
+    0 0 0 2px #f4d981,
+    0 0 28px #e8c66f36;
+}
+
+.hand > .card.selected,
+.hand > .card.selected:hover {
+  transform: translateY(-15px) scale(1.03);
+  outline: none;
+  border-color: #ffe49a;
+  box-shadow:
+    0 20px 30px #0006,
+    0 0 0 3px #f3cc61,
+    0 0 34px #f3cc6140;
+}
+
+.card .rank {
+  letter-spacing: -.02em;
+}
+
+.card .suit {
+  text-shadow: 0 1px #fff8;
+}
+
+/* When the human can act through the hand, make that surface quietly breathe. */
+.app-shell:has(.hand > .card:not(:disabled)) .hand-area {
+  border-color: #e8c66f29;
+  box-shadow: 0 18px 44px #0005, 0 0 36px #d9bd5b0d;
+}
+
+.footer {
+  opacity: .78;
+}
+
+@keyframes played-card-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(.92) rotate(1.5deg);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1) rotate(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important;
+  }
+}
+
+@media (max-width: 620px) {
+  .scoreboard {
+    padding-inline: 0;
+  }
+
+  .scoreboard .score {
+    border-radius: 9px;
+  }
+
+  .table {
+    border-radius: 20px 20px 14px 14px;
+    box-shadow:
+      inset 0 0 0 1px #0004,
+      inset 0 0 72px #00180b8f,
+      0 12px 34px #0006;
+  }
+
+  .opponent {
+    width: 100%;
+    padding: 5px 5px 8px;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .status-strip {
+    gap: 5px;
+    font-size: .78rem;
+  }
+
+  .status-strip span {
+    padding: 4px 7px;
+  }
+
+  .center::before {
+    width: 92%;
+  }
+
+  .decision-card {
+    border-radius: 15px;
+  }
+
+  .hand-area {
+    margin-top: -5px;
+    padding: 10px 4px 3px;
+    border-radius: 0 0 16px 16px;
+  }
+
+  .hand-heading {
+    padding-inline: 2px;
+  }
+
+  /* Preserve the defended 52px mobile card geometry and 5x2 exchange grid. */
+  .hand > .card:hover:not(:disabled),
+  .hand > .card:focus-visible {
+    transform: translateY(-7px);
+  }
+
+  .hand > .card.selected,
+  .hand > .card.selected:hover {
+    transform: translateY(-10px);
+  }
+}
