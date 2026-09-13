@@ -5,6 +5,14 @@
   perspective: none;
 }
 
+/* The legacy hand rule `.hand > .card` is more specific and sets position: relative.
+ * A held card is deliberately a viewport ghost, so override that contract explicitly. */
+.hand > .tactile-card-float {
+  position: fixed;
+  min-width: 0;
+  aspect-ratio: auto;
+}
+
 @media (pointer: coarse), (max-width: 620px) {
   .hand-slot {
     width: 100%;
