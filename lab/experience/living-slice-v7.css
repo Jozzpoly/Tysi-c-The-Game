@@ -8,19 +8,21 @@ body[data-material-phase="intent"] .shared .scene-field {
 }
 
 /* Pending is a transfer of control: the card is no longer under the finger,
-   but it remains clearly the same material object while authority is unresolved. */
-body[data-material-phase="pending"] .hand-card.held.pending {
+   but it remains clearly the same material object while authority is unresolved.
+   Bind this directly to the semantic .pending class in V7 so the old V5
+   opacity transition never gets a perceptual frame to win before the observer. */
+body[data-fixture-version="7"] .hand-card.held.pending {
   opacity: .94;
   filter: drop-shadow(0 11px 13px rgba(0,0,0,.34));
 }
-body[data-material-phase="pending"] .hand-card.held.pending .card-face {
+body[data-fixture-version="7"] .hand-card.held.pending .card-face {
   transform: scale(.985);
   box-shadow:
     0 5px 14px rgba(0,0,0,.30),
     inset 0 0 0 1px rgba(35,67,52,.23),
     inset 0 -8px 16px rgba(34,55,46,.055);
 }
-body[data-material-phase="pending"] .hand-card.held.pending::before {
+body[data-fixture-version="7"] .hand-card.held.pending::before {
   content:"";
   position:absolute;
   z-index:-1;
