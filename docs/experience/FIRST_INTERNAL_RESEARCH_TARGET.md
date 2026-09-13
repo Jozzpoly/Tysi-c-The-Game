@@ -74,7 +74,7 @@ P3 is particularly useful because current external evidence gives us reason to e
 
 The first mechanical comparison should keep card geometry/art, visual depth/shadow, background, acquisition hitbox, target-free movement space, release destination and frame/time-step behavior approximately constant. It should start without sound or haptics, and without neighbor cards unless a later subtest explicitly adds them.
 
-This makes the instrument less product-like than a final Tysiac hand. That is desirable for causal clarity.
+This makes the instrument less product-like than a final Tysiac hand. That is desirable for causal clarity — **but only as the first lens, not as sufficient evidence**.
 
 ## What internal rehearsal can measure without Owner attention
 
@@ -98,6 +98,8 @@ This staged order is about research isolation, not product priority. Mobile rema
 
 Pointer control has far lower occlusion and higher spatial precision, making desktop useful as a clean environment for isolating control-law dynamics. A mouse result is not allowed to certify mobile embodiment; it only narrows the mechanical family.
 
+Desktop is an **analytical lens**, not the reference body.
+
 ## Why Hand Field is second, not first
 
 Hand-field coupling is likely one of the most important product questions, but it depends on what the controlled card itself does. Once a stable primary relationship exists, research can ask whether materiality should shift from the card into relational behavior among neighbors.
@@ -107,6 +109,72 @@ This ordering avoids using whole-hand animation to compensate for a weak held-ob
 ## Why intent/commit and assistance come later
 
 Reorder/play interpretation and target assistance require a real hand geometry, departure zones, target topology and at least representative gameplay context. Testing them now would import too many hidden assumptions.
+
+## Adversarial review of this research target
+
+### Attack 1 — ecological validity
+
+A card in empty space may not have meaningful perceived mass at all. In real play, material character may be dominated by leaving the hand, neighbor pressure, target contact and ownership transfer.
+
+**Correction:** a mechanically viable result from the isolated lane must later survive a minimal-context lane before it can justify Owner testing.
+
+### Attack 2 — mouse bias
+
+Mouse/pointer control may reward different mappings than direct touch.
+
+**Correction:** desktop can reject unstable control laws but cannot select the final mobile candidate. Touch-specific internal rehearsal remains mandatory before Owner exposure.
+
+### Attack 3 — pseudo-haptics domain mismatch
+
+Strong C/D-ratio findings often come from VR/indirect settings with different proprioceptive information.
+
+**Correction:** P2 is a hypothesis generator, not evidence that touchscreen C/D manipulation will feel like weight.
+
+### Attack 4 — secondary dynamics are still a bundle
+
+P1 can easily become `rotation + tilt + settle + shadow`, making causal attribution impossible.
+
+**Correction:** P1 must begin with one secondary carrier or a theoretically necessary minimal pair. Additional channels require later evidence.
+
+### Attack 5 — P3 can become a straw man
+
+If the lag-heavy condition is deliberately awful, beating it proves nothing.
+
+**Correction:** P3 should be stable and plausible enough to represent a genuine alternative inspired by the old positive directional response, not a caricature.
+
+### Attack 6 — metrics can optimize the wrong thing
+
+Low error, low overshoot and short movement time do not prove good interaction aesthetics. A candidate can be objectively efficient and experientially dead.
+
+**Correction:** internal metrics are rejection filters only. They cannot promote a candidate.
+
+### Attack 7 — removing sound/haptics may alter material perception
+
+Multisensory coupling can materially change weight/contact impression.
+
+**Correction:** the first mechanical isolation deliberately excludes them, then surviving control laws later need a controlled sensory-orchestration stage. Absence of early material richness cannot by itself reject a precise control law.
+
+### Attack 8 — neutral visuals are not truly neutral
+
+Card thickness, shadow, scale and perspective already bias perceived physicality.
+
+**Correction:** use restrained constant visuals and record them as part of the experimental apparatus, not as `neutral truth`.
+
+## Revised internal sequence
+
+A future internal instrument should conceptually contain two validation contexts rather than one:
+
+### Lane I — stripped coupling bench
+
+One controlled object, minimal context. Purpose: reject unstable/unpredictable control laws and compare basic coupling.
+
+### Lane II — minimal contextual check
+
+Same surviving control law placed into a small hand-like source with a simple departure/return relation, but without real gameplay. Purpose: detect whether the isolated result reverses once relational context exists.
+
+Only candidates that remain mechanically credible across both lanes are worth considering for later mobile-occlusion and Owner studies.
+
+This two-lane model is still a research plan, not authorization to implement now.
 
 ## Research value test
 
@@ -122,4 +190,4 @@ If the instrument cannot answer that, it should be redesigned before implementat
 
 Still **NOT READY for implementation**.
 
-Before INTERNAL READY design work must still define exact minimal P0/P1/P2/P3 control laws conceptually, plausible bounded parameter ranges, how grab point/rotation are handled without introducing another major variable, neutral visual treatment, internal tasks (slow trace, fast sweep, reversal, precision placement, cancel), low-overhead logging, desktop-first mechanical rehearsal versus mobile simulation boundaries, and an adversarial review of whether isolation strips away too much context for mass perception to remain meaningful.
+Before INTERNAL READY design work must still define exact minimal P0/P1/P2/P3 control laws conceptually, plausible bounded parameter ranges, how grab point/rotation are handled without introducing another major variable, restrained constant visual treatment, internal tasks (slow trace, fast sweep, reversal, precision placement, cancel), low-overhead logging, the Lane I -> Lane II transition, desktop versus mobile internal boundaries, and one further review of whether the proposed apparatus is measuring control ownership or merely preference among motion styles.
