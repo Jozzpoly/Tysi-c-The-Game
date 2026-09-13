@@ -18,6 +18,12 @@
     if (node.style.getPropertyValue(name) !== value) node.style.setProperty(name, value);
   };
 
+  function rawCardSize(node, measured) {
+    const width = parseFloat(node?.style.width) || measured?.width || 60;
+    const height = parseFloat(node?.style.height) || measured?.height || width * 1.42;
+    return { width, height };
+  }
+
   function finalTarget(cardRect) {
     const r = trick.getBoundingClientRect();
     const w = cardRect?.width || 60;
@@ -43,18 +49,28 @@
     return { left:x-w/2, top:y-h/2, width:w, height:h, x, y };
   }
 
+  function thresholdNodeForPhase(phase) {
+    if (phase === 'pending') return document.querySelector('.hand-card.held.pending');
+    if (phase === 'intent') return document.querySelector('.hand-card.held');
+    return null;
+  }
+
   function applyThreshold() {
     if (document.body.dataset.fixtureVersion !== '7.3') document.body.dataset.fixtureVersion = '7.3';
-    const heldNode = document.querySelector('.hand-card.held.pending');
     const snap = base.snapshot();
-    if (!heldNode || snap.materialPhase !== 'pending') return;
+    const phase = snap.materialPhase;
+    const heldNode = thresholdNodeForPhase(phase);
+    if (!heldNode) return;
 
-    const natural = rect(heldNode);
-    const rawW = parseFloat(heldNode.style.width) || natural?.width || 60;
-    const rawH = parseFloat(heldNode.style.height) || natural?.height || rawW*1.42;
-    const threshold = thresholdTarget({ width:rawW, height:rawH });
-    const final = finalTarget({ width:rawW, height:rawH });
+    const measured = rect(heldNode);
+    const size = rawCardSize(heldNode, measured);
+    const threshold = thresholdTarget(size);
+    const final = finalTarget(size);
 
+    // Arm the threshold while the card is still directly controlled. CSS does
+    // not consume these variables until .pending exists, so intent remains
+    // exact-grab. On commit the pending selector already has its destination
+    // and never needs to fall through to V5's canonical trick target.
     setStyleIfChanged(heldNode, '--v73-threshold-left', `${threshold.left.toFixed(3)}px`);
     setStyleIfChanged(heldNode, '--v73-threshold-top', `${threshold.top.toFixed(3)}px`);
     setStyleIfChanged(heldNode, '--v73-threshold-rot', '-1.2deg');
@@ -66,7 +82,7 @@
       verticalAuthorityTravel:threshold.y-final.y,
     };
     if (!lastThreshold || Math.abs(lastThreshold.authorityTravel-next.authorityTravel)>.5) {
-      log('authority-threshold', {
+      log(phase === 'intent' ? 'authority-threshold-armed' : 'authority-threshold', {
         authorityTravel:+next.authorityTravel.toFixed(2),
         verticalAuthorityTravel:+next.verticalAuthorityTravel.toFixed(2),
       });
@@ -75,8 +91,6 @@
   }
 
   const observer = new MutationObserver(applyThreshold);
-  // Observe semantic state/class transitions only. V7.3 writes inline custom
-  // properties itself; observing style would create a feedback loop.
   observer.observe(document.body, { attributes:true, attributeFilter:['data-slice-state','data-material-phase','data-play-intent'] });
   observer.observe(hand, { childList:true, subtree:true, attributes:true, attributeFilter:['class'] });
   window.addEventListener('resize', applyThreshold);
@@ -85,26 +99,37 @@
   window.__livingSliceV73 = {
     snapshot() {
       const snap = baseSnapshot();
-      const heldNode = document.querySelector('.hand-card.held.pending');
+      const controlledNode = thresholdNodeForPhase(snap.materialPhase);
+      const pendingNode = document.querySelector('.hand-card.held.pending');
       const acceptedNode = document.querySelector('[data-anchor="trick-card:0"]');
-      const held = rect(heldNode);
+      const controlled = rect(controlledNode);
+      const pending = rect(pendingNode);
       const accepted = rect(acceptedNode);
       let threshold = null;
       let final = null;
-      if (heldNode) {
-        const rawW = parseFloat(heldNode.style.width) || held?.width || 60;
-        const rawH = parseFloat(heldNode.style.height) || held?.height || rawW*1.42;
-        threshold = thresholdTarget({ width:rawW, height:rawH });
-        final = finalTarget({ width:rawW, height:rawH });
+      if (controlledNode) {
+        const size = rawCardSize(controlledNode, controlled);
+        threshold = thresholdTarget(size);
+        final = finalTarget(size);
       }
       return {
         ...snap,
         version:7.3,
-        authorityThreshold:held && threshold && final ? {
-          held,
+        armedThreshold:controlled && threshold && final ? {
+          phase:snap.materialPhase,
+          held:controlled,
           threshold,
           final,
-          thresholdError:Math.hypot(held.x-threshold.x, held.y-threshold.y),
+          objectThresholdError:Math.hypot(controlled.x-threshold.x, controlled.y-threshold.y),
+          authorityTravel:Math.hypot(threshold.x-final.x, threshold.y-final.y),
+          verticalAuthorityTravel:threshold.y-final.y,
+          shared:rect(shared),
+        } : null,
+        authorityThreshold:pending && threshold && final ? {
+          held:pending,
+          threshold,
+          final,
+          thresholdError:Math.hypot(pending.x-threshold.x, pending.y-threshold.y),
           authorityTravel:Math.hypot(threshold.x-final.x, threshold.y-final.y),
           verticalAuthorityTravel:threshold.y-final.y,
           shared:rect(shared),
