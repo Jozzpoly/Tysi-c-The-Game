@@ -77,6 +77,7 @@ async function acceptProbe(session,mobile,label){
 
   await waitFor(`${label} handoff settled`,async()=>{const s=await snapshot(session);return s.materialPhase==='accepted'&&s.identityHandoff?.phase==='settled'&&!s.handoffCarrierVisible;});
   const accepted=await snapshot(session);const settledHandoff=accepted.identityHandoff;
+  assert(settledHandoff.reason==='transition-end',`${label}: handoff completed through ${settledHandoff.reason}, not transform transition-end`);
   assert(settledHandoff.revealGap<3,`${label}: carrier/canonical swap jumps ${settledHandoff.revealGap.toFixed(2)}px`);assert(settledHandoff.sizeGap<3,`${label}: carrier/canonical size swap jumps ${settledHandoff.sizeGap.toFixed(2)}px`);
   assert(settledHandoff.visibleCopies===1,`${label}: accepted identity duplicates after swap ${settledHandoff.visibleCopies}`);assert(accepted.acceptedCard,`${label}: canonical accepted card missing`);
   assert(dist(accepted.acceptedCard,settledHandoff.targetRect)<3,`${label}: canonical accepted card moved after handoff ${dist(accepted.acceptedCard,settledHandoff.targetRect).toFixed(2)}px`);
@@ -85,7 +86,7 @@ async function acceptProbe(session,mobile,label){
   await waitFor(`${label} resolving`,async()=>(await snapshot(session)).materialPhase==='resolving');await waitFor(`${label} ghosts`,async()=>{const s=await snapshot(session);return s.materialCaptureGhosts.length===3&&s.materialCaptureGhosts.every((g)=>g.material&&g.opacity>=.45);});await screenshot(session,`${label}-resolving`);
   await waitFor(`${label} settled residue`,async()=>{const s=await snapshot(session);return s.materialPhase==='settled'&&s.residue?.visible&&s.residue.cards.join(',')==='10H,KH,AH';});const settled=await snapshot(session);
   assert(settled.capturedValue===65&&settled.matchScore===340&&settled.initiative==='Prowadzisz',`${label}: wrong consequence truth`);assert(!settled.overflowX,`${label}: horizontal overflow`);await screenshot(session,`${label}-settled`);
-  return{objectThresholdError,releaseError,authorityTravel:h.authorityTravel,startGap:h.startGap,revealGap:settledHandoff.revealGap,sizeGap:settledHandoff.sizeGap,residue:settled.residue.cards};
+  return{objectThresholdError,releaseError,authorityTravel:h.authorityTravel,startGap:h.startGap,handoffReason:settledHandoff.reason,revealGap:settledHandoff.revealGap,sizeGap:settledHandoff.sizeGap,residue:settled.residue.cards};
 }
 
 async function runViewport({label,width,height,mobile}){const session=await createSession();try{await setViewport(session,width,height,mobile);const reject=await rejectProbe(session,mobile,`${label}-reject`);const accept=await acceptProbe(session,mobile,`${label}-accept`);return{label,reject,accept};}finally{try{await webdriver(`/session/${session}`,{method:'DELETE'});}catch{}}}
