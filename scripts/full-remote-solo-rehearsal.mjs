@@ -184,7 +184,7 @@ function compactDiagnostic(current) {
 
 function isMatchComplete(current) {
   return current.phaseTitle === 'Rozdanie zakończone'
-    && (current.heading === 'Remis' || current.heading.endsWith(' wygrywa'));
+    && (current.heading === 'Remis' || current.heading === 'Wygrywasz' || current.heading.endsWith(' wygrywa'));
 }
 
 function assertLayout(label, current, width) {
@@ -282,7 +282,9 @@ async function takeDecision(session, current, counters) {
     return 'card-play';
   }
 
-  if (heading.startsWith('Rozdanie ') || heading.includes('kończy rozdanie bombą')) {
+  if (heading.startsWith('Rozdanie ')
+    || heading.startsWith('Kończysz rozdanie bombą')
+    || heading.includes('kończy rozdanie bombą')) {
     if (!await clickButton(session, 'Następne rozdanie')) throw new Error('next hand unavailable');
     counters.completedHands += 1;
     return 'next-hand';
