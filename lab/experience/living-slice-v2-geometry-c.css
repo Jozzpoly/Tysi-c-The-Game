@@ -1,0 +1,108 @@
+/* Geometry C tests desktop causal geography: actor sources belong to the shared scene, not the page header. */
+@media (min-width: 900px) {
+  body[data-geometry="c"] { --card-w: 112px; }
+
+  body[data-geometry="c"] .context {
+    display: block;
+    padding: 0;
+    position: relative;
+    z-index: 8;
+  }
+
+  body[data-geometry="c"] .match-score {
+    position: fixed;
+    top: 13px;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
+  body[data-geometry="c"] .seat {
+    position: fixed;
+    top: clamp(128px, 18vh, 168px);
+    width: 205px;
+    max-width: 205px;
+    border-top: 0;
+    padding: 8px 10px;
+    background: transparent;
+    opacity: .78;
+  }
+
+  body[data-geometry="c"] .seat.left {
+    left: clamp(70px, 11vw, 165px);
+  }
+
+  body[data-geometry="c"] .seat.right {
+    right: clamp(70px, 11vw, 165px);
+  }
+
+  body[data-geometry="c"] .seat::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    width: clamp(52px, 6vw, 92px);
+    height: 1px;
+    background: linear-gradient(90deg, rgba(191,217,202,.16), transparent);
+    opacity: .65;
+  }
+
+  body[data-geometry="c"] .seat.left::after { left: 100%; }
+  body[data-geometry="c"] .seat.right::after {
+    right: 100%;
+    transform: scaleX(-1);
+  }
+
+  body[data-geometry="c"] .seat.action-source {
+    opacity: 1;
+    background: radial-gradient(circle at center, rgba(191,217,202,.055), transparent 72%);
+  }
+
+  body[data-geometry="c"] .seat-source {
+    opacity: .76;
+    transform: scale(1.08);
+  }
+
+  body[data-geometry="c"] .stage {
+    padding-top: 0;
+  }
+
+  body[data-geometry="c"] .shared {
+    width: min(650px, 60vw);
+    height: min(43vh, 400px);
+    margin-top: 12px;
+  }
+
+  body[data-geometry="c"] .trick {
+    width: 405px;
+    height: 215px;
+  }
+
+  body[data-geometry="c"] .source-label {
+    opacity: .72;
+  }
+
+  body[data-geometry="c"] .capture {
+    position: fixed;
+    right: clamp(110px, 14vw, 220px);
+    bottom: 188px;
+    min-width: 164px;
+    background: linear-gradient(90deg, rgba(191,217,202,.028), transparent);
+  }
+
+  body[data-geometry="c"] .hand-zone {
+    min-height: 302px;
+  }
+
+  body[data-geometry="c"] .hand,
+  body[data-geometry="c"] .hand-meta {
+    width: min(1040px, 88vw);
+  }
+
+  body[data-geometry="c"] .hand {
+    --gap: -26px;
+  }
+
+  body[data-geometry="c"] .source-ghost {
+    opacity: 1;
+    filter: drop-shadow(0 14px 24px rgba(0,0,0,.38));
+  }
+}
