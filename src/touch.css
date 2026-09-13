@@ -1,0 +1,99 @@
+/*
+ * Mobile/coarse-pointer interaction contract.
+ *
+ * Keep this layer presentation-only: it improves hit targets and browser touch
+ * behavior without changing game legality or authority.
+ */
+
+button,
+.card {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+button:active:not(:disabled) {
+  filter: brightness(1.12);
+}
+
+@media (pointer: coarse), (max-width: 620px) {
+  button:not(.card) {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  .actions > button,
+  .decision-card > button,
+  .room-actions > button,
+  .join-row > button,
+  .rules-trigger,
+  .mode-card {
+    padding-block: 10px;
+  }
+
+  .topbar-actions button {
+    min-height: 44px;
+    padding: 9px 11px;
+  }
+
+  /*
+   * Mobile auction/contract choices must not hide valid actions inside a tiny
+   * nested scroll box. Let the decision card grow and the page itself scroll.
+   */
+  .bid-actions,
+  .contract-actions {
+    max-height: none;
+    overflow: visible;
+  }
+
+  .bid-actions > button,
+  .contract-actions > button {
+    min-width: 56px;
+  }
+
+  .card {
+    min-height: 72px;
+  }
+
+  /*
+   * Ten cards occur after taking the talon. A one-row fan only exposed about
+   * 35px per card on a 390px viewport, which is smaller than a dependable
+   * finger target. Keep ordinary 7/8-card hands as a fan, but make the dense
+   * 10-card exchange hand an explicit 5x2 touch grid.
+   */
+  .hand:has(> .card:nth-child(10)) {
+    grid-template-columns: repeat(5, var(--hand-card-width));
+    column-gap: 8px;
+    row-gap: 12px;
+    justify-content: center;
+  }
+
+  /*
+   * During the 10-card exchange the trick area has no gameplay content yet.
+   * Preserve finger-sized cards and controls; reclaim the otherwise empty
+   * vertical table space so both rows of the exchange hand remain directly
+   * visible and hittable on a 390x844 phone viewport.
+   */
+  .app-shell:has(.hand > .card:nth-child(10)) .table {
+    min-height: 0;
+  }
+
+  .app-shell:has(.hand > .card:nth-child(10)) .center {
+    min-height: 92px;
+  }
+
+  .app-shell:has(.hand > .card:nth-child(10)) .trick {
+    min-height: 44px;
+  }
+
+  .hand > .card:active:not(:disabled) {
+    z-index: 4;
+    transform: translateY(-4px);
+  }
+
+  .hand > .card.selected:active:not(:disabled) {
+    transform: translateY(-10px);
+  }
+}
