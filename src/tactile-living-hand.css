@@ -1,0 +1,21 @@
+/*
+ * Level 2 — living hand.
+ * Neighbor cards yield continuously to the held card before local order commits.
+ */
+
+.tactile-hand > .hand-slot {
+  transform: translateX(var(--hand-preview-shift-x, 0px));
+  transition: transform 82ms cubic-bezier(.2,.78,.24,1);
+  will-change: transform;
+}
+
+.tactile-hand[data-gesture-phase='table'] > .hand-slot,
+.tactile-hand[data-gesture-phase='accepted'] > .hand-slot {
+  transition-duration: 130ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tactile-hand > .hand-slot {
+    transition-duration: .001ms;
+  }
+}
