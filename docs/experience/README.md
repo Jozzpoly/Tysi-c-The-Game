@@ -15,6 +15,8 @@ Canonical gameplay truth remains in core state, legal commands, reducer events a
 - `RUN_01_CARD_OBJECT_AND_HAND.md` — tactile card object, private hand territory, manual ordering, safe probing, play/reorder gestures, latency/rejection and torture cases.
 - `SELF_TEACHING_VISUAL_LANGUAGE.md` — teaching routine interaction through affordance, direct manipulation, constraint and causal consequence instead of banners and arrows.
 
+A richer standalone Card/Hand embodiment fixture is currently being iterated locally before it is promoted into the branch. It explores direct grabbing, horizontal manual reorder, upward play intent, material legal/illegal constraint, simulated latency/rejection, local sound/haptic reinforcement and new-card insertion without auto-resorting the player's hand.
+
 ## Supporting architecture / grammar
 
 - `UX_FEEDBACK_GRAMMAR.md`
