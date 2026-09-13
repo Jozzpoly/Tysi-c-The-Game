@@ -43,6 +43,30 @@ Those labels bias implementation before the experiential mechanics are understoo
 
 Instead identify observable qualities and build a character from them.
 
+## Known Owner taste boundaries
+
+These are **evidence from prior exploration**, not a final style brief.
+
+Current negative boundaries:
+
+- avoid a felt-table / poker-room metaphor as the primary visual identity;
+- avoid wood/leather/heavy skeuomorphism as the default route to `physicality`;
+- avoid fantasy-CCG visual language by habit;
+- avoid old-web / Kurnik-like product presentation;
+- avoid sterile SaaS/dashboard composition;
+- avoid generic `premium dark glass + glow` as a substitute for character;
+- avoid treating digital-first as synonymous with neon or futuristic chrome.
+
+Current positive directional evidence:
+
+- modern, digital-first presentation is attractive when it serves the cards/actions rather than becoming a dashboard;
+- the game should feel materially responsive without pretending to be a literal real-world table;
+- cards and the private hand deserve unusually strong visual/interaction priority;
+- feedback after actions should form part of the gameplay language, not merely decorate it;
+- the final product should feel distinct enough to act as a reference/donor for future Owner projects.
+
+These boundaries should constrain reference exploration without prematurely fixing a theme.
+
 ## Character is multi-channel
 
 ### Visual form
