@@ -335,7 +335,7 @@ async function runBombViewport(label, width, height, mobile) {
     await screenshot(session, `${label}-bomb-confirmation`);
 
     await clickButtonByText(session, 'Potwierdź bombę');
-    await waitForText(session, 'kończy rozdanie bombą nr 1');
+    await waitForText(session, 'Kończysz rozdanie bombą nr 1');
     const completed = await inspectLayout(session);
     assertViewport(`${label}: bomb completed`, completed, width);
     if (completed.handCards !== 10 || completed.enabledHandCards !== 0) {
