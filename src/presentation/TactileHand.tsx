@@ -34,6 +34,7 @@ interface DragState {
   offsetX: number;
   offsetY: number;
   moved: boolean;
+  throwIntent: boolean;
   commitReady: boolean;
   zoneTop: number;
 }
@@ -82,9 +83,10 @@ function FloatingCard(props: FloatingCardProps) {
   const left = props.dragging ? ghost.x - ghost.offsetX : ghost.left;
   const top = props.dragging ? ghost.y - ghost.offsetY : ghost.top;
   const tilt = props.dragging
-    ? Math.max(-10, Math.min(10, (ghost.x - ghost.startX) / 12))
+    ? Math.max(-12, Math.min(12, (ghost.x - ghost.startX) / 10))
     : ghost.tilt;
   const commitReady = props.dragging && ghost.commitReady;
+  const throwIntent = props.dragging && ghost.throwIntent;
   const style = {
     left,
     top,
@@ -95,7 +97,7 @@ function FloatingCard(props: FloatingCardProps) {
 
   return (
     <div
-      className={`card tactile-card-float ${red ? 'red' : ''} ${commitReady ? 'commit-ready' : ''} ${props.dragging ? '' : 'releasing'}`}
+      className={`card tactile-card-float ${red ? 'red' : ''} ${throwIntent ? 'throw-intent' : ''} ${commitReady ? 'commit-ready' : ''} ${props.dragging ? '' : 'releasing'}`}
       style={style}
       data-rank={rank}
       data-suit={symbol}
@@ -134,10 +136,8 @@ export function TactileHand({
   const releaseTimer = useRef<number | null>(null);
   const cardsKey = cards.join('|');
 
-  // Local order is allowed to remember preference, but it never gets to keep a
-  // card that the canonical SeatProjection no longer contains. Derive the
-  // rendered order synchronously so a committed card disappears in the same
-  // projection render rather than one effect later.
+  // Local order may remember preference, but it never gets to keep a card that
+  // the canonical SeatProjection no longer contains.
   const visibleOrder = previousHandNumber.current === handNumber
     ? reconcileOrder(order, cards)
     : [...cards];
@@ -229,6 +229,7 @@ export function TactileHand({
       offsetX: event.clientX - rect.left,
       offsetY: event.clientY - rect.top,
       moved: false,
+      throwIntent: false,
       commitReady: false,
       zoneTop: Math.max(14, handRect.top - 76),
     });
@@ -239,15 +240,18 @@ export function TactileHand({
     const distance = Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY);
     const moved = drag.moved || distance >= DRAG_SLOP;
     const commitDistance = Math.max(62, drag.height * 0.72);
-    const commitReady = moved && throwableCards.has(drag.card) && event.clientY <= drag.startY - commitDistance;
+    const throwIntent = moved && event.clientY <= drag.startY - commitDistance;
+    const commitReady = throwIntent && throwableCards.has(drag.card);
 
     if (moved) {
       event.preventDefault();
-      reorderFromPointer(drag.card, event.clientX, event.clientY);
+      // Reordering remains free while the card is near the hand. Once the card
+      // is pulled decisively toward the table, stop shuffling slots underneath it.
+      if (!throwIntent) reorderFromPointer(drag.card, event.clientX, event.clientY);
     }
 
     setDrag((current) => current && current.pointerId === event.pointerId
-      ? { ...current, x: event.clientX, y: event.clientY, moved, commitReady }
+      ? { ...current, x: event.clientX, y: event.clientY, moved, throwIntent, commitReady }
       : current);
   }
 
@@ -264,7 +268,7 @@ export function TactileHand({
     }
 
     if (shouldCommit) {
-      const tilt = Math.max(-10, Math.min(10, (drag.x - drag.startX) / 12));
+      const tilt = Math.max(-12, Math.min(12, (drag.x - drag.startX) / 10));
       setReleaseGhost({
         card: drag.card,
         left: drag.x - drag.offsetX,
@@ -278,6 +282,8 @@ export function TactileHand({
       onActivate(drag.card);
     }
 
+    // A non-committing throw is not an error state. The card simply falls back
+    // into the freely arranged hand with no red/error feedback.
     setDrag(null);
   }
 
@@ -298,12 +304,13 @@ export function TactileHand({
       ref={handRef}
       className="hand tactile-hand"
       style={handStyle}
-      aria-label="Twoje karty. Przeciągnij kartę, aby zmienić jej miejsce w ręce."
+      aria-label="Twoje karty. Każdą możesz chwycić i przełożyć; stół podpowie, kiedy gest może stać się ruchem."
     >
       {visibleOrder.map((card, index) => {
         const { suit, rank, symbol, red } = cardFace(card);
         const selected = selectedCards.includes(card);
         const actionable = actionableCards.has(card);
+        const throwable = throwableCards.has(card);
         const held = drag?.card === card;
         const offset = index - (visibleOrder.length - 1) / 2;
         const rotate = Math.max(-5.5, Math.min(5.5, offset * 1.15));
@@ -317,9 +324,11 @@ export function TactileHand({
         return (
           <div
             key={card}
-            className={`hand-slot ${held ? 'is-held' : ''} ${held && drag?.moved ? 'is-dragging' : ''}`}
+            className={`hand-slot ${actionable ? 'is-actionable' : ''} ${throwable ? 'is-throwable' : ''} ${held ? 'is-held' : ''} ${held && drag?.moved ? 'is-dragging' : ''}`}
             data-card={card}
             data-index={index}
+            data-actionable={actionable ? 'true' : 'false'}
+            data-throwable={throwable ? 'true' : 'false'}
             style={slotStyle}
             onPointerDownCapture={(event) => beginDrag(event, card)}
             onPointerMove={moveDrag}
@@ -352,7 +361,7 @@ export function TactileHand({
           style={{ top: drag.zoneTop }}
           aria-hidden="true"
         >
-          {drag.commitReady ? 'Puść, żeby zagrać' : 'Rzuć kartę na stół'}
+          {drag.commitReady ? 'Puść — stół bierze kartę' : 'Ta karta może wejść na stół'}
         </div>
       )}
     </div>
