@@ -4,6 +4,7 @@ import {
   useRef,
   useState,
   type CSSProperties,
+  type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
 } from 'react';
 import { rankOf, suitOf, type CardId } from '../core/index.js';
@@ -46,6 +47,10 @@ interface ReleaseGhost {
   tilt: number;
 }
 
+type FloatingCardProps =
+  | { ghost: DragState; dragging: true }
+  | { ghost: ReleaseGhost; dragging: false };
+
 type SlotStyle = CSSProperties & {
   '--fan-rotate': string;
   '--fan-lift': string;
@@ -64,11 +69,15 @@ function cardFace(card: CardId) {
   return { suit, rank, symbol, red };
 }
 
-function FloatingCard({ ghost, dragging }: { ghost: ReleaseGhost | DragState; dragging: boolean }) {
+function FloatingCard(props: FloatingCardProps) {
+  const { ghost } = props;
   const { rank, symbol, red } = cardFace(ghost.card);
-  const left = dragging ? ghost.x - ghost.offsetX : ghost.left;
-  const top = dragging ? ghost.y - ghost.offsetY : ghost.top;
-  const tilt = dragging ? Math.max(-10, Math.min(10, (ghost.x - ghost.startX) / 12)) : ghost.tilt;
+  const left = props.dragging ? ghost.x - ghost.offsetX : ghost.left;
+  const top = props.dragging ? ghost.y - ghost.offsetY : ghost.top;
+  const tilt = props.dragging
+    ? Math.max(-10, Math.min(10, (ghost.x - ghost.startX) / 12))
+    : ghost.tilt;
+  const commitReady = props.dragging && ghost.commitReady;
   const style = {
     left,
     top,
@@ -79,7 +88,7 @@ function FloatingCard({ ghost, dragging }: { ghost: ReleaseGhost | DragState; dr
 
   return (
     <div
-      className={`card tactile-card-float ${dragging && ghost.commitReady ? 'commit-ready' : ''} ${dragging ? '' : 'releasing'}`}
+      className={`card tactile-card-float ${red ? 'red' : ''} ${commitReady ? 'commit-ready' : ''} ${props.dragging ? '' : 'releasing'}`}
       style={style}
       data-rank={rank}
       data-suit={symbol}
@@ -87,7 +96,6 @@ function FloatingCard({ ghost, dragging }: { ghost: ReleaseGhost | DragState; dr
     >
       <span className="rank" data-suit={symbol}>{rank}</span>
       <span className="suit">{symbol}</span>
-      <span className={red ? 'tactile-red-marker' : 'tactile-dark-marker'} aria-hidden="true" />
     </div>
   );
 }
@@ -237,7 +245,12 @@ export function TactileHand({
     if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
 
     const shouldCommit = !cancelled && drag.moved && drag.commitReady && throwableCards.has(drag.card);
-    if (drag.moved) suppressClick.current = drag.card;
+    if (drag.moved && actionableCards.has(drag.card)) {
+      suppressClick.current = drag.card;
+      window.setTimeout(() => {
+        if (suppressClick.current === drag.card) suppressClick.current = null;
+      }, 0);
+    }
 
     if (shouldCommit) {
       const tilt = Math.max(-10, Math.min(10, (drag.x - drag.startX) / 12));
@@ -257,7 +270,7 @@ export function TactileHand({
     setDrag(null);
   }
 
-  function handleClick(event: React.MouseEvent<HTMLButtonElement>, card: CardId) {
+  function handleClick(event: ReactMouseEvent<HTMLButtonElement>, card: CardId) {
     if (suppressClick.current === card) {
       suppressClick.current = null;
       event.preventDefault();
