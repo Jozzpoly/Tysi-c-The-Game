@@ -293,6 +293,9 @@
       const dest = item.node.getBoundingClientRect();
       const ghost = item.node.cloneNode(true);
       ghost.className = 'source-ghost';
+      // The source trick card is hidden with inline opacity during replay. A clone
+      // inherits that inline style, so explicitly release opacity back to CSS.
+      ghost.style.opacity = '';
       ghost.style.left = `${source.left + source.width / 2 - dest.width / 2}px`;
       ghost.style.top = `${source.top + source.height / 2 - dest.height / 2}px`;
       ghost.style.transform = 'translate3d(0,0,0) scale(.64)';
