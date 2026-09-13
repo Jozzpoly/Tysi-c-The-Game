@@ -134,7 +134,10 @@ async function runAccept(session, mobile, label) {
   const resolving=await snapshot(session);
   assert(resolving.trickMemory.length===3,`${label}: missing public trick memory ${JSON.stringify(resolving.trickMemory)}`);
   await screenshot(session,`${label}-resolving`);
-  await waitFor(`${label} settled`, async()=> (await snapshot(session)).materialPhase==='settled');
+  await waitFor(`${label} settled residue visible`, async()=> {
+    const s=await snapshot(session);
+    return s.materialPhase==='settled' && s.residue?.visible && s.residue.cards.length===3;
+  });
   const settled=await snapshot(session);
   assert(settled.capturedValue===65,`${label}: captured value ${settled.capturedValue}`);
   assert(settled.matchScore===340,`${label}: ordinary trick changed match score ${settled.matchScore}`);
