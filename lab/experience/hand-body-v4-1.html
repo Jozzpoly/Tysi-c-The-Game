@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>Tysiąc Experience Research — Hand Body V4.1</title>
+  <link rel="stylesheet" href="./hand-body-v4.css" />
+  <link rel="stylesheet" href="./hand-body-v4-1.css" />
+</head>
+<body data-state="ready" data-assist="auto">
+  <script>
+    const params = new URLSearchParams(location.search);
+    document.body.dataset.assist = params.get('assist') || 'auto';
+    if (params.get('debugFinger') === '1') document.body.dataset.debugFinger = '1';
+  </script>
+
+  <main class="body-lab" aria-label="Internal Hand Body V4.1 research fixture">
+    <header class="lab-head">
+      <span>HAND BODY · V4.1</span>
+      <span data-mode-label>exact grab · edge-safe adaptive visibility</span>
+    </header>
+
+    <section class="intent-space" data-intent-space>
+      <div class="intent-field" aria-hidden="true"></div>
+      <div class="intent-target" data-intent-target>
+        <span>WSPÓLNA PRZESTRZEŃ</span>
+        <strong data-intent-label>przenieś kartę wyżej, aby sprawdzić zamiar zagrania</strong>
+      </div>
+    </section>
+
+    <section class="hand-zone" data-anchor="hand:self">
+      <div class="hand-meta">
+        <span><strong>Twoja ręka</strong> · prywatny układ</span>
+        <span data-state-label>dotknij / przeciągnij / przełóż</span>
+      </div>
+      <div class="hand" data-hand>
+        <div class="hand-card" data-card="9C" data-play="0"><div class="card-face"><div class="corner">9<span>♣</span></div><div class="pip">♣</div></div></div>
+        <div class="hand-card" data-card="JH" data-play="1"><div class="card-face red"><div class="corner">J<span>♥</span></div><div class="pip">♥</div></div></div>
+        <div class="hand-card" data-card="QS" data-play="0"><div class="card-face"><div class="corner">Q<span>♠</span></div><div class="pip">♠</div></div></div>
+        <div class="hand-card" data-card="AH" data-play="1"><div class="card-face red"><div class="corner">A<span>♥</span></div><div class="pip">♥</div></div></div>
+        <div class="hand-card" data-card="KD" data-play="0"><div class="card-face red"><div class="corner">K<span>♦</span></div><div class="pip">♦</div></div></div>
+        <div class="hand-card" data-card="10C" data-play="0"><div class="card-face"><div class="corner">10<span>♣</span></div><div class="pip">♣</div></div></div>
+        <div class="hand-card" data-card="9S" data-play="0"><div class="card-face"><div class="corner">9<span>♠</span></div><div class="pip">♠</div></div></div>
+      </div>
+    </section>
+
+    <div class="finger-proxy" data-finger-proxy aria-hidden="true"></div>
+    <div class="contact-thread" data-contact-thread aria-hidden="true"></div>
+    <div class="research-badge">internal experience research · hand body v4.1</div>
+  </main>
+  <script src="./hand-body-v4-1.js"></script>
+</body>
+</html>
