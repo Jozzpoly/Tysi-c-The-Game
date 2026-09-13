@@ -55,7 +55,7 @@
     const threshold = thresholdTarget(size);
     setStyleIfChanged(node,'--v74-threshold-left',`${threshold.left.toFixed(3)}px`);
     setStyleIfChanged(node,'--v74-threshold-top',`${threshold.top.toFixed(3)}px`);
-    setStyleIfChanged(node,'--v74-threshold-rot','-1.2deg');
+    setStyleIfChanged(node,'--v74-threshold-rot','0deg');
   }
 
   function capturePendingFrame() {
@@ -140,6 +140,7 @@
 
   function beginHandoff(targetNode) {
     if (!targetNode || targetNode.dataset.anchor !== 'trick-card:0') return;
+    targetNode.classList.add('v74-canonical-self');
     const card = targetNode.dataset.card || null;
     if (!lastPending || !card || lastPending.card !== card) {
       log('authority-handoff-missing-source',{ card, pendingCard:lastPending?.card || null });
