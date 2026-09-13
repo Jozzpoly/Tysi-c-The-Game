@@ -35,6 +35,7 @@
     capturedValue: 40,
     matchScore: 340,
     timingScale: 1,
+    authorityDelayMs: 140,
     trace: [],
   };
 
@@ -327,7 +328,7 @@
     card.style.setProperty('--hold-y', `${target.top}px`);
     card.style.setProperty('--hold-rot', '0deg');
 
-    later(140, () => {
+    later(state.authorityDelayMs, () => {
       if (state.rejectNext) {
         state.rejectNext = false;
         note.classList.add('rule');
@@ -545,12 +546,14 @@
         nextInitiativeVisual: handZone.classList.contains('next-initiative'),
         recentCaptureVisual: capturePile.classList.contains('recent'),
         trickCards: [...trick.querySelectorAll('.trick-card')].map((node) => node.dataset.card),
+        authorityDelayMs: state.authorityDelayMs,
         trace: state.trace.slice(),
         overflowX: document.documentElement.scrollWidth > document.documentElement.clientWidth + 1,
       };
     },
     rejectNext() { state.rejectNext = true; trace('inject-reject', { version:5 }); },
     setTimingScale(value) { state.timingScale = clamp(Number(value) || 1, .25, 8); trace('timing-scale', { value:state.timingScale, version:5 }); },
+    setAuthorityDelayMs(value) { state.authorityDelayMs = clamp(Number(value) || 140, 0, 5000); trace('authority-delay', { value:state.authorityDelayMs, version:5 }); },
     replayOpponentSources,
     reset() { location.reload(); },
   };
