@@ -196,9 +196,12 @@
       visibleCopies:visibleCopies(card),
     });
 
-    ghost.addEventListener('transitionend',(event) => {
-      if (event.propertyName === 'transform') finishHandoff('transition-end');
-    },{ once:true });
+    const onTransformEnd = (event) => {
+      if (event.propertyName !== 'transform') return;
+      ghost.removeEventListener('transitionend',onTransformEnd);
+      finishHandoff('transition-end');
+    };
+    ghost.addEventListener('transitionend',onTransformEnd);
 
     requestAnimationFrame(() => requestAnimationFrame(() => {
       if (!activeHandoff || activeHandoff.ghost !== ghost) return;
