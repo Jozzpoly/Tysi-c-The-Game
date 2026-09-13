@@ -16,7 +16,7 @@ async function cdp(session,cmd,params={}){return webdriver(`/session/${session}/
 async function screenshot(session,name){const data=await webdriver(`/session/${session}/screenshot`);await writeFile(`${OUTPUT}/${name}.png`,Buffer.from(data,'base64'));}
 async function createSession(){const value=await webdriver('/session',{method:'POST',body:JSON.stringify({capabilities:{alwaysMatch:{browserName:'chrome','goog:chromeOptions':{args:['--headless=new','--no-sandbox','--disable-dev-shm-usage','--disable-gpu','--window-size=1440,900']}}}})});return value.sessionId;}
 async function setViewport(session,width,height,mobile){await cdp(session,'Emulation.setDeviceMetricsOverride',{width,height,screenWidth:width,screenHeight:height,deviceScaleFactor:1,mobile,positionX:0,positionY:0,dontSetVisibleSize:false});await cdp(session,'Emulation.setTouchEmulationEnabled',{enabled:mobile,maxTouchPoints:mobile?5:1});}
-async function navigate(session){await webdriver(`/session/${session}/url`,{method:'POST',body:JSON.stringify({url:BASE})});await waitFor('V7.3 ready',()=>execute(session,`return Boolean(window.__livingSliceV73) && window.__livingSliceV73.snapshot().version===7.3;`));}
+async function navigate(session){await webdriver(`/session/${session}/url`,{method:'POST',body:JSON.stringify({url:BASE})});await waitFor('V7.3 ready',()=>execute(session,`return Boolean(window.__livingSliceV73)&&window.__livingSliceV73.snapshot().version===7.3;`));}
 async function snapshot(session){return execute(session,`return window.__livingSliceV73.snapshot();`);}
 async function geometry(session){return execute(session,`const cards=[...document.querySelectorAll('[data-hand] .hand-card:not(.placeholder)')].map(node=>{const r=node.getBoundingClientRect();return{card:node.dataset.card,left:r.left,top:r.top,width:r.width,height:r.height};});const s=document.querySelector('[data-anchor="trick:shared"]').getBoundingClientRect();return{cards,shared:{left:s.left,top:s.top,width:s.width,height:s.height}};`);}
 function cardBy(geo,id){const card=geo.cards.find((item)=>item.card===id);if(!card)throw new Error(`missing card ${id}`);return card;}
@@ -32,23 +32,42 @@ async function start(session,mobile,p){return mobile?touchStart(session,p):mouse
 async function move(session,mobile,p){return mobile?touchMove(session,p):mouseMove(session,p);}
 async function end(session,mobile,p){return mobile?touchEnd(session):mouseEnd(session,p);}
 
-async function enterThresholdIntent(session,mobile,cardId){
-  const geo=await geometry(session);const card=cardBy(geo,cardId);const from=point(card,mobile);const target=thresholdPoint(geo);
-  await start(session,mobile,from);
-  for(let i=1;i<=12;i+=1){const u=i/12;await move(session,mobile,{x:from.x+(target.x-from.x)*u,y:from.y+(target.y-from.y)*u});await sleep(8);}
-  await waitFor(`${cardId} threshold intent`,async()=>(await snapshot(session)).materialPhase==='intent');
-  return{release:target};
+async function controlledPose(session){
+  return execute(session,`const n=document.querySelector('.hand-card.held');const s=document.querySelector('[data-anchor="trick:shared"]').getBoundingClientRect();if(!n)return null;const r=n.getBoundingClientRect();return{held:{x:r.left+r.width/2,y:r.top+r.height/2,left:r.left,top:r.top,width:r.width,height:r.height},threshold:{x:s.left+s.width*.50,y:s.top+s.height*.80}};`);
 }
 
-function assertThreshold(label,pending,release){
+async function enterThresholdIntent(session,mobile,cardId){
+  const geo=await geometry(session);const card=cardBy(geo,cardId);const from=point(card,mobile);let pointer=thresholdPoint(geo);
+  await start(session,mobile,from);
+  for(let i=1;i<=12;i+=1){const u=i/12;await move(session,mobile,{x:from.x+(pointer.x-from.x)*u,y:from.y+(pointer.y-from.y)*u});await sleep(8);}
+  await waitFor(`${cardId} threshold intent`,async()=>{const s=await snapshot(session);return s.materialPhase==='intent'&&Boolean(s.armedThreshold);});
+
+  // Exact-grab means pointer position and card center are intentionally not the
+  // same thing. Move the object itself to the threshold by compensating for
+  // the real grab offset/assist rather than recentering the card on commit.
+  for(let i=0;i<3;i+=1){
+    const pose=await controlledPose(session);assert(pose,`${cardId}: held pose missing during threshold approach`);
+    const dx=pose.threshold.x-pose.held.x;const dy=pose.threshold.y-pose.held.y;
+    if(Math.hypot(dx,dy)<2.5)break;
+    pointer={x:pointer.x+dx,y:pointer.y+dy};await move(session,mobile,pointer);await sleep(24);
+  }
+  const pose=await controlledPose(session);assert(pose,`${cardId}: release pose missing`);
+  const objectThresholdError=dist(pose.held,pose.threshold);
+  assert(objectThresholdError<7,`${cardId}: object cannot be placed on threshold without violating grab ${objectThresholdError.toFixed(2)}px`);
+  const armed=await snapshot(session);
+  assert(armed.armedThreshold&&armed.armedThreshold.objectThresholdError<8,`${cardId}: armed threshold disagrees with object pose ${JSON.stringify(armed.armedThreshold)}`);
+  return{release:pointer,releaseCardCenter:{x:pose.held.x,y:pose.held.y},objectThresholdError};
+}
+
+function assertThreshold(label,pending,releaseCardCenter){
   const t=pending.authorityThreshold;
   assert(t,`${label}: missing authority threshold`);
   assert(t.thresholdError<10,`${label}: pending misses computed threshold ${t.thresholdError.toFixed(2)}px`);
   assert(t.authorityTravel>42,`${label}: pending still reads like accepted trick ${t.authorityTravel.toFixed(2)}px`);
   assert(t.authorityTravel<155,`${label}: threshold too detached from trick ${t.authorityTravel.toFixed(2)}px`);
   assert(t.verticalAuthorityTravel>35,`${label}: accept does not travel inward/upward ${t.verticalAuthorityTravel.toFixed(2)}px`);
-  const releaseError=dist(release,{x:t.held.x,y:t.held.y});
-  assert(releaseError<18,`${label}: release->pending discontinuity too large ${releaseError.toFixed(2)}px`);
+  const releaseError=dist(releaseCardCenter,{x:t.held.x,y:t.held.y});
+  assert(releaseError<12,`${label}: object snaps on release ${releaseError.toFixed(2)}px`);
   const s=t.shared;
   assert(t.held.x>s.left&&t.held.x<s.right&&t.held.y>s.top&&t.held.y<s.bottom,`${label}: pending is outside shared field`);
   return releaseError;
@@ -56,9 +75,9 @@ function assertThreshold(label,pending,release){
 
 async function rejectProbe(session,mobile,label){
   await navigate(session);await execute(session,`window.__livingSliceV73.setTimingScale(4);window.__livingSliceV73.rejectNext();return true;`);
-  const{release}=await enterThresholdIntent(session,mobile,'JH');await end(session,mobile,release);
+  const{release,releaseCardCenter,objectThresholdError}=await enterThresholdIntent(session,mobile,'JH');await end(session,mobile,release);
   await waitFor(`${label} pending`,async()=>{const s=await snapshot(session);return s.materialPhase==='pending'&&Boolean(s.authorityThreshold);});
-  const pending=await snapshot(session);const releaseError=assertThreshold(label,pending,release);
+  const pending=await snapshot(session);const releaseError=assertThreshold(label,pending,releaseCardCenter);
   const opacity=await execute(session,`return Number(getComputedStyle(document.querySelector('.hand-card.held.pending')).opacity);`);
   assert(opacity>.92,`${label}: pending lost object identity ${opacity}`);
   await screenshot(session,`${label}-threshold-pending`);
@@ -67,14 +86,14 @@ async function rejectProbe(session,mobile,label){
   const settled=await snapshot(session);
   assert(settled.capturedValue===40&&settled.matchScore===340,`${label}: reject changed authority truth`);
   assert(!settled.residue,`${label}: reject left consequence residue`);
-  return{authorityTravel:pending.authorityThreshold.authorityTravel,releaseError,opacity};
+  return{authorityTravel:pending.authorityThreshold.authorityTravel,objectThresholdError,releaseError,opacity};
 }
 
 async function acceptProbe(session,mobile,label){
   await navigate(session);await execute(session,`window.__livingSliceV73.setTimingScale(4);return true;`);
-  const{release}=await enterThresholdIntent(session,mobile,'AH');await end(session,mobile,release);
+  const{release,releaseCardCenter,objectThresholdError}=await enterThresholdIntent(session,mobile,'AH');await end(session,mobile,release);
   await waitFor(`${label} pending`,async()=>{const s=await snapshot(session);return s.materialPhase==='pending'&&Boolean(s.authorityThreshold);});
-  const pending=await snapshot(session);const releaseError=assertThreshold(label,pending,release);const pendingCenter={x:pending.authorityThreshold.held.x,y:pending.authorityThreshold.held.y};
+  const pending=await snapshot(session);const releaseError=assertThreshold(label,pending,releaseCardCenter);const pendingCenter={x:pending.authorityThreshold.held.x,y:pending.authorityThreshold.held.y};
   await screenshot(session,`${label}-threshold-pending`);
   await waitFor(`${label} accepted`,async()=>{const s=await snapshot(session);return s.materialPhase==='accepted'&&Boolean(s.acceptedCard);});await sleep(250);
   const accepted=await snapshot(session);const acceptedCenter={x:accepted.acceptedCard.x,y:accepted.acceptedCard.y};const settleDistance=dist(pendingCenter,acceptedCenter);
@@ -85,12 +104,12 @@ async function acceptProbe(session,mobile,label){
   await waitFor(`${label} resolving`,async()=>(await snapshot(session)).materialPhase==='resolving');
   await waitFor(`${label} ghosts`,async()=>{const s=await snapshot(session);return s.materialCaptureGhosts.length===3&&s.materialCaptureGhosts.every((g)=>g.material&&g.opacity>=.45);});
   await screenshot(session,`${label}-resolving`);
-  await waitFor(`${label} settled`,async()=>(await snapshot(session)).materialPhase==='settled');const settled=await snapshot(session);
-  assert(settled.residue?.visible&&settled.residue.cards.join(',')==='10H,KH,AH',`${label}: wrong residue ${JSON.stringify(settled.residue)}`);
+  await waitFor(`${label} settled residue`,async()=>{const s=await snapshot(session);return s.materialPhase==='settled'&&s.residue?.visible&&s.residue.cards.join(',')==='10H,KH,AH';});
+  const settled=await snapshot(session);
   assert(settled.capturedValue===65&&settled.matchScore===340&&settled.initiative==='Prowadzisz',`${label}: wrong consequence truth`);
   assert(!settled.overflowX,`${label}: horizontal overflow`);
   await screenshot(session,`${label}-settled`);
-  return{authorityTravel:pending.authorityThreshold.authorityTravel,releaseError,settleDistance,residue:settled.residue.cards};
+  return{authorityTravel:pending.authorityThreshold.authorityTravel,objectThresholdError,releaseError,settleDistance,residue:settled.residue.cards};
 }
 
 async function runViewport({label,width,height,mobile}){const session=await createSession();try{await setViewport(session,width,height,mobile);const reject=await rejectProbe(session,mobile,`${label}-reject`);const accept=await acceptProbe(session,mobile,`${label}-accept`);return{label,reject,accept};}finally{try{await webdriver(`/session/${session}`,{method:'DELETE'});}catch{}}}
