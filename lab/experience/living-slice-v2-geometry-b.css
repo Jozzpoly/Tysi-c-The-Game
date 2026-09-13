@@ -1,0 +1,64 @@
+/* Geometry B changes causal geography only. It does not change interaction semantics or timing. */
+@media (min-width: 900px) {
+  body[data-geometry="b"] { --card-w: 112px; }
+
+  body[data-geometry="b"] .context {
+    width: min(1060px, 92vw);
+    margin-inline: auto;
+    padding-inline: 0;
+  }
+
+  body[data-geometry="b"] .seat {
+    max-width: 250px;
+    padding-inline: 12px;
+  }
+
+  body[data-geometry="b"] .seat-source {
+    opacity: .68;
+    transform: scale(1.08);
+  }
+
+  body[data-geometry="b"] .stage {
+    padding-top: 0;
+  }
+
+  body[data-geometry="b"] .shared {
+    width: min(720px, 78vw);
+    height: min(44vh, 410px);
+  }
+
+  body[data-geometry="b"] .trick {
+    width: 405px;
+    height: 215px;
+  }
+
+  body[data-geometry="b"] .capture {
+    position: fixed;
+    right: clamp(120px, 16vw, 250px);
+    bottom: 190px;
+    min-width: 164px;
+    background: linear-gradient(90deg, rgba(191,217,202,.025), transparent);
+  }
+
+  body[data-geometry="b"] .hand-zone {
+    min-height: 300px;
+  }
+
+  body[data-geometry="b"] .hand,
+  body[data-geometry="b"] .hand-meta {
+    width: min(1040px, 88vw);
+  }
+
+  body[data-geometry="b"] .hand {
+    --gap: -26px;
+  }
+
+  body[data-geometry="b"] .source-ghost {
+    opacity: 1;
+    filter: drop-shadow(0 14px 24px rgba(0,0,0,.34));
+  }
+
+  body[data-geometry="b"] .source-label {
+    opacity: .9;
+  }
+}
