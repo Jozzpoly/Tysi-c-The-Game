@@ -69,6 +69,13 @@ function cardFace(card: CardId) {
   return { suit, rank, symbol, red };
 }
 
+function reconcileOrder(order: readonly CardId[], cards: readonly CardId[]): CardId[] {
+  const incoming = new Set(cards);
+  const kept = order.filter((card) => incoming.has(card));
+  const keptSet = new Set(kept);
+  return [...kept, ...cards.filter((card) => !keptSet.has(card))];
+}
+
 function FloatingCard(props: FloatingCardProps) {
   const { ghost } = props;
   const { rank, symbol, red } = cardFace(ghost.card);
@@ -127,14 +134,18 @@ export function TactileHand({
   const releaseTimer = useRef<number | null>(null);
   const cardsKey = cards.join('|');
 
+  // Local order is allowed to remember preference, but it never gets to keep a
+  // card that the canonical SeatProjection no longer contains. Derive the
+  // rendered order synchronously so a committed card disappears in the same
+  // projection render rather than one effect later.
+  const visibleOrder = previousHandNumber.current === handNumber
+    ? reconcileOrder(order, cards)
+    : [...cards];
+
   useEffect(() => {
-    setOrder((current) => {
-      if (previousHandNumber.current !== handNumber) return [...cards];
-      const incoming = new Set(cards);
-      const kept = current.filter((card) => incoming.has(card));
-      const keptSet = new Set(kept);
-      return [...kept, ...cards.filter((card) => !keptSet.has(card))];
-    });
+    setOrder((current) => previousHandNumber.current === handNumber
+      ? reconcileOrder(current, cards)
+      : [...cards]);
     previousHandNumber.current = handNumber;
   }, [cardsKey, handNumber]);
 
@@ -192,10 +203,10 @@ export function TactileHand({
       }
     }
 
-    const sourceIndex = order.indexOf(card);
+    const sourceIndex = visibleOrder.indexOf(card);
     if (nearestIndex < 0 || nearestIndex === sourceIndex) return;
     beforeRects.current = readSlotRects();
-    setOrder((current) => moveCard(current, card, nearestIndex));
+    setOrder((current) => moveCard(reconcileOrder(current, cards), card, nearestIndex));
   }
 
   function beginDrag(event: ReactPointerEvent<HTMLDivElement>, card: CardId) {
@@ -280,7 +291,7 @@ export function TactileHand({
     if (actionableCards.has(card)) onActivate(card);
   }
 
-  const handStyle = { '--hand-spread-count': Math.max(0, order.length - 1) } as CSSProperties;
+  const handStyle = { '--hand-spread-count': Math.max(0, visibleOrder.length - 1) } as CSSProperties;
 
   return (
     <div
@@ -289,12 +300,12 @@ export function TactileHand({
       style={handStyle}
       aria-label="Twoje karty. Przeciągnij kartę, aby zmienić jej miejsce w ręce."
     >
-      {order.map((card, index) => {
+      {visibleOrder.map((card, index) => {
         const { suit, rank, symbol, red } = cardFace(card);
         const selected = selectedCards.includes(card);
         const actionable = actionableCards.has(card);
         const held = drag?.card === card;
-        const offset = index - (order.length - 1) / 2;
+        const offset = index - (visibleOrder.length - 1) / 2;
         const rotate = Math.max(-5.5, Math.min(5.5, offset * 1.15));
         const lift = Math.min(6, Math.abs(offset) * 1.15);
         const slotStyle = {
