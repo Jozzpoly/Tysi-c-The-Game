@@ -9,6 +9,10 @@ import {
 } from 'react';
 import { rankOf, suitOf, type CardId } from '../core/index.js';
 import {
+  computeHandInsertionPreview,
+  type HandInsertionPreview,
+} from './tactileHandLayout.js';
+import {
   TACTILE_RELEASE_MS,
   TACTILE_RETURN_MS,
   advanceTactilePointer,
@@ -16,7 +20,6 @@ import {
   classifyTactileRelease,
   moveCardInOrder,
   reconcileHandOrder,
-  shouldReorderFromPointer,
   tactileTiltDegrees,
   type TactilePointerState,
 } from './tactileInteraction.js';
@@ -41,6 +44,11 @@ interface ReleaseGhost {
   tilt: number;
 }
 
+interface DragLayoutSnapshot {
+  sourceIndex: number;
+  centers: number[];
+}
+
 type FloatingCardProps =
   | { ghost: TactilePointerState; dragging: true }
   | { ghost: ReleaseGhost; dragging: false };
@@ -49,6 +57,7 @@ type SlotStyle = CSSProperties & {
   '--fan-rotate': string;
   '--fan-lift': string;
   '--hand-index': number;
+  '--hand-preview-shift-x': string;
 };
 
 type FloatingStyle = CSSProperties & {
@@ -122,16 +131,17 @@ export function TactileHand({
 }: TactileHandProps) {
   const [order, setOrder] = useState<CardId[]>(() => [...cards]);
   const [drag, setDrag] = useState<TactilePointerState | null>(null);
+  const [insertionPreview, setInsertionPreview] = useState<HandInsertionPreview | null>(null);
   const [releaseGhost, setReleaseGhost] = useState<ReleaseGhost | null>(null);
   const handRef = useRef<HTMLDivElement>(null);
   const previousHandNumber = useRef(handNumber);
   const beforeRects = useRef<Map<string, DOMRect> | null>(null);
+  const dragLayout = useRef<DragLayoutSnapshot | null>(null);
+  const latestPreview = useRef<HandInsertionPreview | null>(null);
   const suppressClick = useRef<CardId | null>(null);
   const releaseTimer = useRef<number | null>(null);
   const cardsKey = cards.join('|');
 
-  // Local order may remember preference, but it never gets to keep a card that
-  // the canonical SeatProjection no longer contains.
   const visibleOrder = previousHandNumber.current === handNumber
     ? reconcileHandOrder(order, cards)
     : [...cards];
@@ -154,6 +164,14 @@ export function TactileHand({
       if (card) result.set(card, slot.getBoundingClientRect());
     }
     return result;
+  }
+
+  function readSlotCenters(): number[] {
+    return [...(handRef.current?.querySelectorAll<HTMLElement>(':scope > .hand-slot') ?? [])]
+      .map((slot) => {
+        const rect = slot.getBoundingClientRect();
+        return rect.left + rect.width / 2;
+      });
   }
 
   useLayoutEffect(() => {
@@ -180,27 +198,17 @@ export function TactileHand({
     }
   }, [order]);
 
-  function reorderFromPointer(card: CardId, clientX: number, clientY: number) {
-    const slots = [...(handRef.current?.querySelectorAll<HTMLElement>(':scope > .hand-slot') ?? [])];
-    if (slots.length < 2) return;
-
-    let nearestIndex = -1;
-    let nearestDistance = Infinity;
-    for (const slot of slots) {
-      const rect = slot.getBoundingClientRect();
-      const dx = clientX - (rect.left + rect.width / 2);
-      const dy = clientY - (rect.top + rect.height / 2);
-      const distance = dx * dx + dy * dy * 1.35;
-      if (distance < nearestDistance) {
-        nearestDistance = distance;
-        nearestIndex = Number(slot.dataset.index ?? -1);
-      }
-    }
-
-    const sourceIndex = visibleOrder.indexOf(card);
-    if (nearestIndex < 0 || nearestIndex === sourceIndex) return;
-    beforeRects.current = readSlotRects();
-    setOrder((current) => moveCardInOrder(reconcileHandOrder(current, cards), card, nearestIndex));
+  function applyInsertionPreview(state: TactilePointerState) {
+    const layout = dragLayout.current;
+    if (!layout || state.phase !== 'held') return;
+    const heldCenterX = state.x - state.offsetX + state.width / 2;
+    const preview = computeHandInsertionPreview({
+      sourceIndex: layout.sourceIndex,
+      heldCenterX,
+      centers: layout.centers,
+    });
+    latestPreview.current = preview;
+    setInsertionPreview(preview);
   }
 
   function beginDrag(event: ReactPointerEvent<HTMLDivElement>, card: CardId) {
@@ -209,6 +217,13 @@ export function TactileHand({
     if (!button) return;
     const rect = button.getBoundingClientRect();
     const handRect = handRef.current?.getBoundingClientRect() ?? rect;
+    const sourceIndex = visibleOrder.indexOf(card);
+    dragLayout.current = {
+      sourceIndex,
+      centers: readSlotCenters(),
+    };
+    latestPreview.current = null;
+    setInsertionPreview(null);
     event.currentTarget.setPointerCapture(event.pointerId);
     if (button instanceof HTMLButtonElement && !button.disabled) button.focus({ preventScroll: true });
     setDrag(beginTactilePointer({
@@ -236,7 +251,7 @@ export function TactileHand({
 
     if (next.moved) {
       event.preventDefault();
-      if (shouldReorderFromPointer(next)) reorderFromPointer(next.card, next.x, next.y);
+      if (next.phase === 'held') applyInsertionPreview(next);
     }
 
     setDrag((current) => current?.pointerId === event.pointerId ? next : current);
@@ -263,6 +278,15 @@ export function TactileHand({
       ],
       { duration: TACTILE_RETURN_MS, easing: 'cubic-bezier(.18,.78,.25,1)' },
     );
+  }
+
+  function commitPreviewOrder(card: CardId) {
+    const preview = latestPreview.current;
+    if (!preview) return false;
+    if (preview.targetIndex === preview.sourceIndex) return false;
+    beforeRects.current = readSlotRects();
+    setOrder((current) => moveCardInOrder(reconcileHandOrder(current, cards), card, preview.targetIndex));
+    return true;
   }
 
   function finishDrag(event: ReactPointerEvent<HTMLDivElement>, cancelled = false) {
@@ -294,11 +318,19 @@ export function TactileHand({
       releaseTimer.current = window.setTimeout(() => setReleaseGhost(null), TACTILE_RELEASE_MS);
       onActivate(drag.card);
     } else if (outcome === 'return') {
-      // A free throw is not a failed action. Let the physical card settle back
-      // into the player's chosen hand order without error colour or rejection copy.
-      animateReturnToHand(drag);
+      const reordered = commitPreviewOrder(drag.card);
+      if (reordered) {
+        window.requestAnimationFrame(() => {
+          window.requestAnimationFrame(() => animateReturnToHand(drag));
+        });
+      } else {
+        animateReturnToHand(drag);
+      }
     }
 
+    dragLayout.current = null;
+    latestPreview.current = null;
+    setInsertionPreview(null);
     setDrag(null);
   }
 
@@ -320,6 +352,8 @@ export function TactileHand({
       className="hand tactile-hand"
       style={handStyle}
       data-gesture-phase={drag?.phase ?? 'idle'}
+      data-insertion-position={insertionPreview?.position.toFixed(3) ?? ''}
+      data-insertion-target={insertionPreview?.targetIndex ?? ''}
       aria-label="Twoje karty. Każdą możesz chwycić i przełożyć; stół podpowie, kiedy gest może stać się ruchem."
     >
       {visibleOrder.map((card, index) => {
@@ -331,10 +365,12 @@ export function TactileHand({
         const offset = index - (visibleOrder.length - 1) / 2;
         const rotate = Math.max(-5.5, Math.min(5.5, offset * 1.15));
         const lift = Math.min(6, Math.abs(offset) * 1.15);
+        const previewShiftX = insertionPreview?.shiftsPx[index] ?? 0;
         const slotStyle = {
           '--fan-rotate': `${rotate}deg`,
           '--fan-lift': `${lift}px`,
           '--hand-index': index,
+          '--hand-preview-shift-x': `${previewShiftX}px`,
         } as SlotStyle;
 
         return (
@@ -345,6 +381,7 @@ export function TactileHand({
             data-index={index}
             data-actionable={actionable ? 'true' : 'false'}
             data-throwable={throwable ? 'true' : 'false'}
+            data-preview-shift-x={previewShiftX.toFixed(2)}
             style={slotStyle}
             onPointerDownCapture={(event) => beginDrag(event, card)}
             onPointerMove={moveDrag}
