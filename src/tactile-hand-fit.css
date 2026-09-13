@@ -1,4 +1,10 @@
 /* Render-driven geometry correction for the tactile-hand experiment. */
+
+/* Perspective makes fixed drag feedback relative to the hand instead of the viewport. */
+.tactile-hand {
+  perspective: none;
+}
+
 @media (pointer: coarse), (max-width: 620px) {
   .hand-slot {
     width: 100%;
