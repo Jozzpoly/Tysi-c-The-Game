@@ -1,0 +1,102 @@
+/*
+ * Reversible Run 02 experience experiment.
+ * Desktop only: test whether a denser, larger table reads more like a game
+ * without changing mobile composition, product semantics or visual identity.
+ */
+@media (min-width: 900px) {
+  .app-shell {
+    width: min(1320px, 100%);
+    padding: 16px clamp(16px, 2vw, 28px) 18px;
+    gap: 11px;
+  }
+
+  .scoreboard {
+    gap: 10px;
+  }
+
+  .score {
+    padding: 11px 14px;
+  }
+
+  .score strong {
+    font-size: 1.45rem;
+  }
+
+  .table {
+    min-height: 430px;
+    padding: clamp(18px, 2vw, 26px);
+    gap: 11px;
+  }
+
+  .center {
+    min-height: 165px;
+    gap: 7px;
+  }
+
+  .status-strip {
+    font-size: .94rem;
+    gap: 8px 22px;
+  }
+
+  .trick {
+    min-height: 112px;
+    gap: 14px;
+  }
+
+  .trick .card {
+    width: 78px;
+    flex-basis: 78px;
+  }
+
+  .played small {
+    font-size: .82rem;
+  }
+
+  .opponent > strong {
+    font-size: 1.05rem;
+  }
+
+  .opponent > span {
+    font-size: .88rem;
+  }
+
+  .card-backs {
+    height: 40px;
+  }
+
+  .card-backs i {
+    width: 24px;
+    height: 36px;
+    margin-left: -10px;
+  }
+
+  .decision {
+    min-height: 88px;
+  }
+
+  .decision-card {
+    width: min(800px, 100%);
+    padding: 13px 18px;
+  }
+
+  .decision-card h2 {
+    font-size: 1.08rem;
+  }
+
+  .hand {
+    --hand-card-width: 86px;
+    --hand-gap: 10px;
+  }
+
+  .hand .card .rank {
+    font-size: 1.22rem;
+  }
+
+  .hand .card .suit {
+    font-size: 2.15rem;
+  }
+
+  .hand-heading {
+    font-size: .94rem;
+  }
+}
