@@ -1,0 +1,328 @@
+/*
+ * Run 02 — tactile hand recovery.
+ *
+ * The hand is an interaction surface, not a row of buttons. Cards can be held
+ * and rearranged regardless of play legality; legal cards may additionally be
+ * committed to the table by throwing them upward. This remains presentation-
+ * only state and never changes the canonical hand/order in game authority.
+ */
+
+/* Undo the boxed "control rail" feeling from the first visual pass. */
+.hand-area {
+  position: relative;
+  z-index: 3;
+  margin-top: -18px;
+  padding: 12px 6px 2px;
+  border: 0;
+  border-radius: 0;
+  background:
+    radial-gradient(ellipse at 50% 12%, #12452f66 0%, #071d1438 48%, transparent 76%);
+  box-shadow: none;
+  overflow: visible;
+}
+
+.hand-heading {
+  position: relative;
+  z-index: 2;
+  padding-inline: 7px;
+  opacity: .68;
+}
+
+.hand {
+  position: relative;
+  min-height: 132px;
+  padding: 18px 4px 12px;
+  overflow: visible;
+  perspective: 1000px;
+  align-items: end;
+}
+
+.hand-slot {
+  position: relative;
+  width: var(--hand-card-width);
+  aspect-ratio: .68;
+  display: grid;
+  place-items: stretch;
+  touch-action: none;
+  cursor: grab;
+  z-index: calc(10 + var(--hand-index));
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.hand-slot.is-held {
+  cursor: grabbing;
+  z-index: 80;
+}
+
+.hand-slot > .card {
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  min-height: 0;
+  aspect-ratio: auto;
+  margin: 0;
+  transform-origin: 50% 112%;
+  transform: translateY(var(--fan-lift)) rotate(var(--fan-rotate));
+  transition:
+    transform .15s cubic-bezier(.2,.8,.24,1),
+    box-shadow .15s ease,
+    filter .15s ease,
+    opacity .12s ease,
+    border-color .12s ease;
+  cursor: grab;
+}
+
+/* A non-playable card is still a physical card and may still be rearranged. */
+.hand-slot > .card:disabled {
+  pointer-events: none;
+  opacity: .84;
+  filter: saturate(.82) brightness(.97);
+  border-color: #ded5c3;
+  box-shadow:
+    0 6px 13px #00042,
+    0 1px 1px #00055,
+    inset 0 0 0 1px #fff8;
+}
+
+/* Legality is a secondary visual cue, not permission to touch the object. */
+.hand-slot > .card:not(:disabled) {
+  border-color: #efd073;
+  box-shadow:
+    0 10px 21px #00058,
+    0 0 0 1px #efd0738f,
+    0 0 20px #e8c66f1c,
+    inset 0 0 0 1px #fff;
+}
+
+.hand-slot:hover > .card,
+.hand-slot.is-held > .card,
+.hand-slot:focus-within > .card {
+  opacity: 1;
+  filter: none;
+  transform: translateY(-11px) rotate(0deg) scale(1.025);
+  box-shadow:
+    0 18px 28px #00068,
+    0 0 0 1px #fff5d0a6,
+    0 0 24px #e8c66f1f,
+    inset 0 0 0 1px #fff;
+}
+
+.hand-slot > .card.selected,
+.hand-slot:hover > .card.selected,
+.hand-slot:focus-within > .card.selected {
+  transform: translateY(-16px) rotate(0deg) scale(1.035);
+  outline: none;
+  border-color: #ffe49a;
+  box-shadow:
+    0 21px 31px #0006,
+    0 0 0 3px #f3cc61,
+    0 0 32px #f3cc6144,
+    inset 0 0 0 1px #fff;
+}
+
+.hand-slot.is-dragging > .card {
+  opacity: 0;
+}
+
+.tactile-card-float {
+  position: fixed;
+  z-index: 1200;
+  margin: 0;
+  pointer-events: none;
+  transform: rotate(var(--drag-tilt)) scale(1.055);
+  transform-origin: 50% 68%;
+  opacity: .98;
+  filter: none !important;
+  box-shadow:
+    0 26px 42px #0008,
+    0 6px 14px #00055,
+    0 0 0 1px #fff6c7aa,
+    inset 0 0 0 1px #fff;
+  transition:
+    transform .1s ease,
+    box-shadow .1s ease,
+    filter .1s ease;
+}
+
+.tactile-card-float.commit-ready {
+  transform: rotate(var(--drag-tilt)) translateY(-4px) scale(1.09);
+  border-color: #ffe69c;
+  box-shadow:
+    0 30px 48px #0008,
+    0 0 0 3px #f3cc61,
+    0 0 42px #e8c66f55,
+    inset 0 0 0 1px #fff;
+}
+
+.tactile-card-float.releasing {
+  animation: tactile-card-release .19s cubic-bezier(.15,.76,.3,1) forwards;
+}
+
+.tactile-red-marker,
+.tactile-dark-marker {
+  display: none;
+}
+
+.tactile-commit-zone {
+  position: fixed;
+  left: 50%;
+  z-index: 1190;
+  transform: translate(-50%, -50%) scale(.96);
+  min-width: 170px;
+  padding: 8px 14px;
+  border: 1px solid #ffffff1c;
+  border-radius: 999px;
+  background: #03150edc;
+  color: #c6d7cc;
+  box-shadow: 0 10px 30px #0005, inset 0 1px #ffffff0c;
+  text-align: center;
+  font-size: .78rem;
+  font-weight: 700;
+  letter-spacing: .02em;
+  pointer-events: none;
+  transition: transform .11s ease, color .11s ease, border-color .11s ease, background .11s ease;
+}
+
+.tactile-commit-zone.ready {
+  transform: translate(-50%, -50%) scale(1.04);
+  border-color: #f1d4778f;
+  background: #1e2814ed;
+  color: #ffe8a2;
+  box-shadow: 0 12px 34px #0006, 0 0 28px #e8c66f2b, inset 0 1px #fff4c024;
+}
+
+/* Preserve the lighter in-table instruction while the hand itself is active. */
+.app-shell:has(.hand > .hand-slot > .card:not(:disabled)) .decision-card.compact {
+  width: min(680px, 100%);
+  padding: 5px 10px 2px;
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.app-shell:has(.hand > .hand-slot > .card:not(:disabled)) .decision-card.compact h2 {
+  margin-bottom: 5px;
+  font-size: 1.04rem;
+  text-shadow: 0 2px 8px #00190f;
+}
+
+.app-shell:has(.hand > .hand-slot > .card:not(:disabled)) .decision-card.compact .decision-help {
+  max-width: 580px;
+  margin-top: 6px;
+  color: #b8cbbf;
+}
+
+.app-shell:has(.hand > .hand-slot > .card:not(:disabled)) .decision:has(.decision-card.compact) {
+  min-height: 66px;
+}
+
+@keyframes tactile-card-release {
+  from {
+    opacity: .98;
+    transform: rotate(var(--drag-tilt)) scale(1.08);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-72px) rotate(var(--drag-tilt)) scale(.87);
+  }
+}
+
+@media (pointer: coarse), (max-width: 620px) {
+  .hand-area {
+    margin-top: -12px;
+    padding: 9px 0 1px;
+    background: radial-gradient(ellipse at 50% 8%, #12452f55 0%, transparent 72%);
+  }
+
+  .hand {
+    --hand-card-width: 52px;
+    --hand-gap: 3px;
+    min-height: 100px;
+    padding: 13px 0 8px;
+  }
+
+  .hand-slot > .card {
+    min-height: 72px;
+  }
+
+  .hand-slot:hover > .card,
+  .hand-slot.is-held > .card,
+  .hand-slot:focus-within > .card {
+    transform: translateY(-7px) rotate(0deg) scale(1.02);
+  }
+
+  .hand-slot > .card.selected,
+  .hand-slot:hover > .card.selected,
+  .hand-slot:focus-within > .card.selected {
+    transform: translateY(-10px) rotate(0deg) scale(1.025);
+  }
+
+  /* Ten exchange cards remain a defended 5x2 finger-sized layout. */
+  .hand:has(> .hand-slot:nth-child(10)) {
+    grid-template-columns: repeat(5, var(--hand-card-width));
+    column-gap: 8px;
+    row-gap: 12px;
+    justify-content: center;
+    min-height: 176px;
+    padding-top: 6px;
+  }
+
+  .hand:has(> .hand-slot:nth-child(10)) .hand-slot > .card {
+    transform: none;
+  }
+
+  .hand:has(> .hand-slot:nth-child(10)) .hand-slot:hover > .card,
+  .hand:has(> .hand-slot:nth-child(10)) .hand-slot.is-held > .card,
+  .hand:has(> .hand-slot:nth-child(10)) .hand-slot:focus-within > .card {
+    transform: translateY(-5px) scale(1.02);
+  }
+
+  .hand:has(> .hand-slot:nth-child(10)) .hand-slot > .card.selected {
+    transform: translateY(-8px) scale(1.025);
+  }
+
+  .app-shell:has(.hand > .hand-slot:nth-child(10)) .table {
+    min-height: 0;
+  }
+
+  .app-shell:has(.hand > .hand-slot:nth-child(10)) .center {
+    min-height: 92px;
+  }
+
+  .app-shell:has(.hand > .hand-slot:nth-child(10)) .trick {
+    min-height: 44px;
+  }
+
+  .app-shell:has(.hand > .hand-slot > .card:not(:disabled)) .decision:has(.decision-card.compact) {
+    min-height: 56px;
+  }
+
+  .app-shell:has(.hand > .hand-slot > .card:not(:disabled)) .decision-card.compact {
+    padding: 2px 5px 0;
+  }
+
+  .app-shell:has(.hand > .hand-slot > .card:not(:disabled)) .decision-card.compact .decision-help {
+    margin-top: 4px;
+    padding-inline: 7px;
+    font-size: .7rem;
+  }
+
+  .tactile-commit-zone {
+    min-width: 154px;
+    padding: 7px 11px;
+    font-size: .72rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hand-slot,
+  .hand-slot > .card,
+  .tactile-card-float,
+  .tactile-commit-zone {
+    animation: none !important;
+    transition-duration: .001ms !important;
+  }
+}
