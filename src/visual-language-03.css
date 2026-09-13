@@ -1,0 +1,171 @@
+/*
+ * Run 02 — table feedback slice 02.
+ * Spatialize trick play around the human seat and enrich the existing DOM card
+ * face without introducing final artwork or any game-state authority.
+ */
+
+/* Card face: keep rank/suit instantly readable, but make the object feel like a card. */
+.card {
+  position: relative;
+  overflow: hidden;
+}
+
+.card::before {
+  content: '';
+  position: absolute;
+  inset: 3px;
+  border: 1px solid #231f1712;
+  border-radius: 7px;
+  pointer-events: none;
+}
+
+.card::after {
+  content: attr(data-rank) '\A' attr(data-suit);
+  white-space: pre;
+  position: absolute;
+  right: 5px;
+  bottom: 5px;
+  transform: rotate(180deg);
+  color: currentColor;
+  font-size: .67rem;
+  font-weight: 800;
+  line-height: .82;
+  text-align: center;
+  opacity: .9;
+  pointer-events: none;
+}
+
+.card .rank {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  justify-items: center;
+  line-height: .84;
+}
+
+.card .rank::after {
+  content: attr(data-suit);
+  margin-top: 3px;
+  font-size: .72em;
+  line-height: 1;
+  font-weight: 700;
+}
+
+.card .suit {
+  position: relative;
+  z-index: 1;
+  filter: drop-shadow(0 1px 0 #fff8);
+}
+
+/*
+ * The trick is a spatial table event, not a horizontal list. Relative classes
+ * are derived from the human seat: self at the near edge, opponents left/right.
+ */
+.trick:not(:has(> .muted)) {
+  position: relative;
+  width: min(390px, 82vw);
+  min-height: 154px;
+  display: block;
+}
+
+.trick .played {
+  position: absolute;
+  width: 78px;
+  margin: 0;
+  gap: 3px;
+  transition: filter .15s ease;
+}
+
+.trick .played small {
+  max-width: 82px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: #03150ea6;
+  box-shadow: inset 0 1px #ffffff0c;
+}
+
+.trick .played-self {
+  left: 50%;
+  bottom: 0;
+  transform: translateX(-50%);
+  animation: trick-from-self .24s cubic-bezier(.18, .82, .24, 1) both;
+}
+
+.trick .played-left {
+  left: 8%;
+  top: 3px;
+  animation: trick-from-left .24s cubic-bezier(.18, .82, .24, 1) both;
+}
+
+.trick .played-right {
+  right: 8%;
+  top: 3px;
+  animation: trick-from-right .24s cubic-bezier(.18, .82, .24, 1) both;
+}
+
+.trick.completed .played {
+  filter: saturate(.9) brightness(.96);
+}
+
+.trick.completed .played-self,
+.trick.completed .played-left,
+.trick.completed .played-right {
+  animation-duration: .16s;
+}
+
+@keyframes trick-from-self {
+  from { opacity: 0; transform: translateX(-50%) translateY(22px) scale(.9); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+}
+
+@keyframes trick-from-left {
+  from { opacity: 0; transform: translate(-22px, -8px) scale(.9) rotate(-3deg); }
+  to { opacity: 1; transform: translate(0, 0) scale(1) rotate(0); }
+}
+
+@keyframes trick-from-right {
+  from { opacity: 0; transform: translate(22px, -8px) scale(.9) rotate(3deg); }
+  to { opacity: 1; transform: translate(0, 0) scale(1) rotate(0); }
+}
+
+@media (max-width: 620px) {
+  .card::after {
+    right: 4px;
+    bottom: 4px;
+    font-size: .56rem;
+  }
+
+  .card .rank::after {
+    margin-top: 2px;
+    font-size: .64em;
+  }
+
+  .trick:not(:has(> .muted)) {
+    width: min(290px, 88vw);
+    min-height: 126px;
+  }
+
+  .trick .played {
+    width: 58px;
+  }
+
+  .trick .played small {
+    max-width: 64px;
+    padding: 1px 4px;
+    font-size: .66rem;
+  }
+
+  .trick .played-left { left: 7%; }
+  .trick .played-right { right: 7%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .trick .played-self,
+  .trick .played-left,
+  .trick .played-right {
+    animation: none !important;
+  }
+}
