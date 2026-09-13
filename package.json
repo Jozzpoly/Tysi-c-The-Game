@@ -14,7 +14,7 @@
     "deploy": "npm run build:web && wrangler deploy",
     "test:core": "npm run build:core && node scripts/core-smoke.mjs && node scripts/four-nines-smoke.mjs && node scripts/legacy-snapshot-smoke.mjs && node scripts/trick-policy-smoke.mjs && node scripts/scoring-summary-smoke.mjs && node scripts/projection-smoke.mjs && node scripts/ui-scenario-seeds.mjs && node scripts/product-bot-smoke.mjs",
     "test:worker": "npm run typegen && vitest run --config vitest.config.ts --max-workers=1 --no-isolate",
-    "test:browser": "node scripts/browser-smoke.mjs && node scripts/remote-browser-smoke.mjs && node scripts/remote-playback-smoke.mjs && node scripts/full-remote-solo-rehearsal.mjs && node scripts/navigation-browser-smoke.mjs && node scripts/four-nines-browser-smoke.mjs && node scripts/scoring-browser-smoke.mjs && node scripts/first-play-browser-smoke.mjs && node scripts/mobile-touch-browser-smoke.mjs",
+    "test:browser": "node scripts/browser-smoke.mjs && node scripts/remote-browser-smoke.mjs && node scripts/remote-playback-smoke.mjs && node scripts/full-remote-solo-rehearsal.mjs && node scripts/navigation-browser-smoke.mjs && node scripts/four-nines-browser-smoke.mjs && node scripts/scoring-browser-smoke.mjs && node scripts/first-play-browser-smoke.mjs && node scripts/mobile-touch-browser-smoke.mjs && node scripts/tactile-hand-browser-smoke.mjs",
     "test:deploy-harness": "node --check scripts/public-deploy-smoke.mjs && node --check scripts/temporary-deploy.mjs && node scripts/temporary-deploy-output-smoke.mjs",
     "check": "npm run test:core && npm run test:worker && npm run test:browser && npm run test:deploy-harness && npm run build:web && npm run deploy:dry-run"
   },
