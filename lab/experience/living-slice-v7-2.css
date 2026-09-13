@@ -1,0 +1,69 @@
+/* V7.2 corrects a perceptual truth failure found after V7.1 PASS:
+   pending must not already look like a canonically accepted third trick card.
+
+   The committed card stays near the shared action but remains visibly suspended
+   above the final trick plane until authority accepts it. */
+
+body[data-fixture-version="7.2"] .hand-card.held.pending {
+  --v72-dock-y: 34px;
+  opacity: .96;
+  transform:
+    translate3d(var(--hold-x), calc(var(--hold-y) + var(--v72-dock-y)), 0)
+    rotate(0deg)
+    scale(1.035);
+  filter: drop-shadow(0 20px 24px rgba(0,0,0,.46));
+}
+
+body[data-fixture-version="7.2"] .hand-card.held.pending .card-face {
+  transform: none;
+  box-shadow:
+    0 16px 30px rgba(0,0,0,.34),
+    inset 0 0 0 1px rgba(43,78,61,.24),
+    inset 0 -8px 18px rgba(34,55,46,.055);
+}
+
+/* A contact shadow on the shared plane makes height/depth legible without an
+   abstract authority ring. It belongs to the card, not to a HUD overlay. */
+body[data-fixture-version="7.2"] .hand-card.held.pending::before {
+  content:"";
+  position:absolute;
+  z-index:-1;
+  left:12%; right:12%; bottom:-22px;
+  height:17px;
+  border-radius:50%;
+  background:radial-gradient(ellipse at center, rgba(0,0,0,.38), rgba(0,0,0,.12) 55%, transparent 76%);
+  filter:blur(5px);
+  opacity:.62;
+}
+
+/* Keep the two already-authoritative cards visually stable; pending must not
+   dim or rewrite canonical public information. */
+body[data-fixture-version="7.2"] .trick-card.seat1,
+body[data-fixture-version="7.2"] .trick-card.seat2 {
+  filter:none;
+}
+
+/* Acceptance is a settle onto the shared plane, not a second flashy event. */
+body[data-fixture-version="7.2"][data-material-phase="accepted"] .trick-card.self {
+  animation:v72AuthoritySeat .20s cubic-bezier(.16,.76,.22,1) both;
+}
+@keyframes v72AuthoritySeat {
+  from { opacity:.72; filter:drop-shadow(0 15px 20px rgba(0,0,0,.34)); transform:translate(-50%,-13%) rotate(1deg) scale(1.035); }
+  to { opacity:1; filter:drop-shadow(0 4px 9px rgba(0,0,0,.12)); transform:translate(-50%,-20%) rotate(1deg) scale(1); }
+}
+
+@media (max-width:560px) {
+  body[data-fixture-version="7.2"] .hand-card.held.pending {
+    --v72-dock-y: 27px;
+    transform:
+      translate3d(var(--hold-x), calc(var(--hold-y) + var(--v72-dock-y)), 0)
+      rotate(0deg)
+      scale(1.035);
+  }
+}
+
+@media (prefers-reduced-motion:reduce) {
+  body[data-fixture-version="7.2"][data-material-phase="accepted"] .trick-card.self {
+    animation-duration:.001ms !important;
+  }
+}
