@@ -1,0 +1,25 @@
+/* Render-driven geometry correction for the tactile-hand experiment. */
+@media (pointer: coarse), (max-width: 620px) {
+  .hand-slot {
+    width: 100%;
+    max-width: var(--hand-card-width);
+    justify-self: center;
+  }
+
+  /* Keep the phone hand physical through motion, not edge rotation that creates overflow. */
+  .hand-slot > .card {
+    transform: translateY(var(--fan-lift));
+  }
+
+  .hand-slot:hover > .card,
+  .hand-slot.is-held > .card,
+  .hand-slot:focus-within > .card {
+    transform: translateY(-7px) scale(1.02);
+  }
+
+  .hand-slot > .card.selected,
+  .hand-slot:hover > .card.selected,
+  .hand-slot:focus-within > .card.selected {
+    transform: translateY(-10px) scale(1.025);
+  }
+}
