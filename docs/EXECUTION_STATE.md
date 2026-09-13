@@ -168,7 +168,9 @@ Mandatory Foundation CI covers:
 
 Public Cloudflare edge feasibility is also proven through temporary preview workflows with desktop↔mobile room sync and reconnect smoke. Temporary previews are deliberately ephemeral; they are not a durable production surface.
 
-## Experience track — first Owner-derived slice PASS
+The full remote rehearsal now distinguishes requested viewport width (`window.innerWidth`) from scrollbar-reduced content width and tests horizontal overflow against the content box. Its former global `120 s` whole-match cutoff was removed after the same head produced a valid **117.1 s / 549-decision / 53-hand** desktop PASS and a separate valid match crossed the old bound. Failure remains bounded by per-stage watchdogs, revision/progress checks, layout assertions, reconnect checks and the 1400-decision logical ceiling. This fixes harness flakiness without weakening game/progress assertions.
+
+## Experience track — defended slices, Owner judgement still open
 
 ### Mobile touch hardening
 
@@ -199,7 +201,34 @@ Squash merged as:
 - post-merge Foundation run: **`34730732345` / #201**;
 - result: **PASS**.
 
-A parallel PR run #199 failed once because the long rehearsal observed a desktop `innerWidth` of 1425 instead of an exact expected 1440. The identical head passed the complete rehearsal in #200 and post-merge #201. Treat exact viewport equality as possible harness/flakiness debt if it recurs; there is no current product-regression finding from that event.
+The former `1425 vs 1440` failure is no longer open debt: repeated evidence traced it to scrollbar gutter semantics, and the viewport/overflow assertions were corrected in PR #19.
+
+### Visual table language + spatial trick feedback
+
+Two bounded presentation slices now form the visual candidate baseline without moving game authority.
+
+**PR #18 — table-language baseline**
+
+- reduced dashboard/form-panel dominance;
+- strengthened table/hand hierarchy and playable/selected/disabled card states;
+- brought the hand composition closer to the table;
+- preserved core, projection and authority boundaries.
+
+Defending Foundation **#396: PASS**. Squash merged to `main` as **`ad92d9a0ae20093e22283a94a5df2d4b9fc63fb2`**.
+
+**PR #19 — spatial trick + card-face feedback**
+
+- played cards now map to stable human-relative positions: self / left opponent / right opponent;
+- card arrival motion originates from the corresponding table side, with reduced-motion fallback;
+- existing card faces gained secondary corner information and a subtle inner frame without committing to final artwork;
+- viewport/overflow rehearsal semantics were corrected;
+- the redundant whole-match wall-clock cutoff was removed after direct flakiness evidence.
+
+Final PR head **`4a472c8bbca4e29c42bdcadccacd96f61eff951a`**: Foundation **#400 PASS**.
+Squash merged to current baseline `main` **`2590002e07e96eae3a9aa3b8ba2a87f939009d42`**.
+Post-merge Foundation **#401 PASS**.
+
+Desktop 1440×1000 and mobile 390×844 screenshots from the exact post-merge run show no mechanical layout regression or horizontal overflow. This is **mechanically defended presentation evidence, not Owner approval**. Art direction, visual hierarchy, motion feel and card/table taste remain Owner-unproven until the next preview session.
 
 ## What remains unproven
 
@@ -212,7 +241,7 @@ A parallel PR run #199 failed once because the long rehearsal observed a desktop
 
 ### Experience truth
 
-- whether current visual hierarchy/composition is good enough rather than merely functional;
+- whether the new table/spatial-trick visual hierarchy is actually good to the Owner rather than merely mechanically sound;
 - whether transition timing actually feels right to the Owner;
 - whether causal explanations are useful in real use rather than merely present;
 - professional card/table art direction;
@@ -250,16 +279,18 @@ Professional presentation may become substantially richer without weakening thes
 
 ## Immediate direction
 
-Run 02 is now explicitly dual-track.
+Run 02 is explicitly dual-track, but the immediate experience move is now constrained by evidence rather than more speculative polish.
 
 ### Experience loop
 
-1. Publish the latest defended `main` to a fresh temporary Owner Preview when the next test is needed.
+1. **Publish current defended `main` (`2590002e…`) to a fresh temporary Owner Preview.** Do not add another broad visual layer first.
 2. Let the Owner use desktop and real phone naturally and judge **visuals, interaction, feedback, hierarchy, motion/pacing and overall feel**.
 3. Do not ask the Owner to certify Tysiąc rules or bot strategy.
 4. Translate high-signal reactions into small reversible experience slices with mechanical tests where appropriate.
-5. Begin raising presentation quality continuously; do not wait for complete rule certainty before improving the experience foundation.
+5. Keep the current visual baseline provisional; no final-art commitment follows merely from CI/screenshots.
 6. Avoid expensive/final art commitments where open game semantics could make them premature.
+
+The repository's proven preview route is `Temporary Foundation Preview`. It requires an explicit per-run acceptance of Cloudflare Terms/Privacy plus confirmation of a public unclaimed preview; do not bypass that consent boundary. The current chat GitHub connector cannot dispatch `workflow_dispatch`, so starting that preview requires the minimal manual Owner action in GitHub Actions. Once started, monitoring, verification and extraction of the resulting URL can return to the agent.
 
 ### Game-truth loop
 
@@ -268,4 +299,4 @@ Run 02 is now explicitly dual-track.
 3. Bring knowledgeable Tysiąc players/domain feedback into the questions that genuinely require human game expertise.
 4. Use real-human duo/trio sessions when they can evaluate gameplay rather than infrastructure.
 
-The next major evidence should therefore come from **both** loops, not from pretending one Owner play session can validate the entire game.
+The next major experience evidence should therefore come from the **Owner Preview**, while game-truth work can continue independently rather than pretending that Owner play validates the rules.
