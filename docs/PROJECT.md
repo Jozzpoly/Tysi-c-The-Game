@@ -1,6 +1,6 @@
 # Project model — Tysiąc The Game
 
-Date: 2026-09-12
+Date: 2026-09-13
 
 For current implementation/evidence truth, read `docs/EXECUTION_STATE.md` first.
 
@@ -39,10 +39,12 @@ Therefore:
 - current target: `PLAYOK_3P_800_CANDIDATE`;
 - model a variant field only when evidence or a concrete unresolved scenario justifies it;
 - named profiles are supported bundles, not arbitrary combinations guaranteed to work;
-- friend/domain-expert validation can later define another profile without mutating the PlayOK-targeted one;
+- knowledgeable-player/domain validation may later define another profile without mutating the PlayOK-targeted one;
 - 2P and 4P remain separate future modes because their structures materially differ.
 
-## Architecture — current defended baseline
+The Owner is not a rules oracle. Owner acceptance must never silently promote a candidate rule into reference truth.
+
+## Architecture — defended baseline
 
 ### Pure domain core
 
@@ -61,7 +63,7 @@ Key contracts:
 - canonical legality evaluation + rejection reason;
 - state transition;
 - seat observation/projection;
-- transient domain facts/events where useful to presentation/adapters/tests.
+- transient typed domain facts/events useful to presentation/adapters/tests.
 
 Do not turn this into event sourcing without a demonstrated need.
 
@@ -79,11 +81,11 @@ Canonical human client boundary:
 
 `SeatProjection + scoped GameEvents`
 
-`GameTable` must remain independent of local vs remote authority.
+`GameTable` remains independent of local vs remote authority.
 
-Desktop and mobile share product semantics but may compose the table differently. Long-term both are equal-quality targets, not desktop-first plus a reduced mobile port.
+Desktop and mobile share product semantics but may compose the table differently. Both are equal-quality targets, not desktop-first plus a reduced mobile port.
 
-The foundation must allow later professional:
+The foundation must support professional:
 
 - card/table art;
 - animation and motion feedback;
@@ -92,24 +94,19 @@ The foundation must allow later professional:
 - accessible interaction;
 - responsive compositions that preserve clear hit targets and information hierarchy.
 
+Experience work is allowed to mature **in parallel** with unresolved gameplay/rule research. It must not duplicate game authority, encode uncertain rules as a second state machine or force irreversible art/layout decisions before evidence warrants them.
+
 ### Bots
 
 Bots operate from the same seat observation + legal-command boundary as humans.
 
-Current heuristic is an adequate product baseline, not a final AI opponent. Improve it primarily when real human gameplay exposes concrete weaknesses.
+The current heuristic is an adequate automation/product baseline, not evidence of strategic quality. Improve it from measurable failures, domain reasoning and knowledgeable-player feedback. Owner enjoyment or frustration may identify an experience symptom, but cannot certify whether a move is strategically good Tysiąc.
 
 ### Online authority
 
 Current-best: Cloudflare Worker + one SQLite-backed Durable Object `MatchRoom` per table.
 
-`MatchRoom` owns:
-
-- authoritative hidden match state;
-- accepted command revision;
-- seat capability identity;
-- persistence needed for reconnect;
-- server-owned bot turns;
-- per-seat projection/event broadcasts.
+`MatchRoom` owns authoritative hidden match state, accepted command revision, seat capability identity, reconnect persistence, server-owned bot turns and per-seat projection/event broadcasts.
 
 Use hibernating WebSockets and snapshot/revision reconnect. Socket death is normal lifecycle, not exceptional corruption.
 
@@ -117,39 +114,43 @@ Room code is shareable identity; seat reconnect token is private authority. No m
 
 D1/global persistence is not part of the first product. Add global identity/history/ranking only if product demand justifies it.
 
-## Evidence model
+## Evidence model — two parallel tracks
 
-Different evidence answers different questions.
+The project no longer uses one linear "automation -> Owner gameplay -> polish" validation chain.
 
-### Rules
+### Track A — game truth
 
-- source-documented behavior;
-- observed reference behavior where useful;
-- explicit project pin where legitimate variants disagree;
-- executable profile scenarios.
+Answers:
 
-### Core correctness
+- profile rule identity and edge cases;
+- legality/scoring correctness;
+- authority/privacy/lifecycle correctness;
+- strategic bot credibility;
+- authentic gameplay quality for people who know Tysiąc.
 
-- scenario tests;
-- invariants after transitions;
-- deterministic seeded hands/matches;
-- broad simulation/property testing where it adds signal.
+Evidence hierarchy includes source documentation, reference behavior, explicit reversible pins, executable scenarios/invariants/simulations and knowledgeable-player sessions.
 
-### Platform/runtime
+Owner feedback is **not** evidence that a rule, strategy or Tysiąc convention is correct.
 
-Foundation now has all of:
+### Track B — experience truth
 
-- local workerd/Vitest tests;
-- desktop/mobile Chrome E2E;
-- local remote-room/reconnect E2E;
-- actual public Cloudflare Worker + Durable Object + assets deployment proof;
-- public desktop↔mobile browser/WebSocket/reconnect proof.
+Answers:
 
-This proves feasibility and current boundary correctness, not long-duration production operations.
+- information hierarchy and visual composition;
+- touch/mouse interaction quality;
+- causal feedback and comprehensibility;
+- perceived pacing/motion;
+- responsive desktop/mobile ergonomics;
+- onboarding;
+- visual/professional quality.
 
-### Product
+The Owner is the primary judgement source here. Natural reactions, recordings and screenshots are first-class evidence.
 
-Owner and target-player gameplay determine whether the table is understandable, pleasant and worth using. Product judgement does not replace rule evidence, and automated tests do not replace product judgement.
+Automation supports this track only where the question is measurable: hit targets, overflow, interaction availability, transition observability, responsive bounds, reconnect state and similar mechanics. Green browser tests do not prove taste or feel.
+
+### Integration rule
+
+Neither track blocks the other by default. A presentation slice can proceed while a rule pin remains unresolved if the slice stays downstream of canonical projections/events and remains reversible. A gameplay claim cannot be upgraded merely because the interface feels good.
 
 ## Development sequence
 
@@ -158,7 +159,7 @@ Owner and target-player gameplay determine whether the table is understandable, 
 Delivered and proved:
 
 - deterministic 3P rules/game kernel;
-- executable candidate profile scenarios and invariants;
+- executable candidate-profile scenarios and invariants;
 - playable heuristic bot baseline;
 - projection/privacy/event boundary;
 - one responsive desktop/mobile `GameTable`;
@@ -169,33 +170,30 @@ Delivered and proved:
 - local and public Chrome multiplayer/reconnect evidence;
 - guarded permanent/temporary deployment workflows.
 
-### Run 02 — gameplay / rules / product hardening
+### Run 02 — dual-track game + experience hardening
 
-Primary question: **is the game correct enough, understandable enough and enjoyable enough for serious play?**
+Run 02 no longer asks the Owner to validate Tysiąc gameplay they cannot reliably judge.
 
-Work in this run should prioritize:
+**Game-truth work** prioritizes high-risk PlayOK-sensitive behaviors, executable/reference evidence, bot credibility evidence and eventually knowledgeable real-human sessions.
 
-1. critical audit of unresolved PlayOK-sensitive behaviors;
-2. implementation/tests for rule paths the target profile genuinely requires (especially bombs/redeals if confirmed);
-3. complete solo-match Owner playability on both desktop and mobile;
-4. better causal feedback/history/explanation where the player cannot understand what happened;
-5. bot weaknesses found by real play rather than self-play metric chasing;
-6. real-human duo/trio sessions once the rule/game loop is coherent;
-7. real-device background/suspension/network transition testing;
-8. permanent Cloudflare deployment only when we want a durable friend/Owner test surface.
+**Experience-truth work** continuously iterates interaction, feedback, responsive composition and visual language with the Owner, on both desktop and real mobile devices.
 
-Do not turn Run 02 into a visual-redesign project. Visual polish can improve obvious interaction blockers, but full art/animation polish should follow gameplay truth.
+The tracks converge through the same game core and projection boundary. A real-human duo/trio session is especially valuable once infrastructure is quiet enough that both authentic gameplay and presentation can be judged.
 
-### Later — friend build / presentation quality
+A durable public test surface should be introduced when repeated Owner/friend sessions justify it; temporary previews remain useful for bounded checks.
 
-Once gameplay/rules withstand real use:
+### Later maturity
 
-- stronger feedback/animation/audio/haptics;
-- professional card/table visuals;
-- accessibility pass;
-- permanent deployment and operational soak;
+As evidence accumulates, deepen rather than abruptly begin:
+
+- professional card/table visual systems;
+- richer animation/audio/haptics;
+- accessibility;
+- operational soak and durable deployment;
 - additional validated rule profiles;
-- stronger bots if they materially improve play.
+- stronger bots where they materially improve knowledgeable-player sessions.
+
+"Later" does not mean experience work is deferred. It means final/high-cost polish should follow evidence rather than lock the project too early.
 
 ## Long-term possibilities, not commitments
 
@@ -209,13 +207,14 @@ Once gameplay/rules withstand real use:
 ## Primary project risks
 
 1. Treating one implementation's rules as canonical Polish Tysiąc.
-2. Silently turning ambiguous edge cases into core invariants.
-3. Building a rule framework instead of a good table.
-4. Bots being legal but strategically unpleasant.
-5. Hidden-state leakage through projections/feedback.
-6. Mobile UX becoming a scaled desktop afterthought.
-7. Overengineering persistence/replay/global state before a real need.
-8. Confusing green automation with actual gameplay quality.
-9. Polishing visuals before rule/interaction truth is stable.
+2. Using Owner approval as gameplay/rule validation when the Owner lacks domain expertise.
+3. Silently turning ambiguous edge cases into core invariants.
+4. Building a rule framework instead of a good table.
+5. Bots being legal but strategically unpleasant or inauthentic.
+6. Hidden-state leakage through projections/feedback.
+7. Mobile UX becoming a scaled desktop afterthought.
+8. Confusing green automation with actual gameplay or experience quality.
+9. Deferring experience work so long that technical structure hardens around poor interaction assumptions.
+10. Conversely, locking expensive/final visual work to rule semantics that are still genuinely uncertain.
 
-When uncertain, prefer the smallest reversible action that produces concrete rule, runtime or gameplay evidence.
+When uncertain, prefer the smallest reversible action that produces concrete game-truth or experience-truth evidence.
