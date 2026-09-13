@@ -1,0 +1,27 @@
+name: Experience Research
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  research:
+    if: github.event_name == 'workflow_dispatch' || github.head_ref == 'run03/experience-foundation-reset'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm run research:experience:ci
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: experience-research
+          path: artifacts/experience/*.png
+          if-no-files-found: ignore
