@@ -18,7 +18,7 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci --no-audit --no-fund
-      - run: npm run research:experience:ci
+      - run: npm run research:experience:check && node scripts/experience-living-slice-v3-browser-smoke.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
