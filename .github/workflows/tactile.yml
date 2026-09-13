@@ -15,6 +15,10 @@ on:
       - 'package-lock.json'
       - '.github/workflows/tactile.yml'
 
+concurrency:
+  group: tactile-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
