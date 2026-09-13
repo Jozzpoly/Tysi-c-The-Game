@@ -5,8 +5,10 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <title>Tysiąc Experience Research — Living Slice v2</title>
   <link rel="stylesheet" href="./living-slice-v2.css" />
+  <link rel="stylesheet" href="./living-slice-v2-geometry-b.css" />
 </head>
-<body data-slice-state="ready">
+<body data-slice-state="ready" data-geometry="a">
+  <script>document.body.dataset.geometry = new URLSearchParams(location.search).get('geometry') || 'a';</script>
   <main class="slice" aria-label="Internal Living Slice research fixture v2">
     <header class="context">
       <section class="seat left" data-anchor="seat:1">
