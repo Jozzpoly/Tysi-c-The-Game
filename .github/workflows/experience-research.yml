@@ -18,7 +18,7 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci --no-audit --no-fund
-      - run: npm run research:experience:check && node scripts/experience-hand-body-bench-check.mjs && node scripts/experience-living-slice-v3-browser-smoke.mjs && node scripts/experience-hand-body-v4-browser-smoke.mjs && node scripts/experience-hand-body-v4-1-browser-smoke.mjs
+      - run: npm run research:experience:check && node scripts/experience-hand-body-bench-check.mjs && node scripts/experience-living-slice-v3-browser-smoke.mjs && node scripts/experience-hand-body-v4-browser-smoke.mjs && node scripts/experience-hand-body-v4-1-browser-smoke.mjs && node scripts/experience-living-slice-v5-browser-smoke.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
