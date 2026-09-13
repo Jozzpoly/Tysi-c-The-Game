@@ -104,7 +104,93 @@ A truthful rejection sequence can be:
 
 `commit -> pending relation -> refusal signal -> coherent return/settle -> local explanation if needed`
 
-## 8. Causal hold
+## 8. Authoritative state versus presented state
+
+The current remote runtime already has a good truth seam: server updates arrive as viewer-safe `SeatProjection + GameEvent[]`.
+
+However, the current playback applies the new projection immediately and then waits a fixed presentation delay. That preserves server truth but can still create **perceptual teleportation**:
+
+- a played card may already be gone from the hand before its visual travel can be understood;
+- a completed trick may already be represented as post-resolution state before collection has been perceived;
+- score/initiative may already have changed while presentation is merely holding input.
+
+The mature experience layer therefore needs three concepts, not two competing authorities.
+
+### Authoritative projection
+
+The latest canonical viewer-safe truth received from core/server.
+
+This is never rewritten by animation.
+
+### Presented stable projection
+
+The stable situation the player has currently perceptually reached.
+
+Usually this converges quickly to authoritative projection, but it may temporarily remain at `before` while a required causal transition is shown.
+
+### Ephemeral transition layer
+
+Transient presentation objects/relationships that carry identity and causality between stable situations.
+
+Examples:
+
+- a card clone/representation travelling from hand source to trick destination;
+- trick cards collecting toward winner ownership;
+- score/value consequence travelling from trick result toward a persistent score/captured region.
+
+The transition layer is **not game state** and must never become gameplay authority.
+
+## 9. Before + events + after as experience input
+
+A useful presentation seam is conceptually:
+
+`presented before + visible GameEvent[] + authoritative after -> Experience Transition`
+
+The transition system may decide:
+
+- which truth events compose into one perceptual scene;
+- which stable elements remain at `before` temporarily;
+- which transient overlays carry object identity;
+- when the stable presentation can commit to `after`;
+- which cosmetic tail may continue after action unlock.
+
+It must not decide:
+
+- which card is legal;
+- who won the trick;
+- how many points exist;
+- whether authority accepted the action;
+- hidden/private state.
+
+Those remain canonical inputs.
+
+## 10. Semantic anchors, not pixel choreography
+
+Transition planning should refer to semantic locations such as:
+
+- local hand / specific visible card;
+- trick seat source;
+- shared trick area;
+- captured-value region for a seat;
+- score region;
+- initiative/active actor locus;
+
+Components/layouts can provide geometry for those anchors on mobile and desktop.
+
+This allows shared causal meaning without requiring identical pixel paths across platforms.
+
+## 11. Stable commit point
+
+The presentation should switch its stable base from `before` to `after` at the earliest point where:
+
+- canonical truth is already known;
+- object identity/cause will not be lost;
+- the user can understand the resulting stable situation;
+- subsequent action will not collide semantically with transitional presentation.
+
+Do not mechanically wait for every animation to finish.
+
+## 12. Causal hold
 
 Some event information must remain perceivable long enough for cause/consequence to be understood.
 
@@ -114,7 +200,7 @@ Define:
 
 This is different from total animation length.
 
-## 9. Cosmetic tail
+## 13. Cosmetic tail
 
 Visual/audio settle may continue after meaning is already clear.
 
@@ -128,7 +214,7 @@ A trick can begin settling into captured territory while the next player's legal
 
 Do not hold input hostage to every finishing easing curve.
 
-## 10. Action unlock
+## 14. Action unlock
 
 The next action should become available when:
 
@@ -138,7 +224,29 @@ The next action should become available when:
 
 This should not be tied mechanically to `animationend`.
 
-## 11. Temporal compression
+## 15. Current runtime debt: global playback lock
+
+Current `RemoteRoom` uses fixed playback delays and removes legal commands while playback is active.
+
+That was a strong foundation safety mechanism, but it is deliberately too blunt for the target experience.
+
+Future work should distinguish:
+
+### Authority lock
+
+The canonical state genuinely does not allow the local player to act yet.
+
+### Presentation hold
+
+The next action is temporarily withheld because the causal transition would become unreadable if another action began immediately.
+
+### Cosmetic continuation
+
+Presentation can keep settling while the next action is already available.
+
+Do not replace three current constants with dozens of arbitrary duration constants. First model semantic beats; tune timings later from evidence.
+
+## 16. Temporal compression
 
 Repeated familiar sequences may be compressible.
 
@@ -151,7 +259,7 @@ Potential approaches:
 
 Do not dynamically speed critical rules so much that novices lose comprehension.
 
-## 12. Temporal expansion
+## 17. Temporal expansion
 
 Rare high-significance events may earn more time.
 
@@ -163,7 +271,7 @@ Examples:
 
 Expansion should communicate semantic importance, not exist because animation is expensive/fancy.
 
-## 13. Interruption
+## 18. Interruption
 
 The user may:
 
@@ -185,7 +293,7 @@ Current project principle:
 
 **current authority beats historical spectacle.**
 
-## 14. Reconnect
+## 19. Reconnect
 
 Reconnect should normally:
 
@@ -198,7 +306,25 @@ Reconnect should normally:
 
 Do not replay a backlog of card flights just because events existed.
 
-## 15. Latency budget is semantic
+## 20. Workspace reconciliation during authoritative updates
+
+Canonical projection owns card membership.
+
+Viewer-local presentation may own personal order/grouping/topology.
+
+Therefore an authoritative update should conceptually reconcile:
+
+`previous local topology + new canonical membership -> new local topology`
+
+rather than replacing local topology with canonical sort on every revision.
+
+Membership removal/addition must follow authority.
+
+Surviving viewer-owned organization should remain stable where possible.
+
+This state is presentation-local and must not leak private organization to other viewers unless an explicit product feature later requires sharing it.
+
+## 21. Latency budget is semantic
 
 Different stages tolerate different delay.
 
@@ -210,7 +336,7 @@ Different stages tolerate different delay.
 
 Therefore one global `feedback duration` is structurally wrong.
 
-## 16. Latency and perceived material
+## 22. Latency and perceived material
 
 Be careful not to confuse network delay with object weight.
 
@@ -220,7 +346,7 @@ Authority latency is uncertainty about shared state.
 
 If the same visual sluggishness represents both, the user cannot tell whether the card is heavy or the network is slow.
 
-## 17. Cross-project implications
+## 23. Cross-project implications
 
 ### Multi World
 
@@ -238,19 +364,22 @@ LLM cognition has substantial variable latency. NPC/world behavior must distingu
 
 World edits may have local preview followed by authoritative expensive generation/validation, requiring honest preview/commit separation.
 
-## 18. Failure criteria
+## 24. Failure criteria
 
 - first feedback waits for server;
 - pending looks identical to accepted;
 - rejection appears as magical rewind;
+- stable after-state replaces before-state before identity/cause can be followed;
+- transition overlay becomes a second game-state authority;
 - next input stays locked because decorative tail is unfinished;
 - important causal events are compressed below comprehensibility;
 - familiar routine events remain slow forever;
 - reconnect replays obsolete history;
 - temporal spectacle changes gameplay truth;
-- network latency is visually conflated with material inertia.
+- network latency is visually conflated with material inertia;
+- canonical projection refresh destroys unrelated viewer-local workspace organization.
 
-## 19. Future evidence
+## 25. Future evidence
 
 When prototypes eventually exist, record timestamps separately for:
 
@@ -260,6 +389,7 @@ When prototypes eventually exist, record timestamps separately for:
 - commit threshold;
 - request sent;
 - authority response;
+- stable presentation commit to after-state;
 - minimum causal meaning reached;
 - next action available;
 - cosmetic tail end.
