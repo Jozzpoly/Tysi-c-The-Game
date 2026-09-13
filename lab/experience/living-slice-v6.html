@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>Tysiąc Experience Research — Living Slice V6</title>
+  <link rel="stylesheet" href="./living-slice-v2.css" />
+  <link rel="stylesheet" href="./living-slice-v2-geometry-b.css" />
+  <link rel="stylesheet" href="./living-slice-v2-geometry-c.css" />
+  <link rel="stylesheet" href="./living-slice-v5.css" />
+  <link rel="stylesheet" href="./living-slice-v6.css" />
+</head>
+<body data-slice-state="ready" data-geometry="c" data-fixture-version="6" data-assist="auto" data-play-intent="none" data-sentence="c">
+  <script>
+    const params = new URLSearchParams(location.search);
+    document.body.dataset.geometry = params.get('geometry') || 'c';
+    document.body.dataset.assist = params.get('assist') || 'auto';
+    document.body.dataset.sentence = params.get('sentence') || 'c';
+    if (params.get('debugFinger') === '1') document.body.dataset.debugFinger = '1';
+  </script>
+
+  <main class="slice" aria-label="Internal Living Slice research fixture v6">
+    <header class="context">
+      <section class="seat left" data-anchor="seat:1">
+        <div class="seat-source" aria-hidden="true"><i></i><i></i><i></i></div>
+        <div>
+          <strong class="name">Bot 2</strong>
+          <div class="meta"><span>5 kart</span><span>wartość 38</span></div>
+        </div>
+      </section>
+      <div class="match-score">wynik meczu <strong data-match-score>340</strong></div>
+      <section class="seat right" data-anchor="seat:2">
+        <div>
+          <strong class="name">Bot 3</strong>
+          <div class="meta"><span>5 kart</span><span>wartość 31</span></div>
+        </div>
+        <div class="seat-source" aria-hidden="true"><i></i><i></i><i></i></div>
+      </section>
+    </header>
+
+    <section class="stage">
+      <section class="shared" data-anchor="trick:shared" aria-label="Bieżąca lewa">
+        <div class="scene-field" aria-hidden="true"></div>
+        <div class="trick">
+          <div class="source-label s1">Bot 2</div>
+          <div class="source-label s2">Bot 3</div>
+          <div class="trick-card seat1" data-anchor="trick-card:1" data-card="10H">
+            <div class="card-face red"><div class="corner">10<span>♥</span></div><div class="pip">♥</div></div>
+          </div>
+          <div class="trick-card seat2" data-anchor="trick-card:2" data-card="KH">
+            <div class="card-face red"><div class="corner">K<span>♥</span></div><div class="pip">♥</div></div>
+          </div>
+        </div>
+        <div class="scene-note" data-scene-note>Dwie karty są już w lewie.</div>
+      </section>
+
+      <aside class="capture" data-anchor="captured:0">
+        <div class="capture-pile" data-capture-pile aria-hidden="true"><i></i><i></i><i></i></div>
+        <div class="capture-value" data-anchor="captured-value:0">
+          <span>rozdanie · zdobyte</span>
+          <strong data-captured-value>40</strong>
+          <b data-value-delta>+25</b>
+        </div>
+      </aside>
+    </section>
+
+    <section class="hand-zone" data-anchor="hand:self">
+      <div class="initiative-line" aria-hidden="true"></div>
+      <div class="hand-meta">
+        <span><strong>Twoja ręka</strong> · prywatny układ</span>
+        <span data-initiative>Twój ruch</span>
+      </div>
+      <div class="hand" data-hand>
+        <div class="hand-card" data-card="9C" data-play="0"><div class="card-face"><div class="corner">9<span>♣</span></div><div class="pip">♣</div><i class="capability-dot"></i></div></div>
+        <div class="hand-card" data-card="JH" data-play="1"><div class="card-face red"><div class="corner">J<span>♥</span></div><div class="pip">♥</div><i class="capability-dot"></i></div></div>
+        <div class="hand-card" data-card="QS" data-play="0"><div class="card-face"><div class="corner">Q<span>♠</span></div><div class="pip">♠</div><i class="capability-dot"></i></div></div>
+        <div class="hand-card" data-card="AH" data-play="1"><div class="card-face red"><div class="corner">A<span>♥</span></div><div class="pip">♥</div><i class="capability-dot"></i></div></div>
+        <div class="hand-card" data-card="KD" data-play="0"><div class="card-face red"><div class="corner">K<span>♦</span></div><div class="pip">♦</div><i class="capability-dot"></i></div></div>
+        <div class="hand-card" data-card="10C" data-play="0"><div class="card-face"><div class="corner">10<span>♣</span></div><div class="pip">♣</div><i class="capability-dot"></i></div></div>
+        <div class="hand-card" data-card="9S" data-play="0"><div class="card-face"><div class="corner">9<span>♠</span></div><div class="pip">♠</div><i class="capability-dot"></i></div></div>
+      </div>
+    </section>
+
+    <div class="finger-proxy" data-finger-proxy aria-hidden="true"></div>
+    <div class="contact-thread" data-contact-thread aria-hidden="true"></div>
+    <div class="research-badge">internal experience research · living slice v6</div>
+  </main>
+  <script src="./living-slice-v5.js"></script>
+  <script src="./living-slice-v6.js"></script>
+</body>
+</html>
