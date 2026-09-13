@@ -198,6 +198,207 @@ Rare events may earn richer composition.
 
 Avoid `visual + sound + haptic + particle + text` as a default recipe.
 
+## First Living Slice sensory grammar
+
+The selected internal synthesis target is the ordinary moment in which the local player closes a trick with the third card.
+
+This is not yet a style specification. It is a **semantic channel allocation** meant to prevent later `add juice everywhere` design.
+
+### Resting hand
+
+Primary channels:
+
+- stable visual topology;
+- readable card identity/depth;
+- quiet spatial ownership.
+
+Usually silent:
+
+- no repeating sound;
+- no decorative haptic;
+- no continuous idle animation that competes for attention.
+
+Target quality:
+
+`ready / inhabited`, not `animated`.
+
+### Contact / pickup
+
+Primary:
+
+- immediate local depth/separation response;
+- Card Control response around the actual grab point;
+- small local neighbor response where useful.
+
+Secondary candidates:
+
+- very light contact/lift sound;
+- optional compact haptic on supported mobile hardware.
+
+Avoid:
+
+- global highlight;
+- text;
+- a large bounce that implies commit.
+
+### Reorder / private manipulation
+
+Primary:
+
+- relational hand deformation;
+- insertion feedforward;
+- persistent control ownership.
+
+Secondary candidate:
+
+- extremely restrained slide/insertion audio only where a discrete relation is crossed.
+
+Haptic caution:
+
+Do not vibrate continuously while dragging. If haptic is useful at all, candidate moments are discrete insertion/commit boundaries.
+
+### Play-probe relation
+
+Primary:
+
+- spatial relationship between held card and shared trick;
+- legal destination/relation becomes receptive;
+- illegal relation remains non-receptive without killing the card's private capabilities.
+
+Secondary:
+
+- semantic color/depth or local geometry change;
+- local explanation only after uncertainty/failed probe if the rule requires it.
+
+Usually silent:
+
+- no failure siren during mere exploration;
+- no success sound before commit/authority.
+
+### Commit
+
+Primary:
+
+- clear change in control relation: reversible manipulation becomes submitted action;
+- directional motion toward the shared scene.
+
+Secondary:
+
+- compact commit sound;
+- optional discrete haptic.
+
+The commit cue should be stronger than pickup but weaker than trick resolution.
+
+### Pending authority
+
+Primary:
+
+- continuity of intended relation without pretending success.
+
+Secondary:
+
+- only if latency becomes perceptible, a progressive pending treatment.
+
+Usually silent:
+
+- no repeated spinner-like audio;
+- no score/winner cue.
+
+### Accepted card arrival
+
+Primary:
+
+- visual identity reaches shared trick anchor;
+- source ownership remains understandable.
+
+Secondary:
+
+- concise material impact/placement sound.
+
+Haptic may be redundant here if commit already had a cue; do not double-pulse by default.
+
+### Trick closure / winner resolution
+
+Primary:
+
+- composition/ownership change inside the shared scene;
+- winner becomes spatially legible;
+- attention moves from the arriving card to the whole trick relation.
+
+Secondary:
+
+- stronger but still ordinary resolution sound;
+- semantic emphasis tied to winner/collection, not a generic celebratory burst.
+
+Avoid:
+
+- screen-wide celebration for a normal trick;
+- detached `+points` toast as the primary explanation;
+- one identical sound regardless of source/consequence if material differences later prove meaningful.
+
+### Collection
+
+Primary:
+
+- directional motion of the three-card result toward winner ownership/captured region;
+- cards retain enough identity during transfer to explain cause.
+
+Secondary:
+
+- grouped collection/stacking sound with compact temporal shape.
+
+This is a strong candidate for perceived opponent/player presence because ownership has visible direction.
+
+### Point consequence
+
+Primary:
+
+- before/delta/after relationship at the destination that owns the result;
+- change emerges from the captured trick relation.
+
+Secondary:
+
+- restrained value accent if useful.
+
+Text/numbers are valid here because the value itself is symbolic, but they should be causally attached to the source rather than appearing as unrelated HUD churn.
+
+### Next initiative
+
+Primary:
+
+- newly active seat/hand becomes locally ready/salient;
+- previous consequence begins to settle toward periphery.
+
+Secondary:
+
+- possibly a very subtle readiness cue.
+
+Avoid routine `YOUR TURN` banner dependency once the spatial language is learnable.
+
+### Settle
+
+Primary:
+
+- stable after-state;
+- useful persistent consequences remain;
+- transient emphasis fades.
+
+Sound/haptic:
+
+- normally nothing additional.
+
+The scene earns silence again.
+
+## Cross-channel rules for the Living Slice
+
+1. **Visual-only must remain semantically sufficient.** Sound/haptic improve feel and attention but do not carry exclusive rule information.
+2. **One cause should not emit unrelated feedback from multiple distant places.** Prefer source/destination continuity.
+3. **Do not spend maximum intensity on common trick closure.** Marriage, hand resolution and match resolution need headroom later.
+4. **Do not encode domain illegality as physical pain.** Illegal relation may fail to become receptive; the card itself remains alive in private workspace.
+5. **Authority status has its own language.** Network uncertainty must not sound/feel like card mass or rule failure.
+6. **Reduced-motion mode preserves semantic staging.** It may use shorter spatial transitions, crossfades, local state changes and persistent consequence rather than removing causal order.
+7. **Sound-off and no-haptic remain first-class states.** The game cannot become dead or incomprehensible when those channels are unavailable.
+
 ## Character must survive repetition
 
 The first-use `wow` is not sufficient.
@@ -274,6 +475,8 @@ Useful questions when studying references:
 
 Map current Tysiac interaction families to possible sensory roles without styling them yet.
 
+**First pass now exists for the selected Living Slice.**
+
 ### C2 — material primitives
 
 Explore isolated contact/slide/insertion/commit/impact/settle visual+audio relationships.
@@ -345,6 +548,8 @@ These remain hypotheses until demonstrated beyond Tysiac.
 
 ## Current state
 
-**RESEARCH EARLY / PRIORITY GAP.**
+**RESEARCH ACTIVE / priority gap narrowing.**
 
-Do not wait until production integration to develop this track. Future Owner-facing Card/Hand fixtures need enough real visual/sensory character that judgement is not dominated by debug-tool aesthetics.
+The first Living Slice now has a semantic sensory inventory, but no final material palette, sound family, visual direction or Owner evidence.
+
+Future Owner-facing Card/Hand fixtures need enough real visual/sensory character that judgement is not dominated by debug-tool aesthetics, while remaining narrow enough to reveal which interaction mechanisms actually matter.
