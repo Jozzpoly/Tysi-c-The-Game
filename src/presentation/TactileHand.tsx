@@ -12,6 +12,7 @@ import { rankOf, suitOf, type CardId } from '../core/index.js';
 const SUIT_SYMBOL = { spades: '♠', clubs: '♣', diamonds: '♦', hearts: '♥' } as const;
 const DRAG_SLOP = 6;
 const RELEASE_MS = 190;
+const RETURN_MS = 210;
 
 interface TactileHandProps {
   cards: readonly CardId[];
@@ -255,6 +256,29 @@ export function TactileHand({
       : current);
   }
 
+  function animateReturnToHand(state: DragState) {
+    const slot = handRef.current?.querySelector<HTMLElement>(`:scope > .hand-slot[data-card="${state.card}"]`);
+    if (!slot) return;
+    const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+    if (reduced) return;
+
+    const rect = slot.getBoundingClientRect();
+    const currentLeft = state.x - state.offsetX;
+    const currentTop = state.y - state.offsetY;
+    const dx = currentLeft - rect.left;
+    const dy = currentTop - rect.top;
+    const tilt = Math.max(-12, Math.min(12, (state.x - state.startX) / 10));
+    slot.getAnimations().forEach((animation) => animation.cancel());
+    slot.animate(
+      [
+        { transform: `translate(${dx}px, ${dy}px) rotate(${tilt}deg) scale(1.06)`, offset: 0 },
+        { transform: `translate(${dx * .16}px, ${Math.min(8, dy * .04)}px) rotate(${tilt * .08}deg) scale(1.012)`, offset: .78 },
+        { transform: 'translate(0, 0) rotate(0deg) scale(1)', offset: 1 },
+      ],
+      { duration: RETURN_MS, easing: 'cubic-bezier(.18,.78,.25,1)' },
+    );
+  }
+
   function finishDrag(event: ReactPointerEvent<HTMLDivElement>, cancelled = false) {
     if (!drag || event.pointerId !== drag.pointerId) return;
     if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
@@ -280,10 +304,12 @@ export function TactileHand({
       if (releaseTimer.current !== null) window.clearTimeout(releaseTimer.current);
       releaseTimer.current = window.setTimeout(() => setReleaseGhost(null), RELEASE_MS);
       onActivate(drag.card);
+    } else if (drag.moved) {
+      // A free throw is not a failed action. Let the physical card settle back
+      // into the player's chosen hand order without error colour or rejection copy.
+      animateReturnToHand(drag);
     }
 
-    // A non-committing throw is not an error state. The card simply falls back
-    // into the freely arranged hand with no red/error feedback.
     setDrag(null);
   }
 
