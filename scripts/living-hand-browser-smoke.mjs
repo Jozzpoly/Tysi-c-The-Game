@@ -79,6 +79,10 @@ async function touch(session, type, points) {
   await cdp(session, 'Input.dispatchTouchEvent', { type, touchPoints: points });
 }
 
+async function moveTouch(session, x, y) {
+  await touch(session, 'touchMove', [{ x, y, radiusX: 7, radiusY: 7, force: 1 }]);
+}
+
 async function screenshot(session, name) {
   const base64 = await webdriver(`/session/${session}/screenshot`);
   await writeFile(`${OUTPUT}/${name}.png`, Buffer.from(base64, 'base64'));
@@ -114,6 +118,10 @@ async function handState(session) {
   `);
 }
 
+function sameOrder(state, labels) {
+  return JSON.stringify(state.slots.map((slot) => slot.label)) === JSON.stringify(labels);
+}
+
 async function run() {
   const session = await createSession();
   try {
@@ -143,13 +151,7 @@ async function run() {
     const steps = 8;
     for (let step = 1; step <= steps; step += 1) {
       const ratio = step / steps;
-      await touch(session, 'touchMove', [{
-        x: source.x + (heldTargetX - source.x) * ratio,
-        y: source.y,
-        radiusX: 7,
-        radiusY: 7,
-        force: 1,
-      }]);
+      await moveTouch(session, source.x + (heldTargetX - source.x) * ratio, source.y);
       await sleep(28);
     }
 
@@ -158,15 +160,14 @@ async function run() {
       const shifted = state.slots.filter((slot) => Math.abs(slot.shift) > 4);
       return state.phase === 'held'
         && Number.isFinite(state.insertionPosition)
-        && state.insertionPosition > 2
+        && state.insertionPosition > 3
         && shifted.length >= 2
         ? { ...state, shifted }
         : false;
     }, 3_000);
 
-    const previewLabels = preview.slots.map((slot) => slot.label);
-    if (JSON.stringify(previewLabels) !== JSON.stringify(openingLabels)) {
-      throw new Error(`DOM order changed before release: ${JSON.stringify({ openingLabels, previewLabels })}`);
+    if (!sameOrder(preview, openingLabels)) {
+      throw new Error(`DOM order changed before release: ${JSON.stringify({ openingLabels, preview })}`);
     }
     if (preview.revision !== initial.revision) {
       throw new Error(`living-hand preview changed game revision ${initial.revision} -> ${preview.revision}`);
@@ -176,10 +177,46 @@ async function run() {
     if (physicallyMoved.length < 2) {
       throw new Error(`neighbors did not visibly yield before release: ${JSON.stringify({ preview, physicallyMoved })}`);
     }
-
     await screenshot(session, 'mobile-living-hand-gap-open');
-    await touch(session, 'touchEnd', []);
 
+    // Reverse the same held card almost back to its source. The hand must close
+    // the distant gap without committing order or touching game truth.
+    const reversalX = source.x + (initial.slots[1].x - source.x) * .35;
+    await moveTouch(session, reversalX, source.y);
+    await sleep(120);
+    const reversed = await waitFor('reversible insertion preview', async () => {
+      const state = await handState(session);
+      const firstNeighborShift = Math.abs(state.slots[1]?.shift ?? 999);
+      const distantShift = Math.max(...state.slots.slice(2).map((slot) => Math.abs(slot.shift)));
+      return state.phase === 'held'
+        && Number.isFinite(state.insertionPosition)
+        && state.insertionPosition < .65
+        && firstNeighborShift > 5
+        && firstNeighborShift < Math.abs(preview.slots[1].shift) - 5
+        && distantShift < 5
+        ? { ...state, firstNeighborShift, distantShift }
+        : false;
+    }, 3_000);
+
+    if (!sameOrder(reversed, openingLabels)) throw new Error('reversal committed DOM order before release');
+    if (reversed.revision !== initial.revision) {
+      throw new Error(`reversal changed game revision ${initial.revision} -> ${reversed.revision}`);
+    }
+    await screenshot(session, 'mobile-living-hand-gap-reversed');
+
+    // Move out again and release. The local order should only commit now.
+    for (let step = 1; step <= 6; step += 1) {
+      const ratio = step / 6;
+      await moveTouch(session, reversalX + (heldTargetX - reversalX) * ratio, source.y);
+      await sleep(24);
+    }
+    const reopened = await waitFor('reopened insertion gap', async () => {
+      const state = await handState(session);
+      return state.phase === 'held' && state.insertionPosition > 3 ? state : false;
+    });
+    if (!sameOrder(reopened, openingLabels)) throw new Error('reopened gap committed order before release');
+
+    await touch(session, 'touchEnd', []);
     const settled = await waitFor('local order commit after release', async () => {
       const state = await handState(session);
       const movedIndex = state.slots.findIndex((slot) => slot.label === openingLabels[0]);
@@ -192,17 +229,20 @@ async function run() {
     if (settled.slots.some((slot) => Math.abs(slot.shift) > .5)) {
       throw new Error(`preview shift leaked after release: ${JSON.stringify(settled.slots)}`);
     }
-
     await screenshot(session, 'mobile-living-hand-settled');
 
     return {
       openingOrder: openingLabels,
       previewOrderUnchanged: true,
       previewRevision: `${initial.revision}->${preview.revision}`,
-      insertionPosition: preview.insertionPosition,
-      insertionTarget: preview.insertionTarget,
+      firstInsertionPosition: preview.insertionPosition,
+      firstInsertionTarget: preview.insertionTarget,
       shiftedNeighbors: preview.shifted.map((slot) => ({ index: slot.index, shift: slot.shift })),
       physicallyMovedNeighbors: physicallyMoved.length,
+      reversalPosition: reversed.insertionPosition,
+      reversalFirstNeighborShift: reversed.firstNeighborShift,
+      reversalDistantShift: reversed.distantShift,
+      reversalOrderUnchanged: true,
       releasedToIndex: settled.movedIndex,
       releaseRevision: `${initial.revision}->${settled.revision}`,
     };
