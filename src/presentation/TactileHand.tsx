@@ -69,6 +69,7 @@ function FloatingCard(props: FloatingCardProps) {
   let tilt: number;
   let commitReady = false;
   let throwIntent = false;
+  let gesturePhase: string;
 
   if (props.dragging) {
     const ghost = props.ghost;
@@ -77,11 +78,13 @@ function FloatingCard(props: FloatingCardProps) {
     tilt = tactileTiltDegrees(ghost);
     commitReady = ghost.commitReady;
     throwIntent = ghost.throwIntent;
+    gesturePhase = ghost.phase;
   } else {
     const ghost = props.ghost;
     left = ghost.left;
     top = ghost.top;
     tilt = ghost.tilt;
+    gesturePhase = 'releasing';
   }
 
   const ghost = props.ghost;
@@ -100,7 +103,7 @@ function FloatingCard(props: FloatingCardProps) {
       style={style}
       data-rank={rank}
       data-suit={symbol}
-      data-gesture-phase={props.dragging ? ghost.phase : 'releasing'}
+      data-gesture-phase={gesturePhase}
       aria-hidden="true"
     >
       <span className="rank" data-suit={symbol}>{rank}</span>
