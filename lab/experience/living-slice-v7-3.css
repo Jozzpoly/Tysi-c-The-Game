@@ -1,0 +1,74 @@
+/* V7.3 tests authority as spatial ingress rather than a lifted copy of the
+   final trick seat. A committed card rests at the near edge of the shared
+   field until authority accepts it, then travels deeper into canonical trick
+   geometry. The threshold is material/spatial, not a HUD zone. */
+
+body[data-fixture-version="7.3"] .hand-card.held.pending {
+  opacity: .97;
+  transform:
+    translate3d(var(--v73-threshold-left, var(--hold-x)), var(--v73-threshold-top, var(--hold-y)), 0)
+    rotate(var(--v73-threshold-rot, -1.2deg))
+    scale(1.025);
+  transition: transform .16s cubic-bezier(.18,.76,.22,1), opacity .10s ease, filter .14s ease;
+  filter: drop-shadow(0 18px 24px rgba(0,0,0,.43));
+}
+
+body[data-fixture-version="7.3"] .hand-card.held.pending .card-face {
+  transform:none;
+  box-shadow:
+    0 14px 28px rgba(0,0,0,.32),
+    inset 0 0 0 1px rgba(46,83,64,.25),
+    inset 0 -7px 16px rgba(32,55,45,.05);
+}
+
+/* Shadow belongs to the card and visually touches the common field below it.
+   It should read as suspended ownership, not a glowing status badge. */
+body[data-fixture-version="7.3"] .hand-card.held.pending::before {
+  content:"";
+  position:absolute;
+  z-index:-1;
+  left:10%; right:10%; bottom:-18px;
+  height:16px;
+  border-radius:50%;
+  background:radial-gradient(ellipse at center, rgba(0,0,0,.36), rgba(0,0,0,.11) 56%, transparent 76%);
+  filter:blur(5px);
+  opacity:.58;
+}
+
+/* The field acknowledges ingress only where the object enters. It does not
+   become an abstract highlighted drop target. */
+body[data-fixture-version="7.3"][data-material-phase="pending"] .shared .scene-field {
+  border-color:rgba(191,217,202,.14);
+  box-shadow:inset 0 -22px 48px rgba(165,202,181,.045), inset 0 0 64px rgba(150,186,166,.022);
+  transform:none;
+}
+
+/* Acceptance is a clear inward/depth settle from threshold to canonical trick
+   ownership. The final transform remains the established V5 self seat. */
+body[data-fixture-version="7.3"][data-material-phase="accepted"] .trick-card.self {
+  animation:v73AuthorityIngress .23s cubic-bezier(.15,.78,.20,1) both;
+}
+@keyframes v73AuthorityIngress {
+  from {
+    opacity:.82;
+    filter:drop-shadow(0 15px 19px rgba(0,0,0,.30));
+    transform:translate(-50%, 24%) rotate(-1deg) scale(1.025);
+  }
+  to {
+    opacity:1;
+    filter:drop-shadow(0 4px 9px rgba(0,0,0,.12));
+    transform:translate(-50%,-20%) rotate(1deg) scale(1);
+  }
+}
+
+/* Reject should reverse ownership toward the hand without ever producing a
+   capture/consequence signal. Existing V7 reject face cue remains local. */
+body[data-fixture-version="7.3"][data-material-reject="1"] .shared .scene-field {
+  border-color:rgba(214,163,163,.10);
+  box-shadow:inset 0 -18px 38px rgba(179,91,91,.025);
+}
+
+@media (prefers-reduced-motion:reduce) {
+  body[data-fixture-version="7.3"] .hand-card.held.pending { transition-duration:.001ms !important; }
+  body[data-fixture-version="7.3"][data-material-phase="accepted"] .trick-card.self { animation-duration:.001ms !important; }
+}
