@@ -63,12 +63,23 @@
 
         ghost.className = 'source-ghost';
         ghost.style.opacity = '';
-        ghost.style.left = `${source.left + source.width / 2 - dest.width / 2}px`;
-        ghost.style.top = `${source.top + source.height / 2 - dest.height / 2}px`;
+        ghost.style.left = '0px';
+        ghost.style.top = '0px';
+        ghost.style.transformOrigin = '50% 50%';
         ghost.style.transform = 'translate3d(0,0,0) scale(.64)';
         ghost.dataset.flight = 'establish';
         ghost.dataset.sourceSeat = String(item.seat);
         document.body.appendChild(ghost);
+
+        // Align from the ghost's actual rendered box rather than assuming that
+        // its scaled box matches the destination card dimensions.
+        const initialGhost = ghost.getBoundingClientRect();
+        const sourceCenterX = source.left + source.width / 2;
+        const sourceCenterY = source.top + source.height / 2;
+        const ghostCenterX = initialGhost.left + initialGhost.width / 2;
+        const ghostCenterY = initialGhost.top + initialGhost.height / 2;
+        ghost.style.left = `${sourceCenterX - ghostCenterX}px`;
+        ghost.style.top = `${sourceCenterY - ghostCenterY}px`;
 
         item.seatNode.classList.add('action-source');
         trace('public-source-play', { seat: item.seat, card: item.node.dataset.card, version: 3 });
@@ -81,9 +92,12 @@
           requestAnimationFrame(() => {
             ghost.dataset.flight = 'moving';
             trace('source-flight', { seat: item.seat, card: item.node.dataset.card });
-            const dx = dest.left - parseFloat(ghost.style.left);
-            const dy = dest.top - parseFloat(ghost.style.top);
-            ghost.style.transform = `translate3d(${dx}px,${dy}px,0) scale(1)`;
+            const from = ghost.getBoundingClientRect();
+            const fromCenterX = from.left + from.width / 2;
+            const fromCenterY = from.top + from.height / 2;
+            const destCenterX = dest.left + dest.width / 2;
+            const destCenterY = dest.top + dest.height / 2;
+            ghost.style.transform = `translate3d(${destCenterX - fromCenterX}px,${destCenterY - fromCenterY}px,0) scale(1)`;
             resolve();
           });
         });
