@@ -24,6 +24,20 @@ The old `WEIGHT` mode showed that visible lag can create a distinct feel, but di
 
 External research gives us a real tension rather than a simple rule: temporal/spatial mismatch can reduce sense of agency, while controlled control/display mismatch can also evoke useful pseudo-haptic weight or resistance.
 
+## Evidence boundary — latency is not a free material channel
+
+Direct-touch research is an important warning against using ordinary temporal delay as the default way to express weight. Controlled dragging studies found performance costs as latency increased even within low-latency conditions, and work on very-low-latency touch systems suggests that the perceptual/performance opportunity continues well below typical commodity-device delay.
+
+Therefore the research prior is:
+
+**acknowledge contact and preserve the primary control loop as quickly as practical; treat deliberate temporal lag as a hostile variable that must earn its existence.**
+
+This does not establish a universal millisecond threshold for Tysiac. Device/browser/render pipelines and task geometry differ.
+
+Pseudo-haptic control/display research provides a different kind of evidence: spatial/kinematic mismatch can evoke weight/resistance while retaining ownership in some visuomotor contexts. Most strong quantitative evidence comes from VR or indirect visuomotor setups, so their numeric C/D ratios must **not** be transplanted into touchscreen card control.
+
+The only safe transfer is the hypothesis that predictable bounded sensorimotor transformation can carry material information.
+
 ## Explicit non-goals
 
 The first internal study should not yet answer final hand layout, card art, Tysiac legality, reorder-vs-play gesture, target attraction, opponent presence, final audio/haptics, production architecture or whether mobile and desktop should use identical mechanics.
@@ -53,6 +67,8 @@ Purpose: investigate whether pseudo-haptic resistance can add materiality withou
 A strong positional-spring model similar in spirit to old WEIGHT.
 
 Purpose: act as an upper/control boundary, not as a preferred product candidate. If it later wins under repeated precision tasks, that would materially challenge the current theory.
+
+P3 is particularly useful because current external evidence gives us reason to expect it to hurt direct-touch precision. A surprising win would therefore carry high information value.
 
 ## Variables to hold constant initially
 
