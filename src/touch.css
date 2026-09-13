@@ -70,6 +70,24 @@ button:active:not(:disabled) {
     justify-content: center;
   }
 
+  /*
+   * During the 10-card exchange the trick area has no gameplay content yet.
+   * Preserve finger-sized cards and controls; reclaim the otherwise empty
+   * vertical table space so both rows of the exchange hand remain directly
+   * visible and hittable on a 390x844 phone viewport.
+   */
+  .app-shell:has(.hand > .card:nth-child(10)) .table {
+    min-height: 0;
+  }
+
+  .app-shell:has(.hand > .card:nth-child(10)) .center {
+    min-height: 92px;
+  }
+
+  .app-shell:has(.hand > .card:nth-child(10)) .trick {
+    min-height: 44px;
+  }
+
   .hand > .card:active:not(:disabled) {
     z-index: 4;
     transform: translateY(-4px);
