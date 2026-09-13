@@ -9,6 +9,7 @@
 
   let captureRaf = 0;
   let lastPending = null;
+  let authorityBoundary = null;
   let activeHandoff = null;
   let lastHandoff = null;
   let handoffFallback = null;
@@ -83,6 +84,23 @@
     if (!captureRaf) captureRaf = requestAnimationFrame(capturePendingFrame);
   }
 
+  document.addEventListener('living-slice:authority-accept-boundary',(event) => {
+    const card = event.detail?.card || null;
+    const boundaryRect = event.detail?.rect || null;
+    const node = document.querySelector('.hand-card.held.pending');
+    if (!card || !boundaryRect || !node || node.dataset.card !== card) {
+      log('authority-boundary-missing-source',{ card, nodeCard:node?.dataset.card || null });
+      return;
+    }
+    authorityBoundary = {
+      card,
+      rect:boundaryRect,
+      faceHTML:node.querySelector('.card-face')?.outerHTML || '',
+      capturedAt:performance.now(),
+    };
+    log('authority-boundary-captured',{ card, x:+boundaryRect.x.toFixed(2), y:+boundaryRect.y.toFixed(2) });
+  });
+
   function visibleCopies(card) {
     if (!card) return 0;
     return [...document.querySelectorAll(`[data-card="${CSS.escape(card)}"]`)].filter((node) => {
@@ -119,6 +137,7 @@
       card:h.card,
       phase:'settled',
       reason,
+      sourceKind:h.sourceKind,
       startRect:h.startRect,
       targetRect,
       startGap:h.startGap,
@@ -130,6 +149,7 @@
     };
     log('authority-handoff-settled',{
       card:h.card,
+      sourceKind:h.sourceKind,
       authorityTravel:+h.authorityTravel.toFixed(2),
       revealGap:revealGap == null ? null : +revealGap.toFixed(2),
       sizeGap:Number.isFinite(sizeGap) ? +sizeGap.toFixed(2) : null,
@@ -144,8 +164,11 @@
     if (!targetNode || targetNode.dataset.anchor !== 'trick-card:0') return;
     targetNode.classList.add('v74-canonical-self');
     const card = targetNode.dataset.card || null;
-    if (!lastPending || !card || lastPending.card !== card) {
-      log('authority-handoff-missing-source',{ card, pendingCard:lastPending?.card || null });
+    const boundarySource = authorityBoundary?.card === card ? authorityBoundary : null;
+    const source = boundarySource || (lastPending?.card === card ? lastPending : null);
+    const sourceKind = boundarySource ? 'authority-boundary' : 'last-pending-frame';
+    if (!source || !card) {
+      log('authority-handoff-missing-source',{ card, boundaryCard:authorityBoundary?.card || null, pendingCard:lastPending?.card || null });
       return;
     }
 
@@ -153,10 +176,10 @@
     document.body.dataset.fixtureVersion = '7.4';
     targetNode.classList.add('v74-handoff-target');
     const targetRect = rect(targetNode);
-    const startRect = lastPending.rect;
+    const startRect = source.rect;
     if (!targetRect || !startRect) {
       targetNode.classList.remove('v74-handoff-target');
-      log('authority-handoff-missing-geometry',{ card });
+      log('authority-handoff-missing-geometry',{ card, sourceKind });
       return;
     }
 
@@ -165,11 +188,12 @@
     ghost.dataset.card = card;
     ghost.dataset.authorityCarrier = '1';
     ghost.dataset.handoffStage = 'established';
+    ghost.dataset.sourceKind = sourceKind;
     ghost.style.left = `${startRect.left}px`;
     ghost.style.top = `${startRect.top}px`;
     ghost.style.width = `${startRect.width}px`;
     ghost.style.height = `${startRect.height}px`;
-    ghost.innerHTML = lastPending.faceHTML;
+    ghost.innerHTML = source.faceHTML;
     document.body.appendChild(ghost);
 
     const establishedRect = rect(ghost);
@@ -186,6 +210,7 @@
       phase:'established',
       ghost,
       targetNode,
+      sourceKind,
       startRect,
       targetRect,
       startGap,
@@ -193,8 +218,10 @@
       dx,dy,sx,sy,
       transitionDuration,
     };
+    authorityBoundary = null;
     log('authority-handoff-established',{
       card,
+      sourceKind,
       startGap:+startGap.toFixed(2),
       authorityTravel:+authorityTravel.toFixed(2),
       visibleCopies:visibleCopies(card),
@@ -213,7 +240,7 @@
       ghost.dataset.handoffStage = 'moving';
       ghost.style.transform = `translate3d(${dx}px,${dy}px,0) scale(${sx},${sy})`;
       activeHandoff.phase = 'moving';
-      log('authority-handoff-moving',{ card, visibleCopies:visibleCopies(card), transitionDuration });
+      log('authority-handoff-moving',{ card, sourceKind, visibleCopies:visibleCopies(card), transitionDuration });
       clearTimeout(handoffFallback);
       handoffFallback = window.setTimeout(() => finishHandoff('fallback'),300);
     }));
@@ -264,6 +291,7 @@
       const active = activeHandoff ? {
         card:activeHandoff.card,
         phase:activeHandoff.phase,
+        sourceKind:activeHandoff.sourceKind,
         startRect:activeHandoff.startRect,
         targetRect:rect(activeHandoff.targetNode) || activeHandoff.targetRect,
         ghostRect:rect(activeHandoff.ghost),
@@ -290,6 +318,7 @@
         } : null,
         acceptedCard:rect(acceptedNode),
         identityHandoff:active || lastHandoff,
+        authorityBoundary:authorityBoundary ? { card:authorityBoundary.card, rect:authorityBoundary.rect } : null,
         handoffCarrierVisible:Boolean(document.querySelector('.v74-handoff-ghost')),
         v74Trace:trace.slice(),
       };
