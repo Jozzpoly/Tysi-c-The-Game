@@ -1,0 +1,635 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>Tysiąc Experience Research — Living Slice v1</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0b1111;
+      --surface: #111a19;
+      --surface-2: #16211f;
+      --line: rgba(225, 241, 231, .13);
+      --line-strong: rgba(225, 241, 231, .24);
+      --text: #edf4ef;
+      --muted: #9aaca3;
+      --accent: #bad8c7;
+      --accent-soft: rgba(186, 216, 199, .12);
+      --danger: #d8a6a6;
+      --danger-soft: rgba(216, 166, 166, .12);
+      --gold: #d7c79c;
+      --card-w: clamp(58px, 13vw, 92px);
+      --card-h: calc(var(--card-w) * 1.42);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--text); }
+    body { min-height: 100dvh; overflow: hidden; user-select: none; -webkit-user-select: none; }
+    button { font: inherit; }
+    .slice {
+      min-height: 100dvh;
+      width: 100%;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      position: relative;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 50% 36%, rgba(101, 135, 120, .10), transparent 31%),
+        linear-gradient(180deg, #0e1514 0%, #09100f 100%);
+    }
+    .slice::before {
+      content: "";
+      position: absolute; inset: 0;
+      pointer-events: none;
+      background-image: linear-gradient(rgba(255,255,255,.012) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.01) 1px, transparent 1px);
+      background-size: 38px 38px;
+      mask-image: linear-gradient(to bottom, transparent, black 22%, black 75%, transparent);
+    }
+    .context {
+      position: relative;
+      z-index: 2;
+      padding: 14px clamp(14px, 3vw, 30px) 0;
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: start;
+      gap: 12px;
+    }
+    .seat {
+      max-width: 240px;
+      min-width: 0;
+      padding: 9px 10px 10px;
+      border-top: 1px solid var(--line);
+      transition: border-color .18s ease, background .18s ease, transform .18s ease;
+    }
+    .seat.right { justify-self: end; text-align: right; }
+    .seat.self { display: none; }
+    .seat.initiative {
+      border-color: rgba(186, 216, 199, .55);
+      background: linear-gradient(180deg, rgba(186, 216, 199, .07), transparent);
+    }
+    .seat .name { display: block; font-weight: 660; letter-spacing: .01em; font-size: 13px; }
+    .seat .meta { display: flex; gap: 8px; margin-top: 3px; color: var(--muted); font-size: 11px; }
+    .seat.right .meta { justify-content: flex-end; }
+    .match-score {
+      justify-self: center;
+      color: var(--muted);
+      font-size: 11px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      padding: 7px 9px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      white-space: nowrap;
+    }
+    .match-score strong { color: var(--text); font-size: 12px; margin-left: 5px; }
+    .stage {
+      position: relative;
+      z-index: 1;
+      min-height: 0;
+      display: grid;
+      place-items: center;
+      padding: 10px 14px 4px;
+    }
+    .shared {
+      width: min(620px, 92vw);
+      height: min(42vh, 380px);
+      min-height: 230px;
+      position: relative;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+    }
+    .shared::after {
+      content: "";
+      position: absolute;
+      inset: 12% 9%;
+      border-radius: 50%;
+      border: 1px solid rgba(214, 232, 220, .055);
+      box-shadow: inset 0 0 60px rgba(150, 186, 166, .025);
+      transition: border-color .16s ease, box-shadow .16s ease, transform .16s ease;
+    }
+    .shared.receptive::after {
+      border-color: rgba(186, 216, 199, .28);
+      box-shadow: inset 0 0 60px rgba(150, 186, 166, .05), 0 0 46px rgba(150, 186, 166, .04);
+      transform: scale(1.015);
+    }
+    .shared.blocked::after { border-color: rgba(216, 166, 166, .25); }
+    .trick {
+      position: relative;
+      width: min(350px, 78vw);
+      height: 190px;
+      z-index: 3;
+    }
+    .trick-card {
+      position: absolute;
+      width: var(--card-w);
+      height: var(--card-h);
+      left: 50%; top: 50%;
+      transform-origin: 50% 72%;
+      transition: transform .26s cubic-bezier(.2,.74,.24,1), opacity .20s ease;
+    }
+    .trick-card.seat1 { transform: translate(-122%, -64%) rotate(-10deg); }
+    .trick-card.seat2 { transform: translate(22%, -64%) rotate(10deg); }
+    .trick-card.self { transform: translate(-50%, -20%) rotate(1deg); }
+    .card-face {
+      width: 100%; height: 100%;
+      border-radius: 10px;
+      background: linear-gradient(155deg, #f4f0e7, #e8e2d5);
+      color: #141918;
+      box-shadow: 0 9px 24px rgba(0,0,0,.25), inset 0 0 0 1px rgba(26,36,31,.12);
+      position: relative;
+      overflow: hidden;
+      touch-action: none;
+    }
+    .card-face.red { color: #a33c3c; }
+    .card-face::after {
+      content: "";
+      position: absolute; inset: 0;
+      background: linear-gradient(110deg, transparent 30%, rgba(255,255,255,.23) 48%, transparent 64%);
+      transform: translateX(-145%);
+      transition: transform .34s ease;
+      pointer-events: none;
+    }
+    .held .card-face::after { transform: translateX(120%); }
+    .card-face .corner {
+      position: absolute; left: 8px; top: 7px;
+      display: grid; line-height: .9;
+      font-weight: 760;
+      font-size: clamp(15px, 3.4vw, 22px);
+    }
+    .card-face .corner span:last-child { font-size: .82em; margin-top: 3px; }
+    .card-face .pip {
+      position: absolute; inset: 0;
+      display: grid; place-items: center;
+      font-size: clamp(28px, 7.2vw, 50px);
+      opacity: .9;
+    }
+    .source-label {
+      position: absolute;
+      color: var(--muted);
+      font-size: 10px;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      opacity: .8;
+    }
+    .source-label.s1 { left: 2px; top: 15px; }
+    .source-label.s2 { right: 2px; top: 15px; text-align: right; }
+    .scene-note {
+      position: absolute;
+      left: 50%; bottom: 5px;
+      transform: translateX(-50%);
+      min-height: 24px;
+      color: var(--muted);
+      font-size: 12px;
+      white-space: nowrap;
+      opacity: .92;
+      transition: color .15s ease, opacity .15s ease;
+    }
+    .scene-note.rule { color: var(--danger); }
+    .value-rail {
+      position: absolute;
+      right: clamp(6px, 3vw, 24px);
+      bottom: 9%;
+      z-index: 4;
+      width: 112px;
+      padding: 8px 10px;
+      border-left: 1px solid var(--line-strong);
+      color: var(--muted);
+      font-size: 10px;
+      letter-spacing: .05em;
+      text-transform: uppercase;
+      transition: border-color .18s ease, transform .18s ease;
+    }
+    .value-rail strong { display: block; color: var(--text); font-size: 22px; margin-top: 2px; letter-spacing: 0; }
+    .value-rail.gain { border-color: rgba(215,199,156,.72); transform: translateX(-3px); }
+    .value-delta { position: absolute; right: 108%; top: 20px; color: var(--gold); font-weight: 720; opacity: 0; transform: translateX(8px); }
+    .value-rail.gain .value-delta { animation: valueIn .58s ease both; }
+    @keyframes valueIn { 0%{opacity:0;transform:translateX(10px)} 30%{opacity:1} 100%{opacity:0;transform:translateX(-8px)} }
+    .hand-zone {
+      position: relative;
+      z-index: 6;
+      min-height: clamp(170px, 29vh, 270px);
+      padding: 5px 10px max(14px, env(safe-area-inset-bottom));
+      display: grid;
+      align-content: end;
+    }
+    .hand-meta {
+      width: min(960px, 96vw);
+      margin: 0 auto 7px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      color: var(--muted);
+      font-size: 11px;
+    }
+    .hand-meta strong { color: var(--text); font-size: 12px; }
+    .hand {
+      --gap: clamp(-28px, -3vw, -11px);
+      width: min(960px, 96vw);
+      height: calc(var(--card-h) + 22px);
+      margin: 0 auto;
+      position: relative;
+      display: flex;
+      justify-content: center;
+      align-items: end;
+      isolation: isolate;
+    }
+    .hand-card {
+      position: relative;
+      width: var(--card-w);
+      height: var(--card-h);
+      flex: 0 0 var(--card-w);
+      margin-left: var(--gap);
+      transform: translateY(var(--field-y, 0px)) rotate(var(--rest-rot, 0deg));
+      transition: transform .18s cubic-bezier(.22,.72,.27,1), margin .18s ease, opacity .16s ease;
+      cursor: grab;
+      z-index: var(--z, 1);
+      touch-action: none;
+    }
+    .hand-card:first-child { margin-left: 0; }
+    .hand-card:nth-child(1) { --rest-rot:-3deg; }
+    .hand-card:nth-child(2) { --rest-rot:-2deg; }
+    .hand-card:nth-child(3) { --rest-rot:-1deg; }
+    .hand-card:nth-child(5) { --rest-rot:1deg; }
+    .hand-card:nth-child(6) { --rest-rot:2deg; }
+    .hand-card:nth-child(7) { --rest-rot:3deg; }
+    .hand-card:hover { --field-y:-5px; z-index: 20; }
+    .hand-card.held {
+      position: fixed;
+      left: 0; top: 0;
+      margin: 0;
+      z-index: 100;
+      pointer-events: none;
+      transform: translate3d(var(--hold-x), var(--hold-y), 0) rotate(var(--hold-rot));
+      transition: none;
+      filter: drop-shadow(0 18px 24px rgba(0,0,0,.32));
+    }
+    .hand-card.pending { opacity: .68; }
+    .hand-card.illegal-probe .card-face { box-shadow: 0 9px 24px rgba(0,0,0,.25), inset 0 0 0 1px rgba(179,91,91,.42); }
+    .hand-card.placeholder { visibility: hidden; pointer-events: none; }
+    .capability-dot {
+      position: absolute; right: 8px; bottom: 8px;
+      width: 5px; height: 5px; border-radius: 999px;
+      background: rgba(25,45,37,.26);
+      box-shadow: 0 0 0 1px rgba(25,45,37,.10);
+    }
+    .hand-card[data-play="1"] .capability-dot { background: rgba(39,91,66,.62); }
+    .capture-ghost {
+      position: fixed;
+      width: var(--card-w); height: var(--card-h);
+      z-index: 90;
+      transition: transform .30s cubic-bezier(.2,.72,.22,1), opacity .30s ease;
+      pointer-events: none;
+    }
+    .capture-ghost .card-face { box-shadow: 0 10px 28px rgba(0,0,0,.28); }
+    .research-badge {
+      position: fixed; left: 10px; bottom: 8px; z-index: 40;
+      color: rgba(237,244,239,.42); font-size: 9px; letter-spacing: .08em; text-transform: uppercase;
+      pointer-events: none;
+    }
+    @media (max-width: 560px) {
+      :root { --card-w: 60px; }
+      .context { padding-top: 9px; gap: 5px; }
+      .seat { padding: 7px 5px; }
+      .seat .meta span:nth-child(2) { display: none; }
+      .match-score { padding: 6px 7px; font-size: 9px; }
+      .shared { width: 96vw; height: 36vh; min-height: 225px; }
+      .trick { width: 265px; height: 165px; }
+      .trick-card.seat1 { transform: translate(-116%, -62%) rotate(-9deg); }
+      .trick-card.seat2 { transform: translate(16%, -62%) rotate(9deg); }
+      .value-rail { right: 4px; bottom: 3%; width: 96px; }
+      .hand-zone { min-height: 215px; padding-left: 4px; padding-right: 4px; }
+      .hand { --gap: -15px; width: 100%; }
+      .hand-meta { width: 96%; }
+      .scene-note { bottom: 0; font-size: 11px; max-width: 86vw; overflow: hidden; text-overflow: ellipsis; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; }
+    }
+  </style>
+</head>
+<body data-slice-state="ready">
+  <main class="slice" aria-label="Internal Living Slice research fixture">
+    <header class="context">
+      <section class="seat left" data-anchor="seat:1">
+        <strong class="name">Bot 2</strong>
+        <div class="meta"><span>5 kart</span><span>wartość 38</span></div>
+      </section>
+      <div class="match-score">wynik meczu <strong data-match-score>340</strong></div>
+      <section class="seat right" data-anchor="seat:2">
+        <strong class="name">Bot 3</strong>
+        <div class="meta"><span>5 kart</span><span>wartość 31</span></div>
+      </section>
+    </header>
+
+    <section class="stage">
+      <section class="shared" data-anchor="trick:shared" aria-label="Bieżąca lewa">
+        <div class="trick">
+          <div class="source-label s1">Bot 2</div>
+          <div class="source-label s2">Bot 3</div>
+          <div class="trick-card seat1" data-anchor="trick-card:1" data-card="10H">
+            <div class="card-face red"><div class="corner">10<span>♥</span></div><div class="pip">♥</div></div>
+          </div>
+          <div class="trick-card seat2" data-anchor="trick-card:2" data-card="KH">
+            <div class="card-face red"><div class="corner">K<span>♥</span></div><div class="pip">♥</div></div>
+          </div>
+        </div>
+        <div class="scene-note" data-scene-note>Dwie karty są już w lewie.</div>
+      </section>
+
+      <aside class="value-rail" data-anchor="captured-value:0">
+        rozdanie · zdobyte
+        <strong data-captured-value>40</strong>
+        <span class="value-delta" data-value-delta>+25</span>
+      </aside>
+    </section>
+
+    <section class="hand-zone" data-anchor="hand:self">
+      <div class="hand-meta">
+        <span><strong>Twoja ręka</strong> · prywatny układ</span>
+        <span data-initiative>Twój ruch</span>
+      </div>
+      <div class="hand" data-hand>
+        <div class="hand-card" data-card="9C" data-play="0"><div class="card-face"><div class="corner">9<span>♣</span></div><div class="pip">♣</div><i class="capability-dot"></i></div></div>
+        <div class="hand-card" data-card="JH" data-play="1"><div class="card-face red"><div class="corner">J<span>♥</span></div><div class="pip">♥</div><i class="capability-dot"></i></div></div>
+        <div class="hand-card" data-card="QS" data-play="0"><div class="card-face"><div class="corner">Q<span>♠</span></div><div class="pip">♠</div><i class="capability-dot"></i></div></div>
+        <div class="hand-card" data-card="AH" data-play="1"><div class="card-face red"><div class="corner">A<span>♥</span></div><div class="pip">♥</div><i class="capability-dot"></i></div></div>
+        <div class="hand-card" data-card="KD" data-play="0"><div class="card-face red"><div class="corner">K<span>♦</span></div><div class="pip">♦</div><i class="capability-dot"></i></div></div>
+        <div class="hand-card" data-card="10C" data-play="0"><div class="card-face"><div class="corner">10<span>♣</span></div><div class="pip">♣</div><i class="capability-dot"></i></div></div>
+        <div class="hand-card" data-card="9S" data-play="0"><div class="card-face"><div class="corner">9<span>♠</span></div><div class="pip">♠</div><i class="capability-dot"></i></div></div>
+      </div>
+    </section>
+    <div class="research-badge">internal experience research · living slice v1</div>
+  </main>
+
+  <script>
+    (() => {
+      const hand = document.querySelector('[data-hand]');
+      const shared = document.querySelector('[data-anchor="trick:shared"]');
+      const trick = document.querySelector('.trick');
+      const note = document.querySelector('[data-scene-note]');
+      const captured = document.querySelector('[data-captured-value]');
+      const valueRail = document.querySelector('[data-anchor="captured-value:0"]');
+      const initiative = document.querySelector('[data-initiative]');
+      const state = {
+        phase: 'ready',
+        held: null,
+        originIndex: -1,
+        placeholder: null,
+        pointerId: null,
+        playIntent: false,
+        rejectNext: false,
+        capturedValue: 40,
+        matchScore: 340,
+        trace: [],
+      };
+      const trace = (type, extra = {}) => state.trace.push({ type, t: Math.round(performance.now()), ...extra });
+      const cards = () => [...hand.querySelectorAll('.hand-card:not(.placeholder)')];
+      const setPhase = (phase) => { state.phase = phase; document.body.dataset.sliceState = phase; trace('phase', { phase }); };
+      const center = (rect) => ({ x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 });
+      const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+
+      function createPlaceholder(card) {
+        const p = document.createElement('div');
+        p.className = 'hand-card placeholder';
+        p.style.width = `${card.getBoundingClientRect().width}px`;
+        p.style.height = `${card.getBoundingClientRect().height}px`;
+        return p;
+      }
+
+      function updateReorder(x, y) {
+        const zone = hand.getBoundingClientRect();
+        if (y < zone.top - 20 || !state.placeholder) return;
+        const live = [...hand.children].filter((node) => node !== state.placeholder && !node.classList.contains('held'));
+        let before = null;
+        for (const node of live) {
+          const rect = node.getBoundingClientRect();
+          if (x < rect.left + rect.width / 2) { before = node; break; }
+        }
+        if (before) hand.insertBefore(state.placeholder, before); else hand.appendChild(state.placeholder);
+      }
+
+      function setHeldPose(card, x, y, dx = 0) {
+        const rect = card.getBoundingClientRect();
+        const w = rect.width || parseFloat(getComputedStyle(card).width);
+        const h = rect.height || parseFloat(getComputedStyle(card).height);
+        const rot = clamp(dx * .045, -7, 7);
+        card.style.setProperty('--hold-x', `${x - w / 2}px`);
+        card.style.setProperty('--hold-y', `${y - h * .62}px`);
+        card.style.setProperty('--hold-rot', `${rot}deg`);
+      }
+
+      function resetSceneFeedback() {
+        shared.classList.remove('receptive', 'blocked');
+        note.classList.remove('rule');
+        if (state.phase === 'ready') note.textContent = 'Dwie karty są już w lewie.';
+      }
+
+      function beginHold(card, ev) {
+        if (state.phase !== 'ready') return;
+        state.held = card;
+        state.pointerId = ev.pointerId;
+        state.originIndex = cards().indexOf(card);
+        state.placeholder = createPlaceholder(card);
+        hand.insertBefore(state.placeholder, card);
+        const rect = card.getBoundingClientRect();
+        card.dataset.startX = String(ev.clientX);
+        card.dataset.startY = String(ev.clientY);
+        card.style.width = `${rect.width}px`;
+        card.style.height = `${rect.height}px`;
+        card.classList.add('held');
+        setHeldPose(card, ev.clientX, ev.clientY);
+        card.setPointerCapture?.(ev.pointerId);
+        trace('hold-start', { card: card.dataset.card, legalPlay: card.dataset.play === '1' });
+      }
+
+      function moveHold(ev) {
+        const card = state.held;
+        if (!card || state.pointerId !== ev.pointerId) return;
+        const startX = Number(card.dataset.startX || ev.clientX);
+        setHeldPose(card, ev.clientX, ev.clientY, ev.clientX - startX);
+        const handRect = hand.getBoundingClientRect();
+        const threshold = handRect.top - Math.min(72, Math.max(46, innerHeight * .065));
+        state.playIntent = ev.clientY < threshold;
+        card.classList.toggle('illegal-probe', state.playIntent && card.dataset.play !== '1');
+        updateReorder(ev.clientX, ev.clientY);
+
+        if (state.playIntent) {
+          if (card.dataset.play === '1') {
+            shared.classList.add('receptive');
+            shared.classList.remove('blocked');
+            note.classList.remove('rule');
+            note.textContent = 'Puść, aby zagrać kartę.';
+          } else {
+            shared.classList.remove('receptive');
+            shared.classList.add('blocked');
+            note.classList.add('rule');
+            note.textContent = 'W tej lewie musisz dołożyć ♥.';
+          }
+        } else {
+          resetSceneFeedback();
+        }
+      }
+
+      function settleBack(card, outcome) {
+        const placeholder = state.placeholder;
+        if (placeholder?.parentNode) placeholder.replaceWith(card);
+        card.classList.remove('held', 'illegal-probe', 'pending');
+        card.removeAttribute('style');
+        trace(outcome, { card: card.dataset.card, index: cards().indexOf(card) });
+        state.held = null;
+        state.placeholder = null;
+        state.pointerId = null;
+        state.playIntent = false;
+        resetSceneFeedback();
+        setPhase('ready');
+      }
+
+      function semanticTargetRect() {
+        const r = trick.getBoundingClientRect();
+        const w = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--card-w')) || 72;
+        return { left: r.left + r.width / 2 - w / 2, top: r.top + r.height * .57 - (w * 1.42) / 2 };
+      }
+
+      function commit(card) {
+        setPhase('pending');
+        card.classList.add('pending');
+        shared.classList.remove('receptive');
+        note.textContent = 'Ruch wysłany…';
+        trace('commit', { card: card.dataset.card });
+        const target = semanticTargetRect();
+        card.style.transition = 'transform .20s cubic-bezier(.2,.72,.22,1), opacity .16s ease';
+        card.style.setProperty('--hold-x', `${target.left}px`);
+        card.style.setProperty('--hold-y', `${target.top}px`);
+        card.style.setProperty('--hold-rot', '0deg');
+
+        window.setTimeout(() => {
+          if (state.rejectNext) {
+            state.rejectNext = false;
+            note.classList.add('rule');
+            note.textContent = 'Ruch nie został przyjęty. Karta wraca do Twojej ręki.';
+            trace('authority-reject', { card: card.dataset.card });
+            window.setTimeout(() => settleBack(card, 'reject-settle'), 170);
+            return;
+          }
+          accept(card);
+        }, 140);
+      }
+
+      function accept(card) {
+        trace('authority-accept', { card: card.dataset.card });
+        setPhase('accepted');
+        const placeholder = state.placeholder;
+        placeholder?.remove();
+        state.placeholder = null;
+        state.held = null;
+        state.pointerId = null;
+        state.playIntent = false;
+        card.remove();
+
+        const played = document.createElement('div');
+        played.className = 'trick-card self';
+        played.dataset.anchor = 'trick-card:0';
+        played.dataset.card = card.dataset.card;
+        played.innerHTML = card.querySelector('.card-face').outerHTML;
+        played.style.opacity = '0';
+        trick.appendChild(played);
+        requestAnimationFrame(() => { played.style.opacity = '1'; });
+        note.textContent = 'Lewa zamknięta.';
+        window.setTimeout(resolveTrick, 170);
+      }
+
+      function resolveTrick() {
+        setPhase('resolving');
+        trace('trick-completed', { winner: 0, points: 25 });
+        note.textContent = 'Bierzesz lewę · 25 pkt w tym rozdaniu';
+        const target = valueRail.getBoundingClientRect();
+        const ghosts = [...trick.querySelectorAll('.trick-card')].map((node) => {
+          const rect = node.getBoundingClientRect();
+          const ghost = node.cloneNode(true);
+          ghost.className = 'capture-ghost';
+          ghost.style.left = `${rect.left}px`;
+          ghost.style.top = `${rect.top}px`;
+          ghost.style.transform = 'translate3d(0,0,0) scale(1)';
+          document.body.appendChild(ghost);
+          node.style.opacity = '0';
+          return { ghost, rect };
+        });
+        requestAnimationFrame(() => {
+          for (const { ghost, rect } of ghosts) {
+            const dx = target.left - rect.left + 22;
+            const dy = target.top - rect.top + 18;
+            ghost.style.transform = `translate3d(${dx}px,${dy}px,0) scale(.34) rotate(4deg)`;
+            ghost.style.opacity = '.08';
+          }
+        });
+        window.setTimeout(() => {
+          for (const { ghost } of ghosts) ghost.remove();
+          trick.querySelectorAll('.trick-card').forEach((node) => node.remove());
+          state.capturedValue = 65;
+          captured.textContent = String(state.capturedValue);
+          valueRail.classList.add('gain');
+          trace('captured-value', { before: 40, delta: 25, after: 65, matchScore: state.matchScore });
+          initiative.textContent = 'Prowadzisz następną lewę';
+          document.querySelectorAll('.seat').forEach((node) => node.classList.remove('initiative'));
+          window.setTimeout(() => {
+            valueRail.classList.remove('gain');
+            note.textContent = 'Prowadzisz następną lewę.';
+            setPhase('settled');
+            trace('initiative', { seat: 0 });
+          }, 390);
+        }, 310);
+      }
+
+      function endHold(ev) {
+        const card = state.held;
+        if (!card || state.pointerId !== ev.pointerId) return;
+        const wasPlayIntent = state.playIntent;
+        const legal = card.dataset.play === '1';
+        if (wasPlayIntent && legal) {
+          commit(card);
+          return;
+        }
+        if (wasPlayIntent && !legal) {
+          trace('illegal-play-probe', { card: card.dataset.card });
+          settleBack(card, 'illegal-probe-return');
+          return;
+        }
+        settleBack(card, 'reorder-or-inspect-settle');
+      }
+
+      hand.addEventListener('pointerdown', (ev) => {
+        const card = ev.target.closest('.hand-card');
+        if (!card || card.classList.contains('placeholder')) return;
+        ev.preventDefault();
+        beginHold(card, ev);
+      });
+      window.addEventListener('pointermove', moveHold, { passive: false });
+      window.addEventListener('pointerup', endHold, { passive: false });
+      window.addEventListener('pointercancel', endHold, { passive: false });
+
+      window.__livingSlice = {
+        snapshot() {
+          return {
+            phase: state.phase,
+            hand: cards().map((node) => node.dataset.card),
+            playable: cards().filter((node) => node.dataset.play === '1').map((node) => node.dataset.card),
+            capturedValue: state.capturedValue,
+            matchScore: Number(document.querySelector('[data-match-score]').textContent),
+            initiative: initiative.textContent,
+            trickCards: [...trick.querySelectorAll('.trick-card')].map((node) => node.dataset.card),
+            trace: state.trace.slice(),
+            overflowX: document.documentElement.scrollWidth > document.documentElement.clientWidth + 1,
+          };
+        },
+        rejectNext() { state.rejectNext = true; trace('inject-reject'); },
+        reset() { location.reload(); },
+      };
+      trace('fixture-ready', { hand: cards().map((node) => node.dataset.card) });
+    })();
+  </script>
+</body>
+</html>
