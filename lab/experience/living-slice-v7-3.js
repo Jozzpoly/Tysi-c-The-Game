@@ -4,6 +4,7 @@
 
   const shared = document.querySelector('[data-anchor="trick:shared"]');
   const trick = document.querySelector('.trick');
+  const hand = document.querySelector('[data-hand]');
   const trace = [];
   let lastThreshold = null;
 
@@ -12,6 +13,9 @@
     if (!node) return null;
     const r = node.getBoundingClientRect();
     return { left:r.left, top:r.top, right:r.right, bottom:r.bottom, width:r.width, height:r.height, x:r.left+r.width/2, y:r.top+r.height/2 };
+  };
+  const setStyleIfChanged = (node, name, value) => {
+    if (node.style.getPropertyValue(name) !== value) node.style.setProperty(name, value);
   };
 
   function finalTarget(cardRect) {
@@ -40,7 +44,7 @@
   }
 
   function applyThreshold() {
-    document.body.dataset.fixtureVersion = '7.3';
+    if (document.body.dataset.fixtureVersion !== '7.3') document.body.dataset.fixtureVersion = '7.3';
     const heldNode = document.querySelector('.hand-card.held.pending');
     const snap = base.snapshot();
     if (!heldNode || snap.materialPhase !== 'pending') return;
@@ -51,9 +55,9 @@
     const threshold = thresholdTarget({ width:rawW, height:rawH });
     const final = finalTarget({ width:rawW, height:rawH });
 
-    heldNode.style.setProperty('--v73-threshold-left', `${threshold.left}px`);
-    heldNode.style.setProperty('--v73-threshold-top', `${threshold.top}px`);
-    heldNode.style.setProperty('--v73-threshold-rot', '-1.2deg');
+    setStyleIfChanged(heldNode, '--v73-threshold-left', `${threshold.left.toFixed(3)}px`);
+    setStyleIfChanged(heldNode, '--v73-threshold-top', `${threshold.top.toFixed(3)}px`);
+    setStyleIfChanged(heldNode, '--v73-threshold-rot', '-1.2deg');
 
     const next = {
       threshold,
@@ -71,8 +75,10 @@
   }
 
   const observer = new MutationObserver(applyThreshold);
-  observer.observe(document.body, { attributes:true, attributeFilter:['data-slice-state','data-material-phase','data-play-intent','data-fixture-version'] });
-  observer.observe(document.querySelector('[data-hand]'), { childList:true, subtree:true, attributes:true, attributeFilter:['class','style'] });
+  // Observe semantic state/class transitions only. V7.3 writes inline custom
+  // properties itself; observing style would create a feedback loop.
+  observer.observe(document.body, { attributes:true, attributeFilter:['data-slice-state','data-material-phase','data-play-intent'] });
+  observer.observe(hand, { childList:true, subtree:true, attributes:true, attributeFilter:['class'] });
   window.addEventListener('resize', applyThreshold);
 
   const baseSnapshot = base.snapshot.bind(base);
