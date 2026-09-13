@@ -79,15 +79,28 @@ function reconcileOrder(order: readonly CardId[], cards: readonly CardId[]): Car
 }
 
 function FloatingCard(props: FloatingCardProps) {
-  const { ghost } = props;
+  let left: number;
+  let top: number;
+  let tilt: number;
+  let commitReady = false;
+  let throwIntent = false;
+
+  if (props.dragging) {
+    const ghost = props.ghost;
+    left = ghost.x - ghost.offsetX;
+    top = ghost.y - ghost.offsetY;
+    tilt = Math.max(-12, Math.min(12, (ghost.x - ghost.startX) / 10));
+    commitReady = ghost.commitReady;
+    throwIntent = ghost.throwIntent;
+  } else {
+    const ghost = props.ghost;
+    left = ghost.left;
+    top = ghost.top;
+    tilt = ghost.tilt;
+  }
+
+  const ghost = props.ghost;
   const { rank, symbol, red } = cardFace(ghost.card);
-  const left = props.dragging ? ghost.x - ghost.offsetX : ghost.left;
-  const top = props.dragging ? ghost.y - ghost.offsetY : ghost.top;
-  const tilt = props.dragging
-    ? Math.max(-12, Math.min(12, (ghost.x - ghost.startX) / 10))
-    : ghost.tilt;
-  const commitReady = props.dragging && ghost.commitReady;
-  const throwIntent = props.dragging && ghost.throwIntent;
   const style = {
     left,
     top,
