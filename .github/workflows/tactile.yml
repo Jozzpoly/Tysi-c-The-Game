@@ -9,6 +9,7 @@ on:
       - 'src/tactile-*.css'
       - 'scripts/*hand-browser-smoke.mjs'
       - 'scripts/living-hand-browser-smoke.mjs'
+      - 'scripts/mobile-touch-browser-smoke.mjs'
       - 'test/tactile-*.test.ts'
       - 'package.json'
       - 'package-lock.json'
@@ -33,5 +34,8 @@ jobs:
         if: always()
         with:
           name: tactile-smoke
-          path: artifacts/browser/*tactile*.png
+          path: |
+            artifacts/browser/*tactile*.png
+            artifacts/browser/*living-hand*.png
+            artifacts/browser/mobile-touch-*.png
           if-no-files-found: ignore
