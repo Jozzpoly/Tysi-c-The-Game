@@ -1,0 +1,147 @@
+/* Living Slice V7 changes tactic after V6 overlay review.
+   The cards/capture territory carry the sentence; diagnostic rings/threads are not the core language. */
+
+body[data-material-phase="intent"] .shared .scene-field {
+  border-color: rgba(191,217,202,.20);
+  box-shadow: inset 0 0 72px rgba(170,205,186,.040);
+  transform: scale(1.012);
+}
+
+/* Pending is a transfer of control: the card is no longer under the finger,
+   but it remains clearly the same material object while authority is unresolved. */
+body[data-material-phase="pending"] .hand-card.held.pending {
+  opacity: .94;
+  filter: drop-shadow(0 11px 13px rgba(0,0,0,.34));
+}
+body[data-material-phase="pending"] .hand-card.held.pending .card-face {
+  transform: scale(.985);
+  box-shadow:
+    0 5px 14px rgba(0,0,0,.30),
+    inset 0 0 0 1px rgba(35,67,52,.23),
+    inset 0 -8px 16px rgba(34,55,46,.055);
+}
+body[data-material-phase="pending"] .hand-card.held.pending::before {
+  content:"";
+  position:absolute;
+  z-index:-1;
+  left:10%; right:10%; bottom:-9px;
+  height:18px;
+  border-radius:50%;
+  background:radial-gradient(ellipse at center, rgba(191,217,202,.16), rgba(191,217,202,.02) 58%, transparent 74%);
+  filter:blur(4px);
+  opacity:.72;
+}
+
+/* Accepted object settles into the shared trick; it does not need a UI seal. */
+body[data-material-phase="accepted"] .trick-card.self {
+  animation:v7AcceptedSeat .18s cubic-bezier(.2,.72,.22,1) both;
+}
+@keyframes v7AcceptedSeat {
+  from { opacity:.48; filter:brightness(1.14); }
+  to { opacity:1; filter:brightness(1); }
+}
+
+/* Existing V5 capture ghosts follow canonical collection. V7 makes their
+   material identity remain readable during the transfer instead of fading to telemetry. */
+.capture-ghost.v7-material-ghost {
+  opacity:.54 !important;
+  transition:transform .32s cubic-bezier(.18,.72,.22,1), opacity .28s ease !important;
+  filter:drop-shadow(0 10px 18px rgba(0,0,0,.28));
+}
+
+/* A short public memory of the just-captured trick. It lives at the destination,
+   not in the middle of the table, and fades after the consequence is understood. */
+.v7-recent-trick {
+  position:absolute;
+  left:-54px;
+  top:50%;
+  width:58px;
+  height:48px;
+  transform:translateY(-50%);
+  pointer-events:none;
+  opacity:0;
+  transition:opacity .16s ease, transform .20s cubic-bezier(.2,.72,.22,1);
+}
+.v7-recent-trick.visible {
+  opacity:.76;
+  transform:translateY(-50%) translateX(-3px);
+}
+.v7-recent-trick.fading {
+  opacity:0;
+  transform:translateY(-50%) translateX(-8px) scale(.96);
+}
+.v7-mini-card {
+  position:absolute;
+  left:20px;
+  top:10px;
+  width:22px;
+  height:31px;
+  border-radius:4px;
+  overflow:hidden;
+  background:linear-gradient(155deg,#f5f1e8,#e7e1d4);
+  box-shadow:0 4px 10px rgba(0,0,0,.24), inset 0 0 0 1px rgba(26,36,31,.13);
+  color:#161b19;
+  font-size:8px;
+  font-weight:760;
+  line-height:1;
+  padding:4px 3px;
+  transform-origin:50% 78%;
+}
+.v7-mini-card.red { color:#a43e3e; }
+.v7-mini-card:nth-child(1) { transform:translate(-10px,4px) rotate(-13deg); }
+.v7-mini-card:nth-child(2) { transform:translate(0,0) rotate(-2deg); }
+.v7-mini-card:nth-child(3) { transform:translate(10px,3px) rotate(11deg); }
+.v7-mini-card span { display:block; margin-top:2px; font-size:7px; }
+
+/* Value change belongs to captured territory. */
+body[data-material-phase="resolving"] .capture,
+body[data-material-phase="settled"] .capture {
+  transition:background .22s ease, border-color .22s ease, transform .22s cubic-bezier(.2,.72,.22,1);
+}
+body[data-material-phase="resolving"] .capture {
+  border-color:rgba(220,204,161,.48);
+}
+body[data-material-phase="settled"] .capture.v7-has-residue {
+  background:linear-gradient(90deg,rgba(220,204,161,.045),transparent 72%);
+}
+
+/* Initiative returns to the instrument itself instead of another central message. */
+.hand-zone.v7-initiative-return .hand-card .card-face {
+  box-shadow:0 10px 25px rgba(0,0,0,.25), inset 0 0 0 1px rgba(51,96,73,.16);
+}
+.hand-zone.v7-initiative-return .hand-meta strong {
+  color:#f1f7f3;
+}
+
+/* Reject should read as a failed relationship, not an accepted action rewinding. */
+.hand-card.v7-rejected .card-face {
+  animation:v7RejectFace .20s ease both;
+}
+@keyframes v7RejectFace {
+  0% { transform:translateX(0); box-shadow:0 9px 24px rgba(0,0,0,.25), inset 0 0 0 1px rgba(179,91,91,.18); }
+  40% { transform:translateX(-3px); box-shadow:0 9px 24px rgba(0,0,0,.25), inset 0 0 0 1px rgba(179,91,91,.45); }
+  72% { transform:translateX(2px); }
+  100% { transform:translateX(0); box-shadow:0 9px 24px rgba(0,0,0,.25), inset 0 0 0 1px rgba(179,91,91,.24); }
+}
+
+/* Ordinary phases quiet explanatory text slightly, but rule/reject text remains explicit. */
+body[data-material-phase="intent"] .scene-note:not(.rule) { opacity:.72; }
+body[data-material-phase="pending"] .scene-note:not(.rule) { opacity:.68; }
+body[data-material-phase="resolving"] .scene-note:not(.rule) { opacity:.62; }
+body[data-material-phase="settled"] .scene-note:not(.rule) { opacity:.20; }
+
+@media (max-width:560px) {
+  .v7-recent-trick {
+    left:-40px;
+    top:26%;
+    transform:translateY(-50%) scale(.88);
+  }
+  .v7-recent-trick.visible { transform:translateY(-50%) translateX(-2px) scale(.88); }
+  .v7-recent-trick.fading { transform:translateY(-50%) translateX(-6px) scale(.84); }
+}
+
+@media (prefers-reduced-motion:reduce) {
+  .trick-card.self,
+  .hand-card.v7-rejected .card-face { animation-duration:.001ms !important; }
+  .v7-recent-trick { transition-duration:.001ms !important; }
+}
