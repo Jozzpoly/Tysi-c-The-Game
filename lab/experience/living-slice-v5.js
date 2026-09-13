@@ -343,6 +343,21 @@
 
   function accept(card) {
     trace('authority-accept', { card: card.dataset.card });
+    const boundaryRect = card.getBoundingClientRect();
+    const boundary = {
+      left: boundaryRect.left,
+      top: boundaryRect.top,
+      right: boundaryRect.right,
+      bottom: boundaryRect.bottom,
+      width: boundaryRect.width,
+      height: boundaryRect.height,
+      x: boundaryRect.left + boundaryRect.width / 2,
+      y: boundaryRect.top + boundaryRect.height / 2,
+    };
+    trace('authority-boundary', { card: card.dataset.card, x:+boundary.x.toFixed(2), y:+boundary.y.toFixed(2) });
+    document.dispatchEvent(new CustomEvent('living-slice:authority-accept-boundary', {
+      detail: { card:card.dataset.card, rect:boundary },
+    }));
     setPhase('accepted');
     state.placeholder?.remove();
     state.placeholder = null;
