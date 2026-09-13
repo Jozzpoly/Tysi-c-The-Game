@@ -6,6 +6,7 @@ import './visual-language.css';
 import './visual-language-02.css';
 import './visual-language-03.css';
 import './tactile-hand.css';
+import './tactile-hand-fit.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
