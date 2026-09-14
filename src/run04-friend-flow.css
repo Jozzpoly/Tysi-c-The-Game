@@ -103,7 +103,8 @@
   color: #18150d;
 }
 
-/* Routine trick guidance should not become the scene's visual center. */
+/* Routine trick guidance should stay secondary to the cards, but remain readable
+   in peripheral vision on a phone. */
 .decision-card.compact {
   width: min(520px, 86%);
   padding: 4px 8px;
@@ -115,10 +116,11 @@
 
 .decision-card.compact h2 {
   margin: 0;
-  font-size: .67rem;
+  font-size: .7rem;
+  font-weight: 720;
   letter-spacing: .02em;
   text-transform: none;
-  opacity: .62;
+  opacity: .78;
 }
 
 .decision-card.compact .decision-help {
@@ -183,7 +185,13 @@
 
   .decision-card.compact {
     width: 90%;
-    padding: 3px 6px;
+    padding: 4px 7px;
+  }
+
+  .decision-card.compact h2 {
+    font-size: .74rem;
+    font-weight: 760;
+    opacity: .88;
   }
 
   .decision-card.compact .decision-help {
