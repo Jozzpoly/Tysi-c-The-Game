@@ -186,6 +186,13 @@
   to { opacity: 0; transform: translateY(-72px) rotate(var(--drag-tilt)) scale(.87); }
 }
 
+@media (min-width: 761px) {
+  /* Rotated edge cards need a few pixels of breathing room without clipping. */
+  .tactile-hand {
+    width: min(972px, calc(100% - 8px));
+  }
+}
+
 @media (pointer: coarse), (max-width: 620px) {
   .tactile-hand {
     --hand-card-width: 52px;
