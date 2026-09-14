@@ -14,7 +14,7 @@ import {
   type Seat,
 } from './core/index.js';
 import { describeFeedback } from './presentation/feedback.js';
-import { GameTable } from './presentation/GameTable.js';
+import { LivingGameTable } from './presentation/LivingGameTable.js';
 import { RulesGuide } from './presentation/RulesGuide.js';
 import { presentationFrameDuration } from './presentation/trickPresentation.js';
 import { RemoteRoom } from './remote/RemoteRoom.js';
@@ -114,7 +114,7 @@ function LocalGame() {
   }, [authority, humanSeat, seatNames, presentedEvents]);
 
   return (
-    <GameTable
+    <LivingGameTable
       projection={projection}
       seatNames={seatNames}
       events={presentedEvents}
