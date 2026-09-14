@@ -87,6 +87,10 @@ async function touchActions(session, actions) {
   });
 }
 
+async function releaseActions(session) {
+  await webdriver(`/session/${session}/actions`, { method: 'DELETE' });
+}
+
 async function screenshot(session, name) {
   const base64 = await webdriver(`/session/${session}/screenshot`);
   await writeFile(`${OUTPUT}/${name}.png`, Buffer.from(base64, 'base64'));
@@ -141,8 +145,7 @@ async function sampleGesture(session, label, moveDurationMs) {
   const y = Math.round(source.y);
 
   // One WebDriver action sequence is deliberate: Chrome executes the timing
-  // internally, so the requested 14 ms vs 155 ms move durations are not
-  // distorted by one HTTP round-trip per pointermove.
+  // internally, so 14 ms vs 155 ms is not distorted by HTTP round-trips.
   await touchActions(session, [
     { type: 'pointerMove', duration: 0, origin: 'viewport', x, y },
     { type: 'pointerDown', button: 0 },
@@ -172,7 +175,9 @@ async function sampleGesture(session, label, moveDurationMs) {
   }
   await screenshot(session, `mobile-tactile-motion-${label}`);
 
-  await touchActions(session, [{ type: 'pointerUp', button: 0 }]);
+  // Release Actions is the W3C endpoint for clearing an active input source.
+  // ChromeDriver reliably turns the held touch into the matching pointer-up.
+  await releaseActions(session);
   const settled = await waitFor(`${label} return settle`, async () => {
     const candidate = await state(session);
     return candidate.phase === 'idle' ? candidate : false;
@@ -233,6 +238,7 @@ async function run() {
 
     return { slow, fast };
   } finally {
+    try { await releaseActions(session); } catch {}
     try { await webdriver(`/session/${session}`, { method: 'DELETE' }); } catch {}
   }
 }
