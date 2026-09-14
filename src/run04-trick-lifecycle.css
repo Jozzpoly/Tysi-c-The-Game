@@ -42,9 +42,9 @@
 }
 
 /*
- * First bounded collection pass: the whole trick moves toward the authoritative
- * winner's seat direction. Exact source-anchor geometry can replace these
- * vectors later without changing the event/timeline contract.
+ * Desktop keeps the bounded group translation from P4-C. Mobile below uses
+ * per-card convergence because its trick locus already sits close to the seat
+ * anchors and the old desktop-scaled vector could drive an edge card offscreen.
  */
 .trick.completed.trick-stage-collect[data-winner-position='left'] .played,
 .trick.completed.trick-stage-consequence[data-winner-position='left'] .played {
@@ -73,22 +73,22 @@
   opacity: 0;
 }
 
+/*
+ * The visual scene now carries winner/value. Keep the prose result in the DOM
+ * for accessible announcement and mechanical tracing, but do not let it explain
+ * the picture for sighted play.
+ */
 .trick-result {
-  transition: opacity .14s ease, transform .18s ease;
-}
-
-.trick-result-resolve {
-  opacity: .72;
-}
-
-.trick-result-collect {
-  opacity: .42;
-  transform: translateY(-3px);
-}
-
-.trick-result-consequence {
-  opacity: 0;
-  transform: translateY(-8px);
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0 0 0 0) !important;
+  clip-path: inset(50%) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
 }
 
 .opponent,
@@ -131,29 +131,146 @@
   transform: translate(0, -50%);
 }
 
+/* P4-D persistent ownership: deliberately quiet, attached to the owner. */
+.capture-state {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 14px;
+  margin-top: 1px;
+  color: #b8c9bf !important;
+  font-size: .58rem !important;
+  font-weight: 600;
+  line-height: 1;
+  opacity: .62;
+  transition: opacity .16s ease, color .16s ease, transform .18s ease, filter .18s ease;
+}
+
+.capture-state.is-empty {
+  opacity: 0;
+}
+
+.capture-state-mark {
+  color: #d8c57d;
+  font-size: .48rem;
+  opacity: .72;
+}
+
+.capture-state > strong {
+  color: #e8eee9;
+  font-size: .62rem;
+}
+
+.capture-state.is-updated {
+  color: #f1dda0 !important;
+  opacity: 1;
+  transform: translateY(-1px);
+  filter: brightness(1.08);
+}
+
+/* Next initiative is spatial ownership, not another turn banner. */
+.opponent.next-initiative-source .seat-line strong,
+.hand-area.next-initiative-source .hand-owner > strong {
+  color: #fff3c6;
+  text-shadow: 0 0 16px #ead27a33;
+}
+
+.opponent.next-initiative-source .card-backs {
+  transform: translateY(-1px);
+  filter: brightness(1.08) saturate(1.05);
+}
+
+.opponent.next-initiative-source .seat-line::after,
+.hand-area.next-initiative-source .hand-owner::before {
+  content: '';
+  width: 5px;
+  height: 5px;
+  flex: 0 0 5px;
+  border-radius: 50%;
+  background: #ead27a;
+  box-shadow: 0 0 0 3px #ead27a18, 0 0 12px #ead27a45;
+}
+
+.hand-area.next-initiative-source .hand-owner::before {
+  position: absolute;
+  left: -11px;
+  top: .36rem;
+}
+
 @keyframes trick-capture-pulse {
   from { opacity: 0; scale: .82; }
   to { opacity: 1; scale: 1; }
 }
 
 @media (max-width: 760px) {
-  .trick.completed.trick-stage-collect[data-winner-position='left'] .played,
-  .trick.completed.trick-stage-consequence[data-winner-position='left'] .played {
-    translate: -92px -42px;
+  /*
+   * Converge each card toward the mobile winner anchor instead of translating
+   * the whole trick by a desktop-derived vector. This keeps the edge cards
+   * inside the viewport while making collection read as actual ownership.
+   */
+  .trick.completed.trick-stage-collect[data-winner-position='left'] .played-left,
+  .trick.completed.trick-stage-consequence[data-winner-position='left'] .played-left {
+    translate: 18px -44px;
   }
 
-  .trick.completed.trick-stage-collect[data-winner-position='right'] .played,
-  .trick.completed.trick-stage-consequence[data-winner-position='right'] .played {
-    translate: 92px -42px;
+  .trick.completed.trick-stage-collect[data-winner-position='left'] .played-self,
+  .trick.completed.trick-stage-consequence[data-winner-position='left'] .played-self {
+    translate: -70px -54px;
   }
 
-  .trick.completed.trick-stage-collect[data-winner-position='self'] .played,
-  .trick.completed.trick-stage-consequence[data-winner-position='self'] .played {
+  .trick.completed.trick-stage-collect[data-winner-position='left'] .played-right,
+  .trick.completed.trick-stage-consequence[data-winner-position='left'] .played-right {
+    translate: -150px -44px;
+  }
+
+  .trick.completed.trick-stage-collect[data-winner-position='right'] .played-left,
+  .trick.completed.trick-stage-consequence[data-winner-position='right'] .played-left {
+    translate: 150px -44px;
+  }
+
+  .trick.completed.trick-stage-collect[data-winner-position='right'] .played-self,
+  .trick.completed.trick-stage-consequence[data-winner-position='right'] .played-self {
+    translate: 70px -54px;
+  }
+
+  .trick.completed.trick-stage-collect[data-winner-position='right'] .played-right,
+  .trick.completed.trick-stage-consequence[data-winner-position='right'] .played-right {
+    translate: -18px -44px;
+  }
+
+  .trick.completed.trick-stage-collect[data-winner-position='self'] .played-left,
+  .trick.completed.trick-stage-consequence[data-winner-position='self'] .played-left {
+    translate: 72px 72px;
+  }
+
+  .trick.completed.trick-stage-collect[data-winner-position='self'] .played-self,
+  .trick.completed.trick-stage-consequence[data-winner-position='self'] .played-self {
     translate: 0 72px;
+  }
+
+  .trick.completed.trick-stage-collect[data-winner-position='self'] .played-right,
+  .trick.completed.trick-stage-consequence[data-winner-position='self'] .played-right {
+    translate: -72px 72px;
+  }
+
+  .trick.completed.trick-stage-collect .played,
+  .trick.completed.trick-stage-consequence .played {
+    scale: .68;
   }
 
   .capture-pulse {
     font-size: .66rem !important;
+  }
+
+  .capture-state {
+    gap: 3px;
+    min-height: 12px;
+    font-size: .52rem !important;
+  }
+
+  .capture-state > strong {
+    font-size: .56rem;
   }
 }
 
@@ -164,7 +281,7 @@
   }
 
   .trick.completed .played,
-  .trick-result {
+  .capture-state {
     transition: none !important;
   }
 }
