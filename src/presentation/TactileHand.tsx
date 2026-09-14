@@ -27,6 +27,7 @@ import {
   tactileMotionEnergy,
   tactileNeighborResponseMs,
   tactileReturnMotion,
+  tactileSettleMotion,
 } from './tactileMotion.js';
 
 const SUIT_SYMBOL = { spades: '♠', clubs: '♣', diamonds: '♦', hearts: '♥' } as const;
@@ -210,10 +211,15 @@ export function TactileHand({
       const dx = oldRect.left - newRect.left;
       const dy = oldRect.top - newRect.top;
       if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5) continue;
+      const settle = tactileSettleMotion(dx, dy);
       slot.getAnimations().forEach((animation) => animation.cancel());
       slot.animate(
-        [{ transform: `translate(${dx}px, ${dy}px)` }, { transform: 'translate(0, 0)' }],
-        { duration: 145, easing: 'cubic-bezier(.2,.78,.24,1)' },
+        [
+          { transform: `translate(${dx}px, ${dy}px)`, offset: 0 },
+          { transform: `translate(${settle.overshootX}px, ${settle.overshootY}px)`, offset: .78 },
+          { transform: 'translate(0, 0)', offset: 1 },
+        ],
+        { duration: settle.durationMs, easing: 'cubic-bezier(.18,.82,.2,1)' },
       );
     }
   }, [order]);
