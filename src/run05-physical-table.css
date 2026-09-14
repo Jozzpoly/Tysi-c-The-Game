@@ -73,16 +73,27 @@
   text-align: center;
 }
 
-.opponent:first-child > .captured-pile {
-  right: -11px;
-  bottom: -9px;
-  rotate: 4deg;
+/* Captured cards need their own spatial territory. Reserving room below the two
+ * opponent seats keeps ownership readable without relying on +points text. */
+.opponents {
+  padding-bottom: 38px;
 }
 
+.opponent:first-child > .captured-pile,
 .opponent:last-child > .captured-pile {
-  left: -11px;
-  bottom: -9px;
-  rotate: -4deg;
+  left: 50%;
+  right: auto;
+  bottom: -34px;
+  translate: -50% 0;
+}
+
+.opponent:first-child > .captured-pile { rotate: 3deg; }
+.opponent:last-child > .captured-pile { rotate: -3deg; }
+
+/* Run04's transient points pulse remains supporting feedback, not the primary
+ * ownership representation. */
+.opponent .capture-pulse {
+  opacity: .48;
 }
 
 .hand-area > .captured-pile {
@@ -165,6 +176,10 @@
 @media (max-width: 760px) {
   .table {
     padding-bottom: 228px;
+  }
+
+  .opponents {
+    padding-bottom: 34px;
   }
 
   .center {
@@ -304,14 +319,12 @@
     height: 50px;
   }
 
-  .opponent:first-child > .captured-pile {
-    right: -5px;
-    bottom: -7px;
-  }
-
+  .opponent:first-child > .captured-pile,
   .opponent:last-child > .captured-pile {
-    left: -5px;
-    bottom: -7px;
+    left: 50%;
+    right: auto;
+    bottom: -30px;
+    translate: -50% 0;
   }
 
   .hand-area > .captured-pile {
