@@ -97,12 +97,19 @@ async function state(session) {
     const hand = document.querySelector('.tactile-hand');
     const slots = [...document.querySelectorAll('.hand > .hand-slot')].map((slot, index) => {
       const rect = slot.getBoundingClientRect();
+      const x = rect.left + rect.width / 2;
+      const y = rect.top + rect.height / 2;
+      const hit = document.elementFromPoint(x, y);
       return {
         index,
         label: slot.querySelector(':scope > .card')?.getAttribute('aria-label') ?? '',
-        x: rect.left + rect.width / 2,
-        y: rect.top + rect.height / 2,
+        card: slot.dataset.card ?? '',
+        x,
+        y,
         shift: Number(slot.dataset.previewShiftX ?? 0),
+        hitCard: hit?.closest?.('.hand-slot')?.dataset?.card ?? '',
+        hitTag: hit?.tagName ?? '',
+        hitClass: typeof hit?.className === 'string' ? hit.className : '',
       };
     });
     return {
@@ -110,9 +117,37 @@ async function state(session) {
       revision: revText ? Number(revText.slice(4)) : null,
       phase: hand?.dataset.gesturePhase ?? '',
       insertionPosition: Number(hand?.dataset.insertionPosition || NaN),
+      insertionTarget: Number(hand?.dataset.insertionTarget || NaN),
       slots,
     };
   `);
+}
+
+async function installPointerTrace(session) {
+  await execute(session, `
+    window.__desktopPointerTrace = [];
+    for (const type of ['pointerdown', 'pointermove', 'gotpointercapture', 'lostpointercapture', 'pointerup', 'pointercancel']) {
+      document.addEventListener(type, (event) => {
+        const targetSlot = event.target?.closest?.('.hand-slot');
+        window.__desktopPointerTrace.push({
+          type,
+          pointerId: event.pointerId,
+          pointerType: event.pointerType,
+          button: event.button,
+          buttons: event.buttons,
+          x: Math.round(event.clientX * 10) / 10,
+          y: Math.round(event.clientY * 10) / 10,
+          targetCard: targetSlot?.dataset?.card ?? '',
+          phase: document.querySelector('.tactile-hand')?.dataset?.gesturePhase ?? '',
+        });
+      }, true);
+    }
+    return true;
+  `);
+}
+
+async function pointerTrace(session) {
+  return execute(session, `return window.__desktopPointerTrace ?? [];`);
 }
 
 async function run() {
@@ -134,22 +169,42 @@ async function run() {
     const labels = initial.slots.map((slot) => slot.label);
     const source = initial.slots[0];
     const targetX = (initial.slots[3].x + initial.slots[4].x) / 2;
+    await installPointerTrace(session);
 
     await mouse(session, 'mousePressed', source.x, source.y, true);
-    await sleep(30);
+    await sleep(45);
+    const afterPress = await state(session);
     for (let step = 1; step <= 8; step += 1) {
       const ratio = step / 8;
       await mouse(session, 'mouseMoved', source.x + (targetX - source.x) * ratio, source.y, true);
-      await sleep(24);
+      await sleep(28);
+    }
+    const afterMoves = await state(session);
+    const trace = await pointerTrace(session);
+
+    const shiftedAfterMoves = afterMoves.slots.filter((slot) => Math.abs(slot.shift) > 6);
+    if (!(afterMoves.phase === 'held' && afterMoves.insertionPosition > 3 && shiftedAfterMoves.length >= 2)) {
+      await screenshot(session, 'desktop-living-hand-diagnostic-fail');
+      throw new Error(`desktop living gap missing: ${JSON.stringify({
+        source,
+        targetX,
+        sourceHitMatches: source.hitCard === source.card,
+        afterPress: {
+          phase: afterPress.phase,
+          insertionPosition: afterPress.insertionPosition,
+          insertionTarget: afterPress.insertionTarget,
+        },
+        afterMoves: {
+          phase: afterMoves.phase,
+          insertionPosition: afterMoves.insertionPosition,
+          insertionTarget: afterMoves.insertionTarget,
+          shifted: shiftedAfterMoves.map((slot) => ({ index: slot.index, card: slot.card, shift: slot.shift })),
+        },
+        pointerTrace: trace,
+      })}`);
     }
 
-    const preview = await waitFor('desktop living gap', async () => {
-      const candidate = await state(session);
-      const shifted = candidate.slots.filter((slot) => Math.abs(slot.shift) > 6);
-      return candidate.phase === 'held' && candidate.insertionPosition > 3 && shifted.length >= 2
-        ? { ...candidate, shifted }
-        : false;
-    });
+    const preview = { ...afterMoves, shifted: shiftedAfterMoves };
     if (JSON.stringify(preview.slots.map((slot) => slot.label)) !== JSON.stringify(labels)) {
       throw new Error('desktop order changed before mouse release');
     }
@@ -172,11 +227,14 @@ async function run() {
     await screenshot(session, 'desktop-living-hand-settled');
 
     return {
+      sourceHitMatches: source.hitCard === source.card,
+      pressPhase: afterPress.phase,
       previewOrderUnchanged: true,
       previewRevision: `${initial.revision}->${preview.revision}`,
       insertionPosition: preview.insertionPosition,
       shiftedNeighbors: preview.shifted.map((slot) => ({ index: slot.index, shift: slot.shift })),
       physicallyMovedNeighbors: physicallyMoved.length,
+      pointerEvents: trace.map(({ type, targetCard, phase }) => ({ type, targetCard, phase })),
       releasedToIndex: settled.movedIndex,
       releaseRevision: `${initial.revision}->${settled.revision}`,
     };
