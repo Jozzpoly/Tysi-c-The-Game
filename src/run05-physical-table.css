@@ -188,7 +188,7 @@
   .hand-area {
     left: 4px;
     right: 4px;
-    bottom: max(5px, env(safe-area-inset-bottom));
+    bottom: max(10px, env(safe-area-inset-bottom));
     min-height: 188px;
     padding-top: 4px;
     background:
@@ -252,7 +252,21 @@
   }
 
   .tactile-hand:has(> .hand-slot:nth-child(10)) > .hand-slot + .hand-slot {
-    margin-left: -32px;
+    margin-left: -33px;
+  }
+
+  .tactile-hand:has(> .hand-slot:nth-child(10)) .hand-slot > .card {
+    transform: translateY(var(--fan-lift)) rotate(0deg);
+  }
+
+  .tactile-hand:has(> .hand-slot:nth-child(10)) .hand-slot.is-held > .card,
+  .tactile-hand:has(> .hand-slot:nth-child(10)) .hand-slot:focus-within > .card {
+    transform: translateY(-18px) rotate(0deg) scale(1.035);
+  }
+
+  .tactile-hand:has(> .hand-slot:nth-child(10)) .hand-slot > .card.selected,
+  .tactile-hand:has(> .hand-slot:nth-child(10)) .hand-slot:focus-within > .card.selected {
+    transform: translateY(-23px) rotate(0deg) scale(1.04);
   }
 
   .captured-pile {
