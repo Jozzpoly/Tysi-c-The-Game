@@ -14,6 +14,7 @@ export function LivingGameTable({ events = [], ...props }: GameTableProps) {
   const [consequenceRevision, setConsequenceRevision] = useState<number | null>(null);
   const [consequenceReady, setConsequenceReady] = useState(false);
   const [anchors, setAnchors] = useState<(HTMLElement | null)[]>([null, null, null]);
+  const [centerAnchor, setCenterAnchor] = useState<HTMLElement | null>(null);
 
   const displayedConsequenceReady = completedTrick === null
     ? true
@@ -42,6 +43,8 @@ export function LivingGameTable({ events = [], ...props }: GameTableProps) {
   useLayoutEffect(() => {
     const next = ALL_SEATS.map((seat) => document.querySelector<HTMLElement>(`[data-seat-anchor="${seat}"]`));
     setAnchors((current) => current.every((anchor, index) => anchor === next[index]) ? current : next);
+    const nextCenter = document.querySelector<HTMLElement>('.center');
+    setCenterAnchor((current) => current === nextCenter ? current : nextCenter);
   }, [view.revision, view.seat]);
 
   const initiativeSeat = view.phase === 'trick'
@@ -79,9 +82,32 @@ export function LivingGameTable({ events = [], ...props }: GameTableProps) {
     )];
   });
 
+  const sceneFeedback = centerAnchor ? createPortal(
+    <>
+      {view.phase === 'auction' && (
+        <span
+          className="auction-focus"
+          data-bid={view.auction.currentBid}
+          aria-hidden="true"
+        />
+      )}
+      {events.length > 0 && props.message && (
+        <span
+          key={`${view.revision}:${props.message}`}
+          className="table-event-toast"
+          data-message={props.message}
+          aria-hidden="true"
+        />
+      )}
+    </>,
+    centerAnchor,
+    'scene-feedback',
+  ) : null;
+
   return (
     <>
       <GameTable {...props} events={events} />
+      {sceneFeedback}
       {markers}
     </>
   );

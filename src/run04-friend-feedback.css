@@ -1,0 +1,215 @@
+/* Run 04 — friend-demo causal feedback layer. Presentation only. */
+
+.center {
+  isolation: isolate;
+}
+
+/* Auction gets a real focal object without adding text nodes to the gameplay DOM. */
+.auction-focus {
+  position: absolute;
+  z-index: 2;
+  left: 50%;
+  top: 51%;
+  width: 116px;
+  height: 116px;
+  translate: -50% -50%;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 1px;
+  border: 1px solid #e4ce8530;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, #092d1eec 0%, #062418df 63%, #03170fbc 100%);
+  box-shadow:
+    inset 0 1px #ffffff0f,
+    inset 0 -18px 30px #00190c4d,
+    0 12px 34px #00160b55,
+    0 0 42px #d6bd5b0b;
+  pointer-events: none;
+}
+
+.auction-focus::before {
+  content: 'STAWKA';
+  color: #9eb2a5;
+  font-size: .58rem;
+  font-weight: 750;
+  letter-spacing: .14em;
+}
+
+.auction-focus::after {
+  content: attr(data-bid);
+  color: #f3d987;
+  font-size: 2rem;
+  font-weight: 900;
+  letter-spacing: -.035em;
+  line-height: .98;
+  text-shadow: 0 2px 12px #0007;
+}
+
+/* Fresh authoritative events briefly speak from the table, then get out of the way. */
+.table-event-toast {
+  position: absolute;
+  z-index: 8;
+  left: 50%;
+  bottom: 5px;
+  min-width: min(290px, 72%);
+  max-width: min(520px, 86%);
+  translate: -50% 0;
+  pointer-events: none;
+  animation: table-event-toast 1.55s cubic-bezier(.2, .78, .24, 1) both;
+}
+
+.table-event-toast::before {
+  content: attr(data-message);
+  display: block;
+  width: max-content;
+  max-width: 100%;
+  margin-inline: auto;
+  padding: 5px 10px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border: 1px solid #ead58b26;
+  border-radius: 999px;
+  background: #04170fe8;
+  color: #edf3ee;
+  font-size: .7rem;
+  font-weight: 680;
+  line-height: 1.2;
+  box-shadow: 0 9px 26px #0005, inset 0 1px #ffffff0d;
+}
+
+@keyframes table-event-toast {
+  0% { opacity: 0; transform: translateY(7px) scale(.97); }
+  13% { opacity: 1; transform: translateY(0) scale(1); }
+  70% { opacity: 1; transform: translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateY(-4px) scale(1); }
+}
+
+/* Played-card ownership comes from geometry; sighted labels no longer sit on cards. */
+.trick .played > small {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0 0 0 0) !important;
+  clip-path: inset(50%) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+/* Capture consequence belongs to the winner seat, not the shared status strip. */
+.opponent > .seat-consequence {
+  left: auto;
+  right: 8px;
+  top: auto;
+  bottom: 10px;
+  transform: none;
+  margin: 0;
+  padding: 2px 5px;
+  border-radius: 999px;
+  background: #03150ec4;
+}
+
+.opponent > .seat-consequence.is-updated {
+  transform: translateY(-1px);
+}
+
+.opponent > .seat-consequence.is-initiative::after {
+  left: 50%;
+  top: -7px;
+}
+
+.opponent .capture-pulse {
+  left: auto;
+  right: 8px;
+  top: 8px;
+  transform: none;
+}
+
+.opponent .seat-cards {
+  right: 8px;
+  bottom: auto;
+  top: 53px;
+}
+
+/* Human consequence stays attached to the private territory and away from the cards. */
+.hand-area > .seat-consequence {
+  top: 4px;
+  bottom: auto;
+}
+
+/* External candidate should not advertise implementation/revision chrome. */
+.footer > span:not(.message) {
+  display: none;
+}
+
+.footer {
+  min-height: 16px;
+  justify-content: center;
+  opacity: .68;
+}
+
+.footer .message {
+  font-size: .68rem;
+  text-align: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .table-event-toast {
+    animation-duration: .01ms;
+  }
+}
+
+@media (max-width: 760px) {
+  .auction-focus {
+    top: 50%;
+    width: 88px;
+    height: 88px;
+  }
+
+  .auction-focus::before {
+    font-size: .48rem;
+  }
+
+  .auction-focus::after {
+    font-size: 1.55rem;
+  }
+
+  .table-event-toast {
+    bottom: 4px;
+    min-width: 0;
+    width: 88%;
+    max-width: 88%;
+  }
+
+  .table-event-toast::before {
+    padding: 4px 8px;
+    font-size: .6rem;
+  }
+
+  .opponent > .seat-consequence {
+    right: 5px;
+    bottom: 7px;
+    padding: 2px 4px;
+    font-size: .5rem !important;
+  }
+
+  .opponent .capture-pulse {
+    right: 5px;
+    top: 5px;
+    font-size: .6rem !important;
+  }
+
+  .opponent .seat-cards {
+    right: 5px;
+    top: 40px;
+  }
+
+  .footer {
+    min-height: 12px;
+  }
+}

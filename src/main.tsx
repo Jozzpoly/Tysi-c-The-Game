@@ -12,6 +12,7 @@ import './run04-tactile-fix.css';
 import './run04-touch-contract.css';
 import './run04-trick-lifecycle.css';
 import './run04-friend-demo.css';
+import './run04-friend-feedback.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
