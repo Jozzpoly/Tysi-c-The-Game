@@ -22,7 +22,7 @@
 }
 
 .status-strip {
-  top: -8px;
+  top: 2px;
   padding: 0;
   border: 0;
   border-radius: 0;
@@ -80,17 +80,17 @@
   }
 
   .opponent {
-    min-height: 58px;
+    min-height: 66px;
   }
 
   .center {
     min-height: 162px;
-    margin-top: -7px;
+    margin-top: -4px;
     gap: 3px;
   }
 
   .status-strip {
-    top: -4px;
+    top: 4px;
   }
 
   .status-strip span {
