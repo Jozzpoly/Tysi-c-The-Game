@@ -8,6 +8,19 @@ import {
 } from '../../src/core/index.js';
 import { GameTable } from '../../src/presentation/GameTable.js';
 import '../../src/styles.css';
+import '../../src/touch.css';
+import '../../src/visual-language.css';
+import '../../src/visual-language-02.css';
+import '../../src/visual-language-03.css';
+import '../../src/run04-scene-compression.css';
+import '../../src/run04-mobile-hand.css';
+import '../../src/run04-tactile-hand.css';
+import '../../src/run04-tactile-fix.css';
+import '../../src/run04-touch-contract.css';
+import '../../src/run04-trick-lifecycle.css';
+import '../../src/run04-friend-demo.css';
+import '../../src/run04-friend-feedback.css';
+import '../../src/run04-friend-flow.css';
 
 function fixtureSeat(): Seat {
   const raw = new URLSearchParams(window.location.search).get('seat');
