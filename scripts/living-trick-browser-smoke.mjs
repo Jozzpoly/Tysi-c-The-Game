@@ -325,8 +325,8 @@ async function runViewport(label, width, height, mobile) {
     }
     await screenshot(session, `${label}-living-trick-collect`);
 
-    // Consequence is intentionally brief. A screenshot round trip can consume its
-    // entire live window, so prove the semantic stage from the in-page observer.
+    // DOM mutations prove canonical ownership. Computed visibility is sampled live:
+    // CSS opacity transitions do not emit MutationObserver records as they progress.
     const consequence = await waitFor(`${label}: consequence ownership trace`, async () => {
       const entries = await trace(session);
       return entries.find((entry) => {
@@ -346,7 +346,6 @@ async function runViewport(label, width, height, mobile) {
           && pile.initiative
           && pile.updated
           && !pile.empty
-          && pile.visible
           && pile.layers >= 1;
       }) ?? false;
     }, 3_000);
@@ -360,8 +359,22 @@ async function runViewport(label, width, height, mobile) {
       || consequence.piles.filter((pile) => pile.initiative).length !== 1) {
       throw new Error(`${label}: next initiative is spatially ambiguous ${JSON.stringify({ markers: consequence.markers, piles: consequence.piles })}`);
     }
-    const liveConsequence = await stageState(session, 'consequence');
-    if (liveConsequence) await screenshot(session, `${label}-living-trick-consequence`);
+    const liveConsequence = await waitFor(`${label}: visible consequence pile`, async () => {
+      const state = await stageState(session, 'consequence');
+      if (!state) return false;
+      const pile = pileFor(state, resolve.winnerSeat);
+      return pile
+        && pile.tricks === consequenceWinnerPile.tricks
+        && pile.points === consequenceWinnerPile.points
+        && pile.initiative
+        && !pile.empty
+        && pile.visible
+        ? state
+        : false;
+    }, 1_500);
+    const liveConsequenceWinnerPile = pileFor(liveConsequence, resolve.winnerSeat);
+    if (!liveConsequenceWinnerPile) throw new Error(`${label}: live consequence pile missing`);
+    await screenshot(session, `${label}-living-trick-consequence`);
 
     // Settled is intentionally brief: observe it in-page rather than requiring a
     // slower WebDriver round trip to land inside that window.
@@ -424,7 +437,7 @@ async function runViewport(label, width, height, mobile) {
         points: consequenceWinnerPile.points,
         layers: consequenceWinnerPile.layers,
         initiative: consequenceWinnerPile.initiative,
-        visible: consequenceWinnerPile.visible,
+        visible: liveConsequenceWinnerPile.visible,
       },
       collectDistanceRatio: Number((collectDistance / resolveDistance).toFixed(3)),
       capture: consequence.capture,
