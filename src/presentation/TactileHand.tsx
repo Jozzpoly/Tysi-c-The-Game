@@ -10,6 +10,7 @@ import {
 import { rankOf, suitOf, type CardId } from '../core/index.js';
 import {
   computeHandInsertionPreview,
+  stabilizeInsertionTarget,
   type HandInsertionPreview,
 } from './tactileHandLayout.js';
 import {
@@ -138,6 +139,7 @@ export function TactileHand({
   const beforeRects = useRef<Map<string, DOMRect> | null>(null);
   const dragLayout = useRef<DragLayoutSnapshot | null>(null);
   const latestPreview = useRef<HandInsertionPreview | null>(null);
+  const stableTarget = useRef<number | null>(null);
   const suppressClick = useRef<CardId | null>(null);
   const releaseTimer = useRef<number | null>(null);
   const cardsKey = cards.join('|');
@@ -202,11 +204,20 @@ export function TactileHand({
     const layout = dragLayout.current;
     if (!layout || state.phase !== 'held') return;
     const heldCenterX = state.x - state.offsetX + state.width / 2;
-    const preview = computeHandInsertionPreview({
+    const rawPreview = computeHandInsertionPreview({
       sourceIndex: layout.sourceIndex,
       heldCenterX,
       centers: layout.centers,
     });
+    const targetIndex = stabilizeInsertionTarget({
+      position: rawPreview.position,
+      previousTarget: stableTarget.current ?? layout.sourceIndex,
+      slotCount: layout.centers.length,
+    });
+    stableTarget.current = targetIndex;
+    const preview = targetIndex === rawPreview.targetIndex
+      ? rawPreview
+      : { ...rawPreview, targetIndex };
     latestPreview.current = preview;
     setInsertionPreview(preview);
   }
@@ -223,6 +234,7 @@ export function TactileHand({
       centers: readSlotCenters(),
     };
     latestPreview.current = null;
+    stableTarget.current = sourceIndex;
     setInsertionPreview(null);
     event.currentTarget.setPointerCapture(event.pointerId);
     if (button instanceof HTMLButtonElement && !button.disabled) button.focus({ preventScroll: true });
@@ -321,7 +333,7 @@ export function TactileHand({
       const reordered = commitPreviewOrder(drag.card);
       if (reordered) {
         window.requestAnimationFrame(() => {
-          window.requestAnimationFrame(() => animateReturnToHand(drag));
+          window.requestAnimation(() => animateReturnToHand(drag));
         });
       } else {
         animateReturnToHand(drag);
@@ -330,6 +342,7 @@ export function TactileHand({
 
     dragLayout.current = null;
     latestPreview.current = null;
+    stableTarget.current = null;
     setInsertionPreview(null);
     setDrag(null);
   }
