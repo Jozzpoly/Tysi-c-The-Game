@@ -386,9 +386,11 @@ body {
   .hand-score strong { font-size: .84rem; }
 
   .hand {
-    --hand-card-width: clamp(58px, 18vw, 76px);
-    --hand-gap: clamp(-32px, -6.5vw, -17px);
+    --hand-card-width: clamp(52px, 17.4vw, 68px);
+    --hand-card-step: clamp(25px, 7.6vw, 30px);
     width: calc(100% - 4px);
+    grid-template-columns: repeat(var(--hand-spread-count), minmax(0, var(--hand-card-step))) var(--hand-card-width);
+    column-gap: 0;
     padding: 3px 4px 2px;
   }
 
