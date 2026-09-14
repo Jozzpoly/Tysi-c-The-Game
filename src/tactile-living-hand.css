@@ -1,11 +1,13 @@
 /*
- * Level 2 — living hand.
+ * Level 2/3 — living hand.
  * Neighbor cards yield continuously to the held card before local order commits.
+ * Level 3 lets presentation velocity shorten/relax that response without touching
+ * insertion semantics or authority.
  */
 
 .tactile-hand > .hand-slot {
   transform: translateX(var(--hand-preview-shift-x, 0px));
-  transition: transform 82ms cubic-bezier(.2,.78,.24,1);
+  transition: transform var(--tactile-neighbor-response-ms, 82ms) cubic-bezier(.18,.86,.22,1.04);
   will-change: transform;
 }
 
