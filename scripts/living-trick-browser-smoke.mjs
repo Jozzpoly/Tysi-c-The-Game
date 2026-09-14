@@ -232,6 +232,43 @@ async function stageState(session, stage) {
   `);
 }
 
+async function persistentOwnershipState(session) {
+  return execute(session, `
+    const markers = [...document.querySelectorAll('[data-consequence-seat]')].map((node) => ({
+      seat: node.dataset.consequenceSeat ?? '',
+      tricks: Number(node.dataset.capturedTricks ?? 0),
+      points: Number(node.dataset.capturedPoints ?? 0),
+      initiative: node.dataset.nextInitiative === 'true',
+      updated: node.classList.contains('is-updated'),
+    }));
+    const piles = [...document.querySelectorAll('[data-capture-pile-seat]')].map((node) => {
+      const rect = node.getBoundingClientRect();
+      const style = getComputedStyle(node);
+      return {
+        seat: node.dataset.capturePileSeat ?? '',
+        tricks: Number(node.dataset.capturedTricks ?? 0),
+        points: Number(node.dataset.capturedPoints ?? 0),
+        initiative: node.dataset.nextInitiative === 'true',
+        updated: node.classList.contains('is-updated'),
+        empty: node.classList.contains('is-empty'),
+        visible: style.visibility !== 'hidden' && Number(style.opacity) > .05 && rect.width > 1 && rect.height > 1,
+        layers: node.querySelectorAll('.captured-pile-cards i').length,
+        left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom,
+      };
+    });
+    const trick = document.querySelector('.trick');
+    return {
+      markers,
+      piles,
+      played: trick?.querySelectorAll('.played').length ?? 0,
+      presentationKind: trick?.dataset.presentationKind ?? '',
+      presentationStage: trick?.dataset.trickStage ?? '',
+      width: document.documentElement.clientWidth,
+      scrollWidth: document.documentElement.scrollWidth,
+    };
+  `);
+}
+
 function markerFor(state, seat) {
   return state?.markers?.find((marker) => marker.seat === String(seat)) ?? null;
 }
@@ -323,9 +360,6 @@ async function runViewport(label, width, height, mobile) {
     }
     await screenshot(session, `${label}-living-trick-collect`);
 
-    // The short consequence stage proves when ownership changes. Visibility itself
-    // is asserted after settle, where the physical pile must persist without a
-    // WebDriver race against the ~200ms consequence window.
     const consequence = await waitFor(`${label}: consequence ownership trace`, async () => {
       const entries = await trace(session);
       return entries.find((entry) => {
@@ -380,8 +414,12 @@ async function runViewport(label, width, height, mobile) {
       throw new Error(`${label}: completed trick leaked after settle: ${JSON.stringify(settled)}`);
     }
 
-    const liveSettled = await waitFor(`${label}: persistent visible pile`, () => stageState(session, 'settled').then((state) => {
-      if (!state || state.played.length !== 0) return false;
+    // Persistence is deliberately checked after the presentation frame is allowed
+    // to expire. The physical pile is canonical table state, not a child of the
+    // 80ms `settled` animation stage.
+    const persistent = await waitFor(`${label}: persistent visible pile`, async () => {
+      const state = await persistentOwnershipState(session);
+      if (state.played !== 0) return false;
       const marker = markerFor(state, resolve.winnerSeat);
       const pile = pileFor(state, resolve.winnerSeat);
       return marker
@@ -397,15 +435,12 @@ async function runViewport(label, width, height, mobile) {
         && pile.layers >= 1
         ? state
         : false;
-    }), 3_000);
-    const liveSettledPile = pileFor(liveSettled, resolve.winnerSeat);
-    if (!liveSettledPile) throw new Error(`${label}: persistent settled pile missing`);
+    }, 3_000);
+    const persistentPile = pileFor(persistent, resolve.winnerSeat);
+    if (!persistentPile) throw new Error(`${label}: persistent pile missing after presentation frame`);
     await screenshot(session, `${label}-living-trick-settled`);
 
-    const layout = await execute(session, `return {
-      width: document.documentElement.clientWidth,
-      scrollWidth: document.documentElement.scrollWidth,
-    };`);
+    const layout = { width: persistent.width, scrollWidth: persistent.scrollWidth };
     if (layout.scrollWidth > layout.width + 1) throw new Error(`${label}: horizontal overflow after settle`);
 
     const lifecycleTrace = await trace(session);
@@ -435,15 +470,16 @@ async function runViewport(label, width, height, mobile) {
         empty: collectWinnerPile.empty,
       },
       physicalPileAfter: {
-        tricks: liveSettledPile.tricks,
-        points: liveSettledPile.points,
-        layers: liveSettledPile.layers,
-        initiative: liveSettledPile.initiative,
-        visible: liveSettledPile.visible,
+        tricks: persistentPile.tricks,
+        points: persistentPile.points,
+        layers: persistentPile.layers,
+        initiative: persistentPile.initiative,
+        visible: persistentPile.visible,
       },
       collectDistanceRatio: Number((collectDistance / resolveDistance).toFixed(3)),
       capture: consequence.capture,
       initiativeSeat: consequence.markers.find((marker) => marker.initiative)?.seat ?? '',
+      presentationExpired: persistent.presentationKind !== 'trick-completion',
       stages,
     };
   } finally {
