@@ -47,8 +47,27 @@
     transform: translateY(var(--fan-lift));
   }
 
+  /* Preserve the established compact lift while the ten-card hand overlaps. */
+  .tactile-hand:has(> .hand-slot:nth-child(10)) .hand-slot:hover > .card,
+  .tactile-hand:has(> .hand-slot:nth-child(10)) .hand-slot.is-held > .card,
+  .tactile-hand:has(> .hand-slot:nth-child(10)) .hand-slot:focus-within > .card {
+    transform: translateY(-5px) scale(1.02);
+  }
+
+  .tactile-hand:has(> .hand-slot:nth-child(10)) .hand-slot > .card.selected {
+    transform: translateY(-8px) scale(1.025);
+  }
+
   .app-shell:has(.tactile-hand > .hand-slot:nth-child(10)) .table {
     min-height: 0;
+  }
+
+  .app-shell:has(.tactile-hand > .hand-slot:nth-child(10)) .center {
+    min-height: 92px;
+  }
+
+  .app-shell:has(.tactile-hand > .hand-slot:nth-child(10)) .trick {
+    min-height: 44px;
   }
 }
 
