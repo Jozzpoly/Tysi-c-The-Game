@@ -43,9 +43,40 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -f static-preview
-          if git diff --cached --quiet; then
+          if ! git diff --cached --quiet; then
+            git commit -m "preview: build standalone solo demo"
+            git push origin HEAD:run-02-tactile-interaction-system-02
+          else
             echo "Static preview already current."
-            exit 0
           fi
-          git commit -m "preview: build standalone solo demo"
-          git push origin HEAD:run-02-tactile-interaction-system-02
+      - name: Verify permanent CDN snapshot
+        shell: bash
+        run: |
+          set -euo pipefail
+          SHA="$(git rev-parse HEAD)"
+          BASE="https://rawcdn.githack.com/Jozzpoly/Tysi-c-The-Game/${SHA}/static-preview"
+          ok=0
+          for attempt in {1..12}; do
+            if curl -fsSL "$BASE/index.html" -o /tmp/index.html && curl -fsSL "$BASE/app.html" -o /tmp/app.html; then
+              ok=1
+              break
+            fi
+            sleep 5
+          done
+          if [[ "$ok" != "1" ]]; then
+            echo "::error::Permanent CDN snapshot did not become reachable."
+            exit 1
+          fi
+          grep -q "Tysiąc The Game" /tmp/index.html
+          grep -q "Tysiąc The Game" /tmp/app.html
+          JS="$(grep -o 'src="\./assets/[^"]*"' /tmp/app.html | head -n1 | cut -d'"' -f2)"
+          CSS="$(grep -o 'href="\./assets/[^"]*"' /tmp/app.html | head -n1 | cut -d'"' -f2)"
+          test -n "$JS"
+          test -n "$CSS"
+          curl -fsSL "$BASE/${JS#./}" -o /tmp/app.js
+          curl -fsSL "$BASE/${CSS#./}" -o /tmp/app.css
+          test -s /tmp/app.js
+          test -s /tmp/app.css
+          echo "### Stable standalone solo preview" >> "$GITHUB_STEP_SUMMARY"
+          echo "$BASE/index.html" >> "$GITHUB_STEP_SUMMARY"
+          echo "Commit-pinned CDN snapshot; no Cloudflare temporary-worker expiry." >> "$GITHUB_STEP_SUMMARY"
