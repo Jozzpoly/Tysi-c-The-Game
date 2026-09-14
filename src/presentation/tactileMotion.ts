@@ -10,6 +10,12 @@ export interface TactileReturnMotion {
   overshootY: number;
 }
 
+export interface TactileSettleMotion {
+  durationMs: number;
+  overshootX: number;
+  overshootY: number;
+}
+
 function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
 }
@@ -36,5 +42,21 @@ export function tactileReturnMotion(sample: TactileMotionSample): TactileReturnM
     durationMs: Math.round(220 - energy * 42),
     overshootX: clamp(sample.velocityX * 13, -20, 20),
     overshootY: clamp(sample.velocityY * 10, -14, 14),
+  };
+}
+
+/**
+ * Presentation-only settling after a local reorder. The card starts displaced
+ * by the FLIP delta, crosses rest by only a few pixels, then settles to zero.
+ * The response is based only on rendered displacement and cannot affect order,
+ * insertion targeting, legality, or authority.
+ */
+export function tactileSettleMotion(deltaX: number, deltaY: number): TactileSettleMotion {
+  const distance = Math.hypot(deltaX, deltaY);
+  const strength = clamp(distance / 90, 0, 1);
+  return {
+    durationMs: Math.round(150 + strength * 30),
+    overshootX: -clamp(deltaX * 0.055, -4.5, 4.5),
+    overshootY: -clamp(deltaY * 0.045, -3, 3),
   };
 }
