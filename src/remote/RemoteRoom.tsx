@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Command, GameEvent, Seat, SeatProjection } from '../core/index.js';
 import { describeFeedback } from '../presentation/feedback.js';
 import { GameTable } from '../presentation/GameTable.js';
+import { presentationFrameDuration } from '../presentation/trickPresentation.js';
 import {
   commandEnvelope,
   forgetSeatToken,
@@ -27,16 +28,6 @@ interface PlaybackFrame {
   events: GameEvent[];
 }
 
-const NORMAL_PLAYBACK_MS = 480;
-const MARRIAGE_PLAYBACK_MS = 680;
-const TRICK_COMPLETE_PLAYBACK_MS = 900;
-
-function playbackDelay(events: readonly GameEvent[]): number {
-  if (events.some((event) => event.type === 'trick-completed')) return TRICK_COMPLETE_PLAYBACK_MS;
-  if (events.some((event) => event.type === 'marriage-declared')) return MARRIAGE_PLAYBACK_MS;
-  return NORMAL_PLAYBACK_MS;
-}
-
 function namesForRoom(state: RoomSnapshot, ownSeat: Seat | null): readonly [string, string, string] {
   return state.seats.map((role, index) => {
     if (index === ownSeat) return 'Ty';
@@ -55,6 +46,7 @@ export function RemoteRoom({ room, onLeave }: RemoteRoomProps) {
   const [seat, setSeat] = useState<Seat | null>(null);
   const [roomState, setRoomState] = useState<RoomSnapshot | null>(null);
   const [projection, setProjection] = useState<SeatProjection | null>(null);
+  const [presentedEvents, setPresentedEvents] = useState<GameEvent[]>([]);
   const [message, setMessage] = useState('Łączenie z pokojem…');
   const [connection, setConnection] = useState<ConnectionState>('loading');
   const [inputLocked, setInputLocked] = useState(false);
@@ -97,6 +89,7 @@ export function RemoteRoom({ room, onLeave }: RemoteRoomProps) {
 
   function applyPlaybackFrame(frame: PlaybackFrame) {
     setProjection(frame.projection);
+    setPresentedEvents(frame.events);
     setSeat(frame.projection.observation.seat);
     patchRoomState((current) => ({
       ...current,
@@ -127,7 +120,7 @@ export function RemoteRoom({ room, onLeave }: RemoteRoomProps) {
     playbackTimerRef.current = window.setTimeout(() => {
       playbackTimerRef.current = null;
       pumpPlayback();
-    }, playbackDelay(frame.events));
+    }, presentationFrameDuration(frame.events));
   }
 
   function enqueuePlayback(frame: PlaybackFrame) {
@@ -147,6 +140,7 @@ export function RemoteRoom({ room, onLeave }: RemoteRoomProps) {
       setConnection('loading');
       setMessage('Łączenie z pokojem…');
       setProjection(null);
+      setPresentedEvents([]);
       setSeat(null);
       replaceRoomState(null);
 
@@ -173,6 +167,7 @@ export function RemoteRoom({ room, onLeave }: RemoteRoomProps) {
         setSeat(session.seat);
         replaceRoomState(session.state);
         setProjection(session.projection);
+        setPresentedEvents([]);
         setConnection(session.projection ? 'reconnecting' : 'lobby');
       } catch (error) {
         if (cancelled) return;
@@ -203,6 +198,7 @@ export function RemoteRoom({ room, onLeave }: RemoteRoomProps) {
 
           if (packet.type === 'lobby') {
             cancelPlayback(true);
+            setPresentedEvents([]);
             setSeat(packet.seat);
             replaceRoomState(packet.room);
             setConnection('lobby');
@@ -212,6 +208,7 @@ export function RemoteRoom({ room, onLeave }: RemoteRoomProps) {
           if (packet.type === 'snapshot') {
             cancelPlayback(true);
             setProjection(packet.projection);
+            setPresentedEvents([]);
             setSeat(packet.projection.observation.seat);
             patchRoomState((current) => ({
               ...current,
@@ -224,6 +221,7 @@ export function RemoteRoom({ room, onLeave }: RemoteRoomProps) {
           if (packet.type === 'started') {
             cancelPlayback(true);
             setProjection(packet.projection);
+            setPresentedEvents(packet.events);
             setSeat(packet.projection.observation.seat);
             setConnection('connected');
             patchRoomState((current) => ({ ...current, status: 'playing', revision: packet.projection.observation.revision }));
@@ -245,6 +243,7 @@ export function RemoteRoom({ room, onLeave }: RemoteRoomProps) {
           if (packet.type === 'duplicate') {
             cancelPlayback(true);
             setProjection(packet.projection);
+            setPresentedEvents([]);
             setSeat(packet.projection.observation.seat);
             patchRoomState((current) => ({
               ...current,
@@ -256,6 +255,7 @@ export function RemoteRoom({ room, onLeave }: RemoteRoomProps) {
           }
           if (packet.type === 'rejected') {
             cancelPlayback(true);
+            setPresentedEvents([]);
             if (packet.projection) {
               setProjection(packet.projection);
               setSeat(packet.projection.observation.seat);
@@ -270,6 +270,7 @@ export function RemoteRoom({ room, onLeave }: RemoteRoomProps) {
           }
           if (packet.type === 'error') {
             cancelPlayback(true);
+            setPresentedEvents([]);
             setMessage(`Błąd pokoju: ${packet.reason}`);
           }
         });
@@ -278,6 +279,7 @@ export function RemoteRoom({ room, onLeave }: RemoteRoomProps) {
           if (cancelled || socketRef.current !== socket) return;
           socketRef.current = null;
           cancelPlayback(false);
+          setPresentedEvents([]);
           setConnection('reconnecting');
           setMessage('Połączenie przerwane — ponawiam…');
           reconnectTimerRef.current = window.setTimeout(connect, 900);
@@ -347,7 +349,7 @@ export function RemoteRoom({ room, onLeave }: RemoteRoomProps) {
         <div className={`connection-banner ${connection}`}>
           Pokój {room} · {connection === 'connected' ? 'online' : 'łączenie…'}{inputLocked && connection === 'connected' ? ' · ruchy przy stole…' : ''}
         </div>
-        <GameTable projection={presentedProjection} seatNames={names} message={message} onCommand={sendCommand} />
+        <GameTable projection={presentedProjection} seatNames={names} events={presentedEvents} message={message} onCommand={sendCommand} />
       </div>
     );
   }
