@@ -1,4 +1,4 @@
-import { useEffect, useState, type CSSProperties } from 'react';
+import { useEffect, useState } from 'react';
 import {
   rankOf,
   suitOf,
@@ -9,6 +9,7 @@ import {
 } from '../core/index.js';
 import { RulesGuide } from './RulesGuide.js';
 import { ScoreSummary } from './ScoreSummary.js';
+import { TactileHand } from './TactileHand.js';
 
 const SUIT_SYMBOL = { spades: '♠', clubs: '♣', diamonds: '♦', hearts: '♥' } as const;
 const ALL_SEATS: readonly Seat[] = [0, 1, 2];
@@ -81,6 +82,9 @@ export function GameTable({ projection, seatNames, message = '', onCommand, onNe
   );
   const contracts = humanCommands.filter((command): command is Extract<Command, { type: 'contract' }> => command.type === 'contract');
   const nextHand = humanCommands.find((command): command is Extract<Command, { type: 'next-hand' }> => command.type === 'next-hand');
+  const exchangeMode = view.phase === 'exchange' && exchanges.length > 0;
+  const handActionable = exchangeMode ? new Set<CardId>(humanCards) : playable;
+  const throwableCards = view.phase === 'trick' ? playable : new Set<CardId>();
 
   function toggleTransfer(card: CardId) {
     setSelectedTransfer((current) => {
@@ -104,6 +108,14 @@ export function GameTable({ projection, seatNames, message = '', onCommand, onNe
     if (command) void onCommand(command);
   }
 
+  function activateHandCard(card: CardId) {
+    if (exchangeMode) {
+      toggleTransfer(card);
+      return;
+    }
+    if (view.phase === 'trick' && playable.has(card)) playCard(card);
+  }
+
   const phaseLabel = {
     auction: 'Licytacja',
     exchange: 'Wymiana po musiku',
@@ -115,7 +127,6 @@ export function GameTable({ projection, seatNames, message = '', onCommand, onNe
 
   const visibleTrick = view.trick.length > 0 ? view.trick : view.lastCompletedTrick?.plays ?? [];
   const showingCompletedTrick = view.trick.length === 0 && view.lastCompletedTrick !== null;
-  const handStyle = { '--hand-spread-count': Math.max(0, humanCards.length - 1) } as CSSProperties;
   const bombCompletion = view.completion?.kind === 'bomb' ? view.completion : null;
   const winnerSeat = view.winner ?? humanSeat;
 
@@ -273,8 +284,8 @@ export function GameTable({ projection, seatNames, message = '', onCommand, onNe
               )}
               <small className="decision-help">
                 {marriageCards.size > 0
-                  ? 'Meldunek K+Q daje punkty i ustawia ten kolor jako atut. Możesz też zagrać aktywną kartę bez meldowania.'
-                  : 'Kliknij jedną z aktywnych kart — interfejs blokuje zagrania nielegalne w tej lewie.'}
+                  ? 'Meldunek K+Q daje punkty i ustawia ten kolor jako atut. Możesz też zagrać legalną kartę bez meldowania.'
+                  : 'Każdą kartę możesz chwycić i przełożyć. Legalne zagrania dostają dodatkowy sygnał i możesz rzucić je na stół.'}
               </small>
             </div>
           )}
@@ -304,13 +315,14 @@ export function GameTable({ projection, seatNames, message = '', onCommand, onNe
             <span>pkt</span>
           </div>
         </div>
-        <div className="hand" style={handStyle}>
-          {humanCards.map((card) => {
-            const exchangeMode = view.phase === 'exchange' && exchanges.length > 0;
-            const canPlay = view.phase === 'trick' && playable.has(card);
-            return <Card key={card} card={card} selected={selectedTransfer.includes(card)} disabled={!exchangeMode && !canPlay} onClick={exchangeMode ? () => toggleTransfer(card) : canPlay ? () => playCard(card) : undefined} />;
-          })}
-        </div>
+        <TactileHand
+          cards={humanCards}
+          handNumber={view.handNumber}
+          selectedCards={selectedTransfer}
+          actionableCards={handActionable}
+          throwableCards={throwableCards}
+          onActivate={activateHandCard}
+        />
       </section>
 
       <footer className="footer">
