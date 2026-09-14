@@ -16,6 +16,7 @@ import {
 import { describeFeedback } from './presentation/feedback.js';
 import { GameTable } from './presentation/GameTable.js';
 import { RulesGuide } from './presentation/RulesGuide.js';
+import { presentationFrameDuration } from './presentation/trickPresentation.js';
 import { RemoteRoom } from './remote/RemoteRoom.js';
 import { createRemoteRoom, normalizedRoomCode, type RoomMode } from './remote/room-client.js';
 import './styles.css';
@@ -90,7 +91,8 @@ function LocalGame() {
     const actor = actingSeat(authority);
     if (actor === null || actor === humanSeat) return;
 
-    const delay = authority.hand.phase === 'trick' ? 520 : 360;
+    const ordinaryDelay = authority.hand.phase === 'trick' ? 520 : 360;
+    const delay = Math.max(ordinaryDelay, presentationFrameDuration(presentedEvents));
     const timer = window.setTimeout(() => {
       try {
         const command = productBotCommand(authority, actor);
@@ -109,7 +111,7 @@ function LocalGame() {
     }, delay);
 
     return () => window.clearTimeout(timer);
-  }, [authority, humanSeat, seatNames]);
+  }, [authority, humanSeat, seatNames, presentedEvents]);
 
   return (
     <GameTable
