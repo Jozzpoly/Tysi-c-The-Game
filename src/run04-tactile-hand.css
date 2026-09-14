@@ -187,9 +187,9 @@
 }
 
 @media (min-width: 761px) {
-  /* Rotated edge cards need a few pixels of breathing room without clipping. */
-  .tactile-hand {
-    width: min(972px, calc(100% - 8px));
+  /* Ten visible cards need readability more than fan curvature during exchange. */
+  .tactile-hand:has(> .hand-slot:nth-child(10)) .hand-slot > .card {
+    transform: translateY(var(--fan-lift)) rotate(0deg);
   }
 }
 
