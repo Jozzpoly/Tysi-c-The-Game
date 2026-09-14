@@ -20,6 +20,11 @@ function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
 }
 
+function oppositeOvershoot(value: number, scale: number, limit: number) {
+  const amount = clamp(value * scale, -limit, limit);
+  return amount === 0 ? 0 : -amount;
+}
+
 export function tactileMotionEnergy(velocityX: number, velocityY: number): number {
   const speed = Math.hypot(velocityX, velocityY);
   return clamp((speed - 0.08) / 1.7, 0, 1);
@@ -56,7 +61,7 @@ export function tactileSettleMotion(deltaX: number, deltaY: number): TactileSett
   const strength = clamp(distance / 90, 0, 1);
   return {
     durationMs: Math.round(150 + strength * 30),
-    overshootX: -clamp(deltaX * 0.055, -4.5, 4.5),
-    overshootY: -clamp(deltaY * 0.045, -3, 3),
+    overshootX: oppositeOvershoot(deltaX, 0.055, 4.5),
+    overshootY: oppositeOvershoot(deltaY, 0.045, 3),
   };
 }
