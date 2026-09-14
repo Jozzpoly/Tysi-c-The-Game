@@ -204,12 +204,12 @@
     opacity: .96;
   }
 
-  /* A large hand must still expose the centre of every card as its own touch
-   * target. 78px cards at a 41px semantic step keep 8 cards inside 390px while
-   * preserving a small ownership margin between neighbouring centres. */
+  /* Large cards still need an independent centre and a little horizontal budget
+   * for fan transforms. 76px / 40px keeps eight cards materially larger than FC1
+   * while leaving enough room for the rotated visual edges inside a 390px phone. */
   .tactile-hand {
-    --hand-card-width: 78px !important;
-    --hand-card-step: 41px !important;
+    --hand-card-width: 76px !important;
+    --hand-card-step: 40px !important;
     width: calc(100% - 2px);
     min-height: 150px;
     padding: 15px 2px 7px;
