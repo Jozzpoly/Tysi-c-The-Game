@@ -34,7 +34,7 @@ export function RulesGuide({ label = 'Jak grać', className = '' }: RulesGuidePr
           >
             <header className="rules-dialog-header">
               <div>
-                <div className="eyebrow">PlayOK / Kurnik · 3 graczy · wersja testowa</div>
+                <div className="eyebrow">Wariant stołu · PlayOK / Kurnik · 3 graczy</div>
                 <h2 id="rules-guide-title">Tysiąc w 60 sekund</h2>
               </div>
               <button className="ghost rules-close" onClick={() => setOpen(false)} aria-label="Zamknij zasady">×</button>
@@ -57,7 +57,7 @@ export function RulesGuide({ label = 'Jak grać', className = '' }: RulesGuidePr
               <section className="rules-block">
                 <h3>Kontrakt i lewy</h3>
                 <p>Po wymianie ustalasz ostateczny kontrakt — nie niższy niż wygrana stawka. Jeśli go nie zrealizujesz, tracisz jego wartość.</p>
-                <p>Rozdanie ma 8 lew. W tej wersji: dołóż do koloru; jeśli możesz, przebij wyższą kartą tego koloru; bez koloru zagraj atut; jeśli atut już leży i masz wyższy, przebij go.</p>
+                <p>Rozdanie ma 8 lew. W tym wariancie: dołóż do koloru; jeśli możesz, przebij wyższą kartą tego koloru; bez koloru zagraj atut; jeśli atut już leży i masz wyższy, przebij go.</p>
               </section>
 
               <section className="rules-block">
@@ -73,9 +73,9 @@ export function RulesGuide({ label = 'Jak grać', className = '' }: RulesGuidePr
               </section>
 
               <section className="rules-block">
-                <h3>800 i rzadkie reguły</h3>
+                <h3>800 i rzadsze reguły</h3>
                 <p>Od 800 punktów wynik rośnie tylko wtedy, gdy jesteś grającym. Bomba i cztery dziewiątki pojawią się w interfejsie tylko wtedy, gdy możesz z nich skorzystać.</p>
-                <p className="rules-note">To świadomie wąski profil testowy. Rzadkie warianty Tysiąca różnią się między stołami i część z nich nadal weryfikujemy.</p>
+                <p className="rules-note">Tysiąc ma kilka popularnych odmian. Ten stół konsekwentnie używa wariantu PlayOK/Kurnik dla 3 graczy.</p>
               </section>
             </div>
 

@@ -55,7 +55,7 @@ function LocalGame() {
   const seatNames = useMemo(() => namesForHuman(humanSeat), [humanSeat]);
   const [authority, setAuthority] = useState<MatchState>(() => freshMatch(startupSeed()));
   const [presentedEvents, setPresentedEvents] = useState<GameEvent[]>([]);
-  const [message, setMessage] = useState('Lokalny QA slice — profil PlayOK/Kurnik candidate.');
+  const [message, setMessage] = useState('');
   const projection = useMemo(() => projectSeat(authority, humanSeat), [authority, humanSeat]);
   const seatName = (seat: Seat) => seatNames[seat];
 
@@ -189,7 +189,7 @@ function App() {
       <section className="home-card">
         <div className="eyebrow">Tysiąc The Game</div>
         <h1>Usiądź do stołu</h1>
-        <p>Bez konta. Prywatny pokój działa na tym samym silniku reguł dla ludzi i botów.</p>
+        <p>Zagraj sam albo zaproś znajomego jednym linkiem. Bez konta.</p>
 
         <div className="home-guide-row">
           <span>Pierwszy raz grasz w Tysiąca?</span>
@@ -222,7 +222,6 @@ function App() {
         </div>
 
         {message && <div className="home-message">{message}</div>}
-        <small>Zasady: PlayOK/Kurnik 3P 800 · wersja testowa. Rzadkie warianty nadal weryfikujemy.</small>
       </section>
     </main>
   );
