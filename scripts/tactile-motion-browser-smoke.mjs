@@ -125,8 +125,64 @@ async function state(session) {
   `);
 }
 
+async function installMotionTrace(session) {
+  return execute(session, `
+    const hand = document.querySelector('.tactile-hand');
+    if (!hand) return false;
+    window.__tactileMotionObserver?.disconnect?.();
+    window.__tactileMotionTrace = [];
+    const record = () => {
+      const float = document.querySelector('.tactile-card-float:not(.releasing)');
+      window.__tactileMotionTrace.push({
+        t: performance.now(),
+        phase: hand.dataset.gesturePhase ?? '',
+        energy: Number(hand.dataset.motionEnergy ?? 0),
+        response: Number(hand.dataset.neighborResponseMs ?? 0),
+        tilt: Number(float?.getAttribute('data-motion-tilt') ?? 0),
+        position: Number(hand.dataset.insertionPosition || NaN),
+        target: Number(hand.dataset.insertionTarget || NaN),
+      });
+    };
+    const observer = new MutationObserver(record);
+    observer.observe(hand, {
+      attributes: true,
+      subtree: true,
+      attributeFilter: [
+        'data-gesture-phase',
+        'data-motion-energy',
+        'data-neighbor-response-ms',
+        'data-motion-tilt',
+        'data-insertion-position',
+        'data-insertion-target',
+      ],
+    });
+    window.__tactileMotionObserver = observer;
+    record();
+    return true;
+  `);
+}
+
+async function resetMotionTrace(session) {
+  await execute(session, `window.__tactileMotionTrace = []; return true;`);
+}
+
+async function motionTrace(session) {
+  return execute(session, `return window.__tactileMotionTrace ?? [];`);
+}
+
 function labels(candidate) {
   return candidate.slots.map((slot) => slot.label);
+}
+
+function summarizeTrace(trace) {
+  const held = trace.filter((entry) => entry.phase === 'held');
+  if (held.length === 0) return { peakEnergy: 0, minNeighborResponseMs: Infinity, peakAbsTilt: 0, samples: 0 };
+  return {
+    peakEnergy: Math.max(...held.map((entry) => entry.energy)),
+    minNeighborResponseMs: Math.min(...held.map((entry) => entry.response)),
+    peakAbsTilt: Math.max(...held.map((entry) => Math.abs(entry.tilt))),
+    samples: held.length,
+  };
 }
 
 async function sampleGesture(session, label, moveDurationMs) {
@@ -143,9 +199,11 @@ async function sampleGesture(session, label, moveDurationMs) {
   const source = before.slots[0];
   const x = Math.round(source.x);
   const y = Math.round(source.y);
+  await resetMotionTrace(session);
 
-  // One WebDriver action sequence is deliberate: Chrome executes the timing
-  // internally, so 14 ms vs 155 ms is not distorted by HTTP round-trips.
+  // Chrome executes this entire profile internally. MutationObserver records
+  // every rendered response so the proof measures gesture peak, not an
+  // arbitrary final interpolation frame.
   await touchActions(session, [
     { type: 'pointerMove', duration: 0, origin: 'viewport', x, y },
     { type: 'pointerDown', button: 0 },
@@ -166,6 +224,8 @@ async function sampleGesture(session, label, moveDurationMs) {
       ? candidate
       : false;
   }, 3_000);
+  const trace = await motionTrace(session);
+  const peak = summarizeTrace(trace);
 
   if (JSON.stringify(labels(held)) !== JSON.stringify(openingLabels)) {
     throw new Error(`${label} changed order while held`);
@@ -173,10 +233,9 @@ async function sampleGesture(session, label, moveDurationMs) {
   if (held.revision !== before.revision) {
     throw new Error(`${label} changed revision ${before.revision} -> ${held.revision}`);
   }
+  if (peak.samples < 1) throw new Error(`${label} produced no held motion samples: ${JSON.stringify(trace)}`);
   await screenshot(session, `mobile-tactile-motion-${label}`);
 
-  // Release Actions is the W3C endpoint for clearing an active input source.
-  // ChromeDriver reliably turns the held touch into the matching pointer-up.
   await releaseActions(session);
   const settled = await waitFor(`${label} return settle`, async () => {
     const candidate = await state(session);
@@ -190,9 +249,13 @@ async function sampleGesture(session, label, moveDurationMs) {
   }
 
   return {
-    motionEnergy: held.motionEnergy,
-    neighborResponseMs: held.neighborResponseMs,
-    motionTilt: held.motionTilt,
+    peakEnergy: peak.peakEnergy,
+    minNeighborResponseMs: peak.minNeighborResponseMs,
+    peakAbsTilt: peak.peakAbsTilt,
+    renderedSamples: peak.samples,
+    finalEnergy: held.motionEnergy,
+    finalNeighborResponseMs: held.neighborResponseMs,
+    finalTilt: held.motionTilt,
     insertionPosition: held.insertionPosition,
     insertionTarget: held.insertionTarget,
     revision: `${before.revision}->${settled.revision}`,
@@ -215,19 +278,20 @@ async function run() {
       const candidate = await state(session);
       return candidate.heading === 'Twoja licytacja' && candidate.revision !== null ? candidate : false;
     });
+    if (!await installMotionTrace(session)) throw new Error('could not install motion trace');
 
     const slow = await sampleGesture(session, 'slow', 155);
     await sleep(120);
     const fast = await sampleGesture(session, 'fast', 14);
 
-    if (!(fast.motionEnergy > slow.motionEnergy + 0.12)) {
-      throw new Error(`fast gesture did not carry more motion energy: ${JSON.stringify({ slow, fast })}`);
+    if (!(fast.peakEnergy > slow.peakEnergy + 0.12)) {
+      throw new Error(`fast gesture did not reach more motion energy: ${JSON.stringify({ slow, fast })}`);
     }
-    if (!(fast.neighborResponseMs <= slow.neighborResponseMs - 8)) {
-      throw new Error(`fast gesture did not shorten neighbor response: ${JSON.stringify({ slow, fast })}`);
+    if (!(fast.minNeighborResponseMs <= slow.minNeighborResponseMs - 8)) {
+      throw new Error(`fast gesture did not shorten peak neighbor response: ${JSON.stringify({ slow, fast })}`);
     }
-    if (!(Math.abs(fast.motionTilt) > Math.abs(slow.motionTilt) + 0.5)) {
-      throw new Error(`fast gesture did not increase carried-card tilt: ${JSON.stringify({ slow, fast })}`);
+    if (!(fast.peakAbsTilt > slow.peakAbsTilt + 0.5)) {
+      throw new Error(`fast gesture did not increase peak carried-card tilt: ${JSON.stringify({ slow, fast })}`);
     }
     if (slow.insertionTarget !== fast.insertionTarget || slow.insertionTarget !== 0) {
       throw new Error(`motion changed stable insertion semantics: ${JSON.stringify({ slow, fast })}`);
