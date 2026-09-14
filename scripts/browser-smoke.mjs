@@ -369,16 +369,14 @@ async function runNonzeroSeatViewport(label, width, height, mobile) {
     assertViewport(`${label}: seat2 auction`, layout, width);
 
     const identity = await execute(session, `
-      const scores = [...document.querySelectorAll('.score')];
-      const humanIndex = scores.findIndex((node) => node.classList.contains('human'));
-      const humanLabel = scores[humanIndex]?.querySelector('span')?.textContent?.trim() ?? '';
+      const humanTerritory = document.querySelector('.hand-owner strong')?.textContent?.trim() ?? '';
       const opponents = [...document.querySelectorAll('.opponent strong')].map((node) => node.textContent?.trim() ?? '');
-      return { humanIndex, humanLabel, opponents };
+      return { humanTerritory, opponents };
     `);
-    if (identity.humanIndex !== 2 || identity.humanLabel !== 'Ty') {
-      throw new Error(`${label}: seat2 renderer identity mismatch ${JSON.stringify(identity)}`);
+    if (identity.humanTerritory !== 'Twoje karty') {
+      throw new Error(`${label}: private human territory is not identifiable ${JSON.stringify(identity)}`);
     }
-    if (identity.opponents.length !== 2 || identity.opponents.includes('Ty')) {
+    if (identity.opponents.length !== 2 || identity.opponents.includes('Ty') || !identity.opponents.includes('Bot A') || !identity.opponents.includes('Bot B')) {
       throw new Error(`${label}: seat2 opponent composition mismatch ${JSON.stringify(identity)}`);
     }
     if (layout.enabledHandCards !== 0 || layout.handCards !== 7) {
