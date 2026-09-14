@@ -120,6 +120,23 @@ async function installLifecycleTrace(session) {
       initiative: node.dataset.nextInitiative === 'true',
       updated: node.classList.contains('is-updated'),
     }));
+    const readPiles = () => [...document.querySelectorAll('[data-captured-pile-seat]')].map((node) => {
+      const rect = node.getBoundingClientRect();
+      const style = getComputedStyle(node);
+      return {
+        seat: node.dataset.capturedPileSeat ?? '',
+        tricks: Number(node.dataset.capturedTricks ?? 0),
+        points: Number(node.dataset.capturedPoints ?? 0),
+        initiative: node.dataset.nextInitiative === 'true',
+        updated: node.classList.contains('is-updated'),
+        empty: node.classList.contains('is-empty'),
+        visible: style.visibility !== 'hidden' && Number(style.opacity) > .05 && rect.width > 1 && rect.height > 1,
+        layers: node.querySelectorAll('.captured-pile-cards i').length,
+        left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom,
+        x: rect.left + rect.width / 2,
+        y: rect.top + rect.height / 2,
+      };
+    });
     const sample = () => {
       const trick = document.querySelector('.trick');
       if (!trick) return;
@@ -137,6 +154,7 @@ async function installLifecycleTrace(session) {
         winnerPosition: trick.dataset.winnerPosition ?? '',
         played,
         markers: readMarkers(),
+        piles: readPiles(),
         result: document.querySelector('.trick-result')?.textContent?.trim() ?? '',
         capture: document.querySelector('.capture-pulse')?.textContent?.trim() ?? '',
         enabledActions: document.querySelectorAll('.decision-card button:not(:disabled), .hand .card:not(:disabled)').length,
@@ -169,6 +187,23 @@ async function stageState(session, stage) {
       initiative: node.dataset.nextInitiative === 'true',
       updated: node.classList.contains('is-updated'),
     }));
+    const readPiles = () => [...document.querySelectorAll('[data-captured-pile-seat]')].map((node) => {
+      const rect = node.getBoundingClientRect();
+      const style = getComputedStyle(node);
+      return {
+        seat: node.dataset.capturedPileSeat ?? '',
+        tricks: Number(node.dataset.capturedTricks ?? 0),
+        points: Number(node.dataset.capturedPoints ?? 0),
+        initiative: node.dataset.nextInitiative === 'true',
+        updated: node.classList.contains('is-updated'),
+        empty: node.classList.contains('is-empty'),
+        visible: style.visibility !== 'hidden' && Number(style.opacity) > .05 && rect.width > 1 && rect.height > 1,
+        layers: node.querySelectorAll('.captured-pile-cards i').length,
+        left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom,
+        x: rect.left + rect.width / 2,
+        y: rect.top + rect.height / 2,
+      };
+    });
     return {
       stage: trick.dataset.trickStage,
       freshPlay: trick.dataset.freshPlay ?? '',
@@ -182,9 +217,12 @@ async function stageState(session, stage) {
           fresh: node.classList.contains('is-fresh-arrival'),
           winner: node.classList.contains('is-trick-winner'),
           left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom,
+          x: rect.left + rect.width / 2,
+          y: rect.top + rect.height / 2,
         };
       }),
       markers: readMarkers(),
+      piles: readPiles(),
       result: document.querySelector('.trick-result')?.textContent?.trim() ?? '',
       capture: document.querySelector('.capture-pulse')?.textContent?.trim() ?? '',
       enabledActions: document.querySelectorAll('.decision-card button:not(:disabled), .hand .card:not(:disabled)').length,
@@ -196,6 +234,15 @@ async function stageState(session, stage) {
 
 function markerFor(state, seat) {
   return state?.markers?.find((marker) => marker.seat === String(seat)) ?? null;
+}
+
+function pileFor(state, seat) {
+  return state?.piles?.find((pile) => pile.seat === String(seat)) ?? null;
+}
+
+function averageDistanceToPile(state, pile) {
+  if (!state?.played?.length || !pile) return Infinity;
+  return state.played.reduce((sum, play) => sum + Math.hypot(play.x - pile.x, play.y - pile.y), 0) / state.played.length;
 }
 
 async function runViewport(label, width, height, mobile) {
@@ -224,30 +271,57 @@ async function runViewport(label, width, height, mobile) {
       throw new Error(`${label}: authoritative winner is ambiguous: ${JSON.stringify(resolve)}`);
     }
     if (resolve.enabledActions !== 0) throw new Error(`${label}: input active during resolve`);
-    if (resolve.markers.length !== 3) throw new Error(`${label}: ownership markers missing during resolve ${JSON.stringify(resolve.markers)}`);
+    if (resolve.markers.length !== 3 || resolve.piles.length !== 3) {
+      throw new Error(`${label}: ownership representations missing during resolve ${JSON.stringify({ markers: resolve.markers, piles: resolve.piles })}`);
+    }
     const resolveWinnerMarker = markerFor(resolve, resolve.winnerSeat);
+    const resolveWinnerPile = pileFor(resolve, resolve.winnerSeat);
     if (!resolveWinnerMarker || resolveWinnerMarker.initiative || resolveWinnerMarker.updated) {
       throw new Error(`${label}: winner consequence leaked during resolve ${JSON.stringify(resolveWinnerMarker)}`);
+    }
+    if (!resolveWinnerPile
+      || resolveWinnerPile.tricks !== resolveWinnerMarker.tricks
+      || resolveWinnerPile.points !== resolveWinnerMarker.points
+      || resolveWinnerPile.initiative
+      || resolveWinnerPile.updated) {
+      throw new Error(`${label}: physical pile disagrees with pre-consequence ownership ${JSON.stringify({ resolveWinnerMarker, resolveWinnerPile })}`);
     }
 
     const collect = await waitFor(`${label}: collect`, () => stageState(session, 'collect'), 3_000);
     if (collect.played.length !== 3 || collect.enabledActions !== 0) throw new Error(`${label}: invalid collect state ${JSON.stringify(collect)}`);
     const collectWinnerMarker = markerFor(collect, resolve.winnerSeat);
+    const collectWinnerPile = pileFor(collect, resolve.winnerSeat);
     if (!collectWinnerMarker || collectWinnerMarker.initiative || collectWinnerMarker.updated) {
       throw new Error(`${label}: winner consequence leaked during collect ${JSON.stringify(collectWinnerMarker)}`);
+    }
+    if (!collectWinnerPile
+      || collectWinnerPile.tricks !== resolveWinnerPile.tricks
+      || collectWinnerPile.points !== resolveWinnerPile.points
+      || collectWinnerPile.initiative
+      || collectWinnerPile.updated) {
+      throw new Error(`${label}: physical pile advanced before consequence ${JSON.stringify({ resolveWinnerPile, collectWinnerPile })}`);
     }
     if (collectWinnerMarker.tricks !== resolveWinnerMarker.tricks || collectWinnerMarker.points !== resolveWinnerMarker.points) {
       throw new Error(`${label}: persistent capture advanced before consequence ${JSON.stringify({ resolveWinnerMarker, collectWinnerMarker })}`);
     }
 
+    const resolveDistance = averageDistanceToPile(resolve, resolveWinnerPile);
+
     // Check the moving cards after collection has materially progressed. Scroll
     // width cannot detect a transformed card hanging outside the visual viewport.
     await sleep(115);
     const collectLate = await stageState(session, 'collect') ?? collect;
+    const collectLateWinnerPile = pileFor(collectLate, resolve.winnerSeat) ?? collectWinnerPile;
+    const collectDistance = averageDistanceToPile(collectLate, collectLateWinnerPile);
     for (const play of collectLate.played) {
       if (play.left < -1 || play.right > collectLate.width + 1) {
         throw new Error(`${label}: collected card escaped viewport ${JSON.stringify({ play, width: collectLate.width, winner: collectLate.winnerPosition })}`);
       }
+    }
+    if (!(Number.isFinite(resolveDistance)
+      && Number.isFinite(collectDistance)
+      && collectDistance < resolveDistance * .75)) {
+      throw new Error(`${label}: trick cards did not materially converge on winner pile ${JSON.stringify({ resolveDistance, collectDistance, pile: collectLateWinnerPile, played: collectLate.played })}`);
     }
     await screenshot(session, `${label}-living-trick-collect`);
 
@@ -258,22 +332,33 @@ async function runViewport(label, width, height, mobile) {
       return entries.find((entry) => {
         if (entry.kind !== 'trick-completion' || entry.stage !== 'consequence') return false;
         const marker = markerFor(entry, resolve.winnerSeat);
+        const pile = pileFor(entry, resolve.winnerSeat);
         const delta = Number(entry.capture.match(/\+?(\d+)\s*pkt/)?.[1] ?? NaN);
         return marker
+          && pile
           && Number.isFinite(delta)
           && marker.tricks === collectWinnerMarker.tricks + 1
           && marker.points === collectWinnerMarker.points + delta
           && marker.initiative
-          && marker.updated;
+          && marker.updated
+          && pile.tricks === marker.tricks
+          && pile.points === marker.points
+          && pile.initiative
+          && pile.updated
+          && !pile.empty
+          && pile.visible
+          && pile.layers >= 1;
       }) ?? false;
     }, 3_000);
     const consequenceWinnerMarker = markerFor(consequence, resolve.winnerSeat);
-    if (!consequence.capture.includes('pkt') || !consequenceWinnerMarker) {
+    const consequenceWinnerPile = pileFor(consequence, resolve.winnerSeat);
+    if (!consequence.capture.includes('pkt') || !consequenceWinnerMarker || !consequenceWinnerPile) {
       throw new Error(`${label}: point consequence did not attach to winner: ${JSON.stringify(consequence)}`);
     }
     if (consequence.enabledActions !== 0) throw new Error(`${label}: input active during consequence`);
-    if (consequence.markers.filter((marker) => marker.initiative).length !== 1) {
-      throw new Error(`${label}: next initiative is spatially ambiguous ${JSON.stringify(consequence.markers)}`);
+    if (consequence.markers.filter((marker) => marker.initiative).length !== 1
+      || consequence.piles.filter((pile) => pile.initiative).length !== 1) {
+      throw new Error(`${label}: next initiative is spatially ambiguous ${JSON.stringify({ markers: consequence.markers, piles: consequence.piles })}`);
     }
     const liveConsequence = await stageState(session, 'consequence');
     if (liveConsequence) await screenshot(session, `${label}-living-trick-consequence`);
@@ -285,10 +370,17 @@ async function runViewport(label, width, height, mobile) {
       return entries.find((entry) => {
         if (entry.kind !== 'trick-completion' || entry.stage !== 'settled') return false;
         const marker = markerFor(entry, resolve.winnerSeat);
+        const pile = pileFor(entry, resolve.winnerSeat);
         return marker
+          && pile
           && marker.tricks === consequenceWinnerMarker.tricks
           && marker.points === consequenceWinnerMarker.points
-          && marker.initiative;
+          && marker.initiative
+          && pile.tricks === consequenceWinnerPile.tricks
+          && pile.points === consequenceWinnerPile.points
+          && pile.initiative
+          && !pile.empty
+          && pile.visible;
       }) ?? false;
     }, 3_000);
     if (settled.played.length !== 0 || settled.result !== '' || settled.capture !== '') {
@@ -322,6 +414,19 @@ async function runViewport(label, width, height, mobile) {
       winnerPosition: resolve.winnerPosition,
       captureBefore: collectWinnerMarker,
       captureAfter: consequenceWinnerMarker,
+      physicalPileBefore: {
+        tricks: collectWinnerPile.tricks,
+        points: collectWinnerPile.points,
+        empty: collectWinnerPile.empty,
+      },
+      physicalPileAfter: {
+        tricks: consequenceWinnerPile.tricks,
+        points: consequenceWinnerPile.points,
+        layers: consequenceWinnerPile.layers,
+        initiative: consequenceWinnerPile.initiative,
+        visible: consequenceWinnerPile.visible,
+      },
+      collectDistanceRatio: Number((collectDistance / resolveDistance).toFixed(3)),
       capture: consequence.capture,
       initiativeSeat: consequence.markers.find((marker) => marker.initiative)?.seat ?? '',
       stages,
