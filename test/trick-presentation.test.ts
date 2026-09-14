@@ -4,8 +4,10 @@ import {
   MARRIAGE_PRESENTATION_MS,
   NORMAL_PRESENTATION_MS,
   TRICK_COMPLETION_PRESENTATION_MS,
+  TRICK_COMPLETION_TIMELINE,
   planTrickPresentation,
   presentationFrameDuration,
+  trickCompletionStageAt,
 } from '../src/presentation/trickPresentation.js';
 
 const ordinaryPlay: GameEvent[] = [
@@ -65,5 +67,20 @@ describe('Run 04 trick presentation planning', () => {
       { type: 'card-played', audience: 'public', seat: 0, card: 'hearts:K' },
     ];
     expect(presentationFrameDuration(marriage)).toBe(MARRIAGE_PRESENTATION_MS);
+  });
+
+  it('stages completion in causal order before the playback frame can advance', () => {
+    expect(trickCompletionStageAt(0)).toBe('arrival');
+    expect(trickCompletionStageAt(TRICK_COMPLETION_TIMELINE.resolveMs - 1)).toBe('arrival');
+    expect(trickCompletionStageAt(TRICK_COMPLETION_TIMELINE.resolveMs)).toBe('resolve');
+    expect(trickCompletionStageAt(TRICK_COMPLETION_TIMELINE.collectMs)).toBe('collect');
+    expect(trickCompletionStageAt(TRICK_COMPLETION_TIMELINE.consequenceMs)).toBe('consequence');
+    expect(trickCompletionStageAt(TRICK_COMPLETION_TIMELINE.settleMs)).toBe('settled');
+    expect(TRICK_COMPLETION_TIMELINE.settleMs).toBeLessThan(TRICK_COMPLETION_PRESENTATION_MS);
+  });
+
+  it('normalizes invalid/negative elapsed time to the arrival stage', () => {
+    expect(trickCompletionStageAt(-500)).toBe('arrival');
+    expect(trickCompletionStageAt(Number.NaN)).toBe('arrival');
   });
 });
