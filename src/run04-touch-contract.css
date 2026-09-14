@@ -1,7 +1,8 @@
 /* Run 04 P2: composition must not shrink primary mobile controls below the defended touch contract. */
 @media (max-width: 760px) {
   .topbar-actions button,
-  .topbar-actions .rules-trigger {
+  .topbar-actions .rules-trigger,
+  .decision-card button {
     min-height: 44px;
   }
 }
