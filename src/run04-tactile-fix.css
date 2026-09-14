@@ -1,0 +1,4 @@
+/* Run 04 P3 integration correction: beat the baseline `.hand > .card { position: relative }`. */
+.tactile-hand > .tactile-card-float {
+  position: fixed;
+}
