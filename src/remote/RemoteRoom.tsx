@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Command, GameEvent, Seat, SeatProjection } from '../core/index.js';
 import { describeFeedback } from '../presentation/feedback.js';
-import { GameTable } from '../presentation/GameTable.js';
+import { LivingGameTable } from '../presentation/LivingGameTable.js';
 import { presentationFrameDuration } from '../presentation/trickPresentation.js';
 import {
   commandEnvelope,
@@ -349,7 +349,7 @@ export function RemoteRoom({ room, onLeave }: RemoteRoomProps) {
         <div className={`connection-banner ${connection}`}>
           Pokój {room} · {connection === 'connected' ? 'online' : 'łączenie…'}{inputLocked && connection === 'connected' ? ' · ruchy przy stole…' : ''}
         </div>
-        <GameTable projection={presentedProjection} seatNames={names} events={presentedEvents} message={message} onCommand={sendCommand} />
+        <LivingGameTable projection={presentedProjection} seatNames={names} events={presentedEvents} message={message} onCommand={sendCommand} />
       </div>
     );
   }
