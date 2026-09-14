@@ -120,11 +120,11 @@ async function installLifecycleTrace(session) {
       initiative: node.dataset.nextInitiative === 'true',
       updated: node.classList.contains('is-updated'),
     }));
-    const readPiles = () => [...document.querySelectorAll('[data-captured-pile-seat]')].map((node) => {
+    const readPiles = () => [...document.querySelectorAll('[data-capture-pile-seat]')].map((node) => {
       const rect = node.getBoundingClientRect();
       const style = getComputedStyle(node);
       return {
-        seat: node.dataset.capturedPileSeat ?? '',
+        seat: node.dataset.capturePileSeat ?? '',
         tricks: Number(node.dataset.capturedTricks ?? 0),
         points: Number(node.dataset.capturedPoints ?? 0),
         initiative: node.dataset.nextInitiative === 'true',
@@ -187,11 +187,11 @@ async function stageState(session, stage) {
       initiative: node.dataset.nextInitiative === 'true',
       updated: node.classList.contains('is-updated'),
     }));
-    const readPiles = () => [...document.querySelectorAll('[data-captured-pile-seat]')].map((node) => {
+    const readPiles = () => [...document.querySelectorAll('[data-capture-pile-seat]')].map((node) => {
       const rect = node.getBoundingClientRect();
       const style = getComputedStyle(node);
       return {
-        seat: node.dataset.capturedPileSeat ?? '',
+        seat: node.dataset.capturePileSeat ?? '',
         tricks: Number(node.dataset.capturedTricks ?? 0),
         points: Number(node.dataset.capturedPoints ?? 0),
         initiative: node.dataset.nextInitiative === 'true',
