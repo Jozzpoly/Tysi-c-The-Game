@@ -204,7 +204,7 @@ async function run() {
     }
     await screenshot(session, 'mobile-living-hand-gap-reversed');
 
-    // Move out again and release. The local order should only commit now.
+    // Move out again. The local order still must not commit.
     for (let step = 1; step <= 6; step += 1) {
       const ratio = step / 6;
       await moveTouch(session, reversalX + (heldTargetX - reversalX) * ratio, source.y);
@@ -212,9 +212,31 @@ async function run() {
     }
     const reopened = await waitFor('reopened insertion gap', async () => {
       const state = await handState(session);
-      return state.phase === 'held' && state.insertionPosition > 3 ? state : false;
+      return state.phase === 'held' && state.insertionPosition > 3 && state.insertionTarget === 4 ? state : false;
     });
     if (!sameOrder(reopened, openingLabels)) throw new Error('reopened gap committed order before release');
+
+    // Hover around the 3/4 boundary. The geometric gap should keep following
+    // the finger, but the release target must not chatter 3 <-> 4 on tiny noise.
+    const jitterOffsets = [-3, 2, -2, 3, -1, 1];
+    const jitterStates = [];
+    for (const offset of jitterOffsets) {
+      await moveTouch(session, heldTargetX + offset, source.y);
+      await sleep(55);
+      const state = await handState(session);
+      if (state.phase !== 'held') throw new Error(`jitter left held phase: ${JSON.stringify(state)}`);
+      if (state.insertionTarget !== 4) {
+        throw new Error(`hysteresis target chattered at offset ${offset}: ${JSON.stringify({ position: state.insertionPosition, target: state.insertionTarget })}`);
+      }
+      if (!sameOrder(state, openingLabels)) throw new Error('hysteresis jitter committed order before release');
+      if (state.revision !== initial.revision) throw new Error('hysteresis jitter changed game revision');
+      jitterStates.push({ offset, position: state.insertionPosition, target: state.insertionTarget });
+    }
+    const crossedBelow = jitterStates.some((entry) => entry.position < 3.5);
+    const crossedAbove = jitterStates.some((entry) => entry.position > 3.5);
+    if (!crossedBelow || !crossedAbove) {
+      throw new Error(`hysteresis rehearsal did not straddle boundary: ${JSON.stringify(jitterStates)}`);
+    }
 
     await touch(session, 'touchEnd', []);
     const settled = await waitFor('local order commit after release', async () => {
@@ -223,6 +245,9 @@ async function run() {
       return movedIndex >= 2 && state.phase === 'idle' ? { ...state, movedIndex } : false;
     }, 4_000);
 
+    if (settled.movedIndex !== 4) {
+      throw new Error(`stable hysteresis release landed at ${settled.movedIndex}, expected 4`);
+    }
     if (settled.revision !== initial.revision) {
       throw new Error(`local reorder changed game revision ${initial.revision} -> ${settled.revision}`);
     }
@@ -243,6 +268,8 @@ async function run() {
       reversalFirstNeighborShift: reversed.firstNeighborShift,
       reversalDistantShift: reversed.distantShift,
       reversalOrderUnchanged: true,
+      hysteresisBoundaryPositions: jitterStates,
+      hysteresisTargetStable: true,
       releasedToIndex: settled.movedIndex,
       releaseRevision: `${initial.revision}->${settled.revision}`,
     };
