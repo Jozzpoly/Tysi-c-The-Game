@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   rankOf,
   suitOf,
@@ -11,7 +11,11 @@ import {
 import { RulesGuide } from './RulesGuide.js';
 import { ScoreSummary } from './ScoreSummary.js';
 import { TactileHand } from './TactileHand.js';
-import { planTrickPresentation } from './trickPresentation.js';
+import {
+  TRICK_COMPLETION_TIMELINE,
+  planTrickPresentation,
+  type TrickCompletionStage,
+} from './trickPresentation.js';
 
 const SUIT_SYMBOL = { spades: '♠', clubs: '♣', diamonds: '♦', hearts: '♥' } as const;
 const ALL_SEATS: readonly Seat[] = [0, 1, 2];
@@ -51,11 +55,33 @@ export function GameTable({ projection, seatNames, events = [], message = '', on
   const humanCommands = projection.legalCommands;
   const [selectedTransfer, setSelectedTransfer] = useState<CardId[]>([]);
   const [confirmBomb, setConfirmBomb] = useState(false);
+  const [trickCompletionStage, setTrickCompletionStage] = useState<TrickCompletionStage>('settled');
+  const trickPresentation = useMemo(() => planTrickPresentation(events), [events]);
 
   useEffect(() => {
     setSelectedTransfer([]);
     setConfirmBomb(false);
   }, [view.revision]);
+
+  useEffect(() => {
+    if (trickPresentation.kind !== 'trick-completion') {
+      setTrickCompletionStage('settled');
+      return;
+    }
+
+    const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+    const timers: number[] = [];
+    setTrickCompletionStage(reducedMotion ? 'consequence' : 'arrival');
+
+    if (!reducedMotion) {
+      timers.push(window.setTimeout(() => setTrickCompletionStage('resolve'), TRICK_COMPLETION_TIMELINE.resolveMs));
+      timers.push(window.setTimeout(() => setTrickCompletionStage('collect'), TRICK_COMPLETION_TIMELINE.collectMs));
+      timers.push(window.setTimeout(() => setTrickCompletionStage('consequence'), TRICK_COMPLETION_TIMELINE.consequenceMs));
+    }
+    timers.push(window.setTimeout(() => setTrickCompletionStage('settled'), TRICK_COMPLETION_TIMELINE.settleMs));
+
+    return () => timers.forEach((timer) => window.clearTimeout(timer));
+  }, [trickPresentation.kind, view.revision]);
 
   const seatName = (seat: Seat) => seatNames[seat];
   const seatAction = (seat: Seat, you: string, thirdPerson: string) => seat === humanSeat ? you : `${seatName(seat)} ${thirdPerson}`;
@@ -128,10 +154,16 @@ export function GameTable({ projection, seatNames, events = [], message = '', on
     complete: 'Rozdanie zakończone',
   }[view.phase];
 
-  const visibleTrick = view.trick.length > 0 ? view.trick : view.lastCompletedTrick?.plays ?? [];
-  const showingCompletedTrick = view.trick.length === 0 && view.lastCompletedTrick !== null;
-  const trickPresentation = planTrickPresentation(events);
+  const completedTrick = trickPresentation.kind === 'trick-completion' ? trickPresentation.completedTrick : null;
+  const showingCompletedTrick = completedTrick !== null && trickCompletionStage !== 'settled';
+  const visibleTrick = view.trick.length > 0
+    ? view.trick
+    : showingCompletedTrick && completedTrick
+      ? completedTrick.plays
+      : [];
   const freshPlay = trickPresentation.freshPlay;
+  const completedWinner = completedTrick?.winner ?? null;
+  const completedWinnerPosition = completedWinner === null ? '' : playPosition(completedWinner);
   const bombCompletion = view.completion?.kind === 'bomb' ? view.completion : null;
   const winnerSeat = view.winner ?? humanSeat;
 
@@ -151,7 +183,11 @@ export function GameTable({ projection, seatNames, events = [], message = '', on
       <section className="table">
         <div className="opponents">
           {opponentSeats.map((seat) => (
-            <div className="opponent" key={seat}>
+            <div
+              className={`opponent ${showingCompletedTrick && completedWinner === seat && trickCompletionStage !== 'arrival' ? 'trick-winner-source' : ''}`}
+              key={seat}
+              data-seat-anchor={seat}
+            >
               <div className="seat-line">
                 <strong>{seatName(seat)}</strong>
                 <span className="seat-score">{view.scores[seat]}</span>
@@ -161,6 +197,9 @@ export function GameTable({ projection, seatNames, events = [], message = '', on
               <div className="card-backs" aria-hidden="true">
                 {Array.from({ length: Math.min(view.opponentCardCounts[seat], 8) }, (_, index) => <i key={index} />)}
               </div>
+              {showingCompletedTrick && completedWinner === seat && trickCompletionStage === 'consequence' && (
+                <span className="capture-pulse">+{completedTrick?.points ?? 0} pkt</span>
+              )}
             </div>
           ))}
         </div>
@@ -182,19 +221,23 @@ export function GameTable({ projection, seatNames, events = [], message = '', on
           )}
 
           <div
-            className={`trick ${showingCompletedTrick ? 'completed' : ''}`}
+            className={`trick ${showingCompletedTrick ? 'completed' : ''} trick-stage-${trickCompletionStage}`}
             aria-label="Aktualna lewa"
             data-presentation-kind={trickPresentation.kind}
             data-fresh-play={freshPlay ? `${freshPlay.seat}:${freshPlay.card}` : ''}
+            data-trick-stage={trickCompletionStage}
+            data-winner-seat={completedWinner ?? ''}
+            data-winner-position={completedWinnerPosition}
           >
             {visibleTrick.length === 0 ? (
               <span className="muted">Stół czeka na zagranie</span>
             ) : (
               visibleTrick.map((play) => {
                 const isFresh = freshPlay?.seat === play.seat && freshPlay.card === play.card;
+                const isWinner = showingCompletedTrick && completedWinner === play.seat;
                 return (
                   <div
-                    className={`played played-${playPosition(play.seat)} ${isFresh ? 'is-fresh-arrival' : ''}`}
+                    className={`played played-${playPosition(play.seat)} ${isFresh ? 'is-fresh-arrival' : ''} ${isWinner ? 'is-trick-winner' : ''}`}
                     key={`${play.seat}-${play.card}`}
                     data-seat={play.seat}
                     data-card={play.card}
@@ -206,8 +249,10 @@ export function GameTable({ projection, seatNames, events = [], message = '', on
               })
             )}
           </div>
-          {showingCompletedTrick && view.lastCompletedTrick && (
-            <div className="trick-result">Lewa {view.lastCompletedTrick.index}: {seatName(view.lastCompletedTrick.winner)} · {view.lastCompletedTrick.points} pkt</div>
+          {showingCompletedTrick && completedTrick && trickCompletionStage !== 'arrival' && (
+            <div className={`trick-result trick-result-${trickCompletionStage}`}>
+              {seatName(completedTrick.winner)} · {completedTrick.points} pkt
+            </div>
           )}
         </div>
 
@@ -322,11 +367,17 @@ export function GameTable({ projection, seatNames, events = [], message = '', on
         </section>
       </section>
 
-      <section className="hand-area">
+      <section
+        className={`hand-area ${showingCompletedTrick && completedWinner === humanSeat && trickCompletionStage !== 'arrival' ? 'trick-winner-source' : ''}`}
+        data-seat-anchor={humanSeat}
+      >
         <div className="hand-heading">
           <div className="hand-owner">
             <strong>Twoje karty</strong>
             <span>{seatRole(humanSeat) || `${humanCards.length} kart`}</span>
+            {showingCompletedTrick && completedWinner === humanSeat && trickCompletionStage === 'consequence' && (
+              <span className="capture-pulse">+{completedTrick?.points ?? 0} pkt</span>
+            )}
           </div>
           <div className="hand-score" aria-label={`Twój wynik ${view.scores[humanSeat]}`}>
             <strong>{view.scores[humanSeat]}</strong>
