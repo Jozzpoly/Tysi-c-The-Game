@@ -4,12 +4,14 @@ import {
   suitOf,
   type CardId,
   type Command,
+  type GameEvent,
   type Seat,
   type SeatProjection,
 } from '../core/index.js';
 import { RulesGuide } from './RulesGuide.js';
 import { ScoreSummary } from './ScoreSummary.js';
 import { TactileHand } from './TactileHand.js';
+import { planTrickPresentation } from './trickPresentation.js';
 
 const SUIT_SYMBOL = { spades: '♠', clubs: '♣', diamonds: '♦', hearts: '♥' } as const;
 const ALL_SEATS: readonly Seat[] = [0, 1, 2];
@@ -17,6 +19,7 @@ const ALL_SEATS: readonly Seat[] = [0, 1, 2];
 export interface GameTableProps {
   projection: SeatProjection;
   seatNames: readonly [string, string, string];
+  events?: readonly GameEvent[];
   message?: string;
   onCommand: (command: Command) => void | Promise<void>;
   onNewGame?: () => void;
@@ -42,7 +45,7 @@ function Card({ card, disabled, selected, onClick }: { card: CardId; disabled?: 
   );
 }
 
-export function GameTable({ projection, seatNames, message = '', onCommand, onNewGame }: GameTableProps) {
+export function GameTable({ projection, seatNames, events = [], message = '', onCommand, onNewGame }: GameTableProps) {
   const view = projection.observation;
   const humanSeat = view.seat;
   const humanCommands = projection.legalCommands;
@@ -127,6 +130,8 @@ export function GameTable({ projection, seatNames, message = '', onCommand, onNe
 
   const visibleTrick = view.trick.length > 0 ? view.trick : view.lastCompletedTrick?.plays ?? [];
   const showingCompletedTrick = view.trick.length === 0 && view.lastCompletedTrick !== null;
+  const trickPresentation = planTrickPresentation(events);
+  const freshPlay = trickPresentation.freshPlay;
   const bombCompletion = view.completion?.kind === 'bomb' ? view.completion : null;
   const winnerSeat = view.winner ?? humanSeat;
 
@@ -176,16 +181,29 @@ export function GameTable({ projection, seatNames, message = '', onCommand, onNe
             </div>
           )}
 
-          <div className={`trick ${showingCompletedTrick ? 'completed' : ''}`} aria-label="Aktualna lewa">
+          <div
+            className={`trick ${showingCompletedTrick ? 'completed' : ''}`}
+            aria-label="Aktualna lewa"
+            data-presentation-kind={trickPresentation.kind}
+            data-fresh-play={freshPlay ? `${freshPlay.seat}:${freshPlay.card}` : ''}
+          >
             {visibleTrick.length === 0 ? (
               <span className="muted">Stół czeka na zagranie</span>
             ) : (
-              visibleTrick.map((play) => (
-                <div className={`played played-${playPosition(play.seat)}`} key={`${play.seat}-${play.card}`}>
-                  <small>{seatName(play.seat)}</small>
-                  <Card card={play.card} disabled />
-                </div>
-              ))
+              visibleTrick.map((play) => {
+                const isFresh = freshPlay?.seat === play.seat && freshPlay.card === play.card;
+                return (
+                  <div
+                    className={`played played-${playPosition(play.seat)} ${isFresh ? 'is-fresh-arrival' : ''}`}
+                    key={`${play.seat}-${play.card}`}
+                    data-seat={play.seat}
+                    data-card={play.card}
+                  >
+                    <small>{seatName(play.seat)}</small>
+                    <Card card={play.card} disabled />
+                  </div>
+                );
+              })
             )}
           </div>
           {showingCompletedTrick && view.lastCompletedTrick && (
