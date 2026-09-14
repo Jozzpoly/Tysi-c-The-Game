@@ -4,6 +4,7 @@ import {
   tactileMotionEnergy,
   tactileNeighborResponseMs,
   tactileReturnMotion,
+  tactileSettleMotion,
 } from '../src/presentation/tactileMotion.js';
 
 describe('tactile presentation motion', () => {
@@ -13,6 +14,11 @@ describe('tactile presentation motion', () => {
     expect(tactileNeighborResponseMs(0, 0)).toBe(104);
     expect(tactileReturnMotion({ displacementX: 0, velocityX: 0, velocityY: 0 })).toEqual({
       durationMs: 220,
+      overshootX: 0,
+      overshootY: 0,
+    });
+    expect(tactileSettleMotion(0, 0)).toEqual({
+      durationMs: 150,
       overshootX: 0,
       overshootY: 0,
     });
@@ -52,5 +58,25 @@ describe('tactile presentation motion', () => {
     expect(response.durationMs).toBeLessThanOrEqual(220);
     expect(response.overshootX).toBeCloseTo(10.4);
     expect(response.overshootY).toBeCloseTo(-5);
+  });
+
+  it('settles reordered neighbors with a small opposite-side overshoot', () => {
+    const rightwardDelta = tactileSettleMotion(60, 8);
+    const leftwardDelta = tactileSettleMotion(-60, -8);
+
+    expect(rightwardDelta.durationMs).toBeGreaterThan(150);
+    expect(rightwardDelta.durationMs).toBeLessThanOrEqual(180);
+    expect(rightwardDelta.overshootX).toBeCloseTo(-3.3);
+    expect(rightwardDelta.overshootY).toBeCloseTo(-0.36);
+    expect(leftwardDelta.overshootX).toBeCloseTo(3.3);
+    expect(leftwardDelta.overshootY).toBeCloseTo(0.36);
+  });
+
+  it('clamps settle spring even for extreme FLIP displacement', () => {
+    expect(tactileSettleMotion(9999, -9999)).toEqual({
+      durationMs: 180,
+      overshootX: -4.5,
+      overshootY: 3,
+    });
   });
 });
