@@ -1,0 +1,51 @@
+name: Stable Static Owner Preview
+
+on:
+  push:
+    branches:
+      - run-02-tactile-interaction-system-02
+    paths-ignore:
+      - 'static-preview/**'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: tysiac-stable-static-owner-preview
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: run-02-tactile-interaction-system-02
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: Build standalone local-game preview
+        run: |
+          npx vite build --config vite.static-preview.config.ts
+          mv static-preview/index.html static-preview/app.html
+          cat > static-preview/index.html <<'EOF'
+          <!doctype html>
+          <html lang="pl"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Tysiąc The Game</title><script>location.replace('./app.html?local=1')</script></head><body><a href="./app.html?local=1">Otwórz Tysiąc The Game</a></body></html>
+          EOF
+      - name: Commit immutable static build inputs to preview branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f static-preview
+          if git diff --cached --quiet; then
+            echo "Static preview already current."
+            exit 0
+          fi
+          git commit -m "preview: build standalone solo demo"
+          git push origin HEAD:run-02-tactile-interaction-system-02
