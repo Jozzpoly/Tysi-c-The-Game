@@ -142,6 +142,20 @@
   bottom: auto;
 }
 
+/* A zero-capture state has no sighted content. If that player leads next, the
+   existing initiative pseudo-dot remains as the only visual signal. */
+.seat-consequence.is-empty {
+  min-width: 0;
+  padding: 0 !important;
+  border-color: transparent !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.seat-consequence.is-empty > * {
+  display: none !important;
+}
+
 /* External candidate should not advertise implementation/revision chrome. */
 .footer > span:not(.message) {
   display: none;
