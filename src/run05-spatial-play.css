@@ -56,16 +56,17 @@
   z-index: 1;
 }
 
-/* Picking up a legal card makes the table discoverable, but the surface stays
- * quiet enough that free hand reordering remains the dominant interaction. */
-.table:has(.tactile-hand[data-gesture-phase='held'] > .hand-slot.is-held.is-throwable) .trick::before {
+/* The hand is a sibling of `.table`, not its descendant. `.app-shell` is the
+ * smallest shared presentation owner, so it carries the gesture state across
+ * those two spatial layers without moving the canonical `.trick` geometry. */
+.app-shell:has(.tactile-hand[data-gesture-phase='held'] > .hand-slot.is-held.is-throwable) .trick::before {
   opacity: .5;
   border-color: #e8d17a3d;
   background: radial-gradient(ellipse at center, #f0d77d10 0%, #d9bd5f08 48%, #d9bd5f00 74%);
   box-shadow: inset 0 0 28px #e5cd7410, 0 0 32px #d8bf5f0b;
 }
 
-.table:has(.tactile-hand[data-gesture-phase='held'] > .hand-slot.is-held.is-throwable) .trick::after {
+.app-shell:has(.tactile-hand[data-gesture-phase='held'] > .hand-slot.is-held.is-throwable) .trick::after {
   content: 'Zagraj tutaj';
   opacity: .34;
 }
@@ -73,7 +74,7 @@
 /* Accepted is a spatial state, not a button state. The exact same rectangle
  * gains weight; its geometry is never transformed, so feedback cannot move the
  * acceptance boundary under the pointer. */
-.table:has(.tactile-hand[data-gesture-phase='accepted'] > .hand-slot.is-held.is-throwable) .trick::before {
+.app-shell:has(.tactile-hand[data-gesture-phase='accepted'] > .hand-slot.is-held.is-throwable) .trick::before {
   opacity: 1;
   border-color: #f0d77da3;
   background: radial-gradient(ellipse at center, #f0d77d25 0%, #d9bd5f12 48%, #d9bd5f00 76%);
@@ -83,14 +84,14 @@
     0 0 30px #d9bd5f22;
 }
 
-.table:has(.tactile-hand[data-gesture-phase='accepted'] > .hand-slot.is-held.is-throwable) .trick::after {
+.app-shell:has(.tactile-hand[data-gesture-phase='accepted'] > .hand-slot.is-held.is-throwable) .trick::after {
   content: 'Puść kartę';
   color: #fff0b5;
   opacity: .88;
   translate: -50% -2px;
 }
 
-.table:has(.tactile-hand[data-gesture-phase='accepted'] > .hand-slot.is-held.is-throwable) .trick > .muted {
+.app-shell:has(.tactile-hand[data-gesture-phase='accepted'] > .hand-slot.is-held.is-throwable) .trick > .muted {
   opacity: .28;
 }
 
