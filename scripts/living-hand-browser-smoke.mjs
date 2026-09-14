@@ -122,6 +122,18 @@ function sameOrder(state, labels) {
   return JSON.stringify(state.slots.map((slot) => slot.label)) === JSON.stringify(labels);
 }
 
+function compactHandState(state) {
+  return {
+    phase: state.phase,
+    position: state.insertionPosition,
+    target: state.insertionTarget,
+    revision: state.revision,
+    shifted: state.slots
+      .filter((slot) => Math.abs(slot.shift) > 1)
+      .map((slot) => ({ index: slot.index, shift: slot.shift })),
+  };
+}
+
 async function run() {
   const session = await createSession();
   try {
@@ -179,8 +191,6 @@ async function run() {
     }
     await screenshot(session, 'mobile-living-hand-gap-open');
 
-    // Reverse the same held card almost back to its source. The hand must close
-    // the distant gap without committing order or touching game truth.
     const reversalX = source.x + (initial.slots[1].x - source.x) * .35;
     await moveTouch(session, reversalX, source.y);
     await sleep(120);
@@ -204,20 +214,31 @@ async function run() {
     }
     await screenshot(session, 'mobile-living-hand-gap-reversed');
 
-    // Move out again. The local order still must not commit.
+    // Re-open the same gap and record every real browser state. This trace is
+    // deliberately diagnostic: hysteresis must be explained by measured state,
+    // not by timing guesses in the harness.
+    const reopenTrace = [];
     for (let step = 1; step <= 6; step += 1) {
       const ratio = step / 6;
-      await moveTouch(session, reversalX + (heldTargetX - reversalX) * ratio, source.y);
-      await sleep(24);
+      const x = reversalX + (heldTargetX - reversalX) * ratio;
+      await moveTouch(session, x, source.y);
+      await sleep(60);
+      reopenTrace.push({ step, ratio, x, ...compactHandState(await handState(session)) });
     }
-    const reopened = await waitFor('reopened insertion gap', async () => {
-      const state = await handState(session);
-      return state.phase === 'held' && state.insertionPosition > 3 && state.insertionTarget === 4 ? state : false;
-    });
+    await sleep(100);
+    const reopened = await handState(session);
+    if (!(reopened.phase === 'held' && reopened.insertionPosition > 3 && reopened.insertionTarget === 4)) {
+      await screenshot(session, 'mobile-living-hand-reopen-diagnostic-fail');
+      throw new Error(`reopened insertion gap missing: ${JSON.stringify({
+        reversed: compactHandState(reversed),
+        heldTargetX,
+        reversalX,
+        reopenTrace,
+        final: compactHandState(reopened),
+      })}`);
+    }
     if (!sameOrder(reopened, openingLabels)) throw new Error('reopened gap committed order before release');
 
-    // Hover around the 3/4 boundary. The geometric gap should keep following
-    // the finger, but the release target must not chatter 3 <-> 4 on tiny noise.
     const jitterOffsets = [-3, 2, -2, 3, -1, 1];
     const jitterStates = [];
     for (const offset of jitterOffsets) {
@@ -268,6 +289,7 @@ async function run() {
       reversalFirstNeighborShift: reversed.firstNeighborShift,
       reversalDistantShift: reversed.distantShift,
       reversalOrderUnchanged: true,
+      reopenTrace,
       hysteresisBoundaryPositions: jitterStates,
       hysteresisTargetStable: true,
       releasedToIndex: settled.movedIndex,
