@@ -52,11 +52,12 @@ function Card({ card, disabled, selected, onClick }: { card: CardId; disabled?: 
 export function GameTable({ projection, seatNames, events = [], message = '', onCommand, onNewGame }: GameTableProps) {
   const view = projection.observation;
   const humanSeat = view.seat;
-  const humanCommands = projection.legalCommands;
   const [selectedTransfer, setSelectedTransfer] = useState<CardId[]>([]);
   const [confirmBomb, setConfirmBomb] = useState(false);
   const [trickCompletionStage, setTrickCompletionStage] = useState<TrickCompletionStage>('settled');
   const trickPresentation = useMemo(() => planTrickPresentation(events), [events]);
+  const presentationBlocksInput = trickPresentation.kind === 'trick-completion' && trickCompletionStage !== 'settled';
+  const humanCommands = presentationBlocksInput ? [] : projection.legalCommands;
 
   useEffect(() => {
     setSelectedTransfer([]);
@@ -251,7 +252,7 @@ export function GameTable({ projection, seatNames, events = [], message = '', on
           </div>
           {showingCompletedTrick && completedTrick && trickCompletionStage !== 'arrival' && (
             <div className={`trick-result trick-result-${trickCompletionStage}`}>
-              {seatName(completedTrick.winner)} · {completedTrick.points} pkt
+              Lewa {completedTrick.index}: {seatName(completedTrick.winner)} · {completedTrick.points} pkt
             </div>
           )}
         </div>
