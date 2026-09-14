@@ -232,9 +232,10 @@
   }
 
   /* Ten-card exchange stays a single hand, but no longer collapses back to FC1's
-   * tiny 52px cards. The extra cards are paid for with overlap, not scale loss. */
+   * tiny 52px cards. The extra cards are paid for mostly with overlap, while a
+   * small center-spacing reserve keeps every touch target independently hittable. */
   .tactile-hand:has(> .hand-slot:nth-child(10)) {
-    --hand-card-width: 66px !important;
+    --hand-card-width: 64px !important;
     display: flex;
     width: 100%;
     min-height: 138px;
@@ -245,14 +246,14 @@
   }
 
   .tactile-hand:has(> .hand-slot:nth-child(10)) > .hand-slot {
-    flex: 0 0 66px;
-    width: 66px;
-    min-width: 66px;
-    max-width: 66px;
+    flex: 0 0 64px;
+    width: 64px;
+    min-width: 64px;
+    max-width: 64px;
   }
 
   .tactile-hand:has(> .hand-slot:nth-child(10)) > .hand-slot + .hand-slot {
-    margin-left: -32px;
+    margin-left: -30px;
   }
 
   .tactile-hand:has(> .hand-slot:nth-child(10)) .hand-slot > .card {
