@@ -9,6 +9,7 @@ import {
   productBotCommand,
   projectSeat,
   type Command,
+  type GameEvent,
   type MatchState,
   type Seat,
 } from './core/index.js';
@@ -52,6 +53,7 @@ function LocalGame() {
   const [humanSeat] = useState<Seat>(startupSeat);
   const seatNames = useMemo(() => namesForHuman(humanSeat), [humanSeat]);
   const [authority, setAuthority] = useState<MatchState>(() => freshMatch(startupSeed()));
+  const [presentedEvents, setPresentedEvents] = useState<GameEvent[]>([]);
   const [message, setMessage] = useState('Lokalny QA slice — profil PlayOK/Kurnik candidate.');
   const projection = useMemo(() => projectSeat(authority, humanSeat), [authority, humanSeat]);
   const seatName = (seat: Seat) => seatNames[seat];
@@ -70,6 +72,7 @@ function LocalGame() {
     try {
       assertCoreInvariants(result.state);
       setAuthority(result.state);
+      setPresentedEvents(eventsForSeat(result.events, humanSeat));
       publishFeedback(result.events, 'Ruch przyjęty.');
     } catch (error) {
       setMessage(error instanceof Error ? error.message : String(error));
@@ -78,6 +81,7 @@ function LocalGame() {
 
   function startNewGame() {
     setAuthority(freshMatch());
+    setPresentedEvents([]);
     setMessage('Nowa gra.');
   }
 
@@ -97,6 +101,7 @@ function LocalGame() {
         }
         assertCoreInvariants(result.state);
         setAuthority(result.state);
+        setPresentedEvents(eventsForSeat(result.events, humanSeat));
         publishFeedback(result.events, `${seatNames[actor]} wykonał ruch.`);
       } catch (error) {
         setMessage(error instanceof Error ? error.message : String(error));
@@ -110,6 +115,7 @@ function LocalGame() {
     <GameTable
       projection={projection}
       seatNames={seatNames}
+      events={presentedEvents}
       message={message}
       onCommand={commit}
       onNewGame={startNewGame}
