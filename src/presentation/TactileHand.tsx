@@ -15,15 +15,19 @@ import {
 } from './tactileHandLayout.js';
 import {
   TACTILE_RELEASE_MS,
-  TACTILE_RETURN_MS,
   advanceTactilePointer,
   beginTactilePointer,
   classifyTactileRelease,
   moveCardInOrder,
   reconcileHandOrder,
-  tactileTiltDegrees,
   type TactilePointerState,
 } from './tactileInteraction.js';
+import {
+  tactileCarryTiltDegrees,
+  tactileMotionEnergy,
+  tactileNeighborResponseMs,
+  tactileReturnMotion,
+} from './tactileMotion.js';
 
 const SUIT_SYMBOL = { spades: '♠', clubs: '♣', diamonds: '♦', hearts: '♥' } as const;
 
@@ -65,12 +69,25 @@ type FloatingStyle = CSSProperties & {
   '--drag-tilt': string;
 };
 
+type HandStyle = CSSProperties & {
+  '--hand-spread-count': number;
+  '--tactile-neighbor-response-ms': string;
+};
+
 function cardFace(card: CardId) {
   const suit = suitOf(card);
   const rank = rankOf(card);
   const symbol = SUIT_SYMBOL[suit];
   const red = suit === 'hearts' || suit === 'diamonds';
   return { suit, rank, symbol, red };
+}
+
+function pointerMotionSample(ghost: TactilePointerState) {
+  return {
+    displacementX: ghost.x - ghost.startX,
+    velocityX: ghost.velocityX,
+    velocityY: ghost.velocityY,
+  };
 }
 
 function FloatingCard(props: FloatingCardProps) {
@@ -85,7 +102,7 @@ function FloatingCard(props: FloatingCardProps) {
     const ghost = props.ghost;
     left = ghost.x - ghost.offsetX;
     top = ghost.y - ghost.offsetY;
-    tilt = tactileTiltDegrees(ghost);
+    tilt = tactileCarryTiltDegrees(pointerMotionSample(ghost));
     commitReady = ghost.commitReady;
     throwIntent = ghost.throwIntent;
     gesturePhase = ghost.phase;
@@ -114,6 +131,7 @@ function FloatingCard(props: FloatingCardProps) {
       data-rank={rank}
       data-suit={symbol}
       data-gesture-phase={gesturePhase}
+      data-motion-tilt={tilt.toFixed(2)}
       aria-hidden="true"
     >
       <span className="rank" data-suit={symbol}>{rank}</span>
@@ -280,15 +298,19 @@ export function TactileHand({
     const currentTop = state.y - state.offsetY;
     const dx = currentLeft - rect.left;
     const dy = currentTop - rect.top;
-    const tilt = tactileTiltDegrees(state);
+    const motion = tactileReturnMotion(pointerMotionSample(state));
+    const tilt = tactileCarryTiltDegrees(pointerMotionSample(state));
     slot.getAnimations().forEach((animation) => animation.cancel());
     slot.animate(
       [
         { transform: `translate(${dx}px, ${dy}px) rotate(${tilt}deg) scale(1.06)`, offset: 0 },
-        { transform: `translate(${dx * .16}px, ${Math.min(8, dy * .04)}px) rotate(${tilt * .08}deg) scale(1.012)`, offset: .78 },
+        {
+          transform: `translate(${dx * .12 + motion.overshootX}px, ${dy * .05 + motion.overshootY}px) rotate(${-tilt * .06}deg) scale(1.014)`,
+          offset: .74,
+        },
         { transform: 'translate(0, 0) rotate(0deg) scale(1)', offset: 1 },
       ],
-      { duration: TACTILE_RETURN_MS, easing: 'cubic-bezier(.18,.78,.25,1)' },
+      { duration: motion.durationMs, easing: 'cubic-bezier(.18,.78,.25,1)' },
     );
   }
 
@@ -324,7 +346,7 @@ export function TactileHand({
         top: drag.y - drag.offsetY,
         width: drag.width,
         height: drag.height,
-        tilt: tactileTiltDegrees(drag),
+        tilt: tactileCarryTiltDegrees(pointerMotionSample(drag)),
       });
       if (releaseTimer.current !== null) window.clearTimeout(releaseTimer.current);
       releaseTimer.current = window.setTimeout(() => setReleaseGhost(null), TACTILE_RELEASE_MS);
@@ -357,7 +379,12 @@ export function TactileHand({
     if (actionableCards.has(card)) onActivate(card);
   }
 
-  const handStyle = { '--hand-spread-count': Math.max(0, visibleOrder.length - 1) } as CSSProperties;
+  const motionEnergy = drag?.moved ? tactileMotionEnergy(drag.velocityX, drag.velocityY) : 0;
+  const neighborResponseMs = drag?.moved ? tactileNeighborResponseMs(drag.velocityX, drag.velocityY) : 82;
+  const handStyle = {
+    '--hand-spread-count': Math.max(0, visibleOrder.length - 1),
+    '--tactile-neighbor-response-ms': `${neighborResponseMs}ms`,
+  } as HandStyle;
 
   return (
     <div
@@ -367,6 +394,8 @@ export function TactileHand({
       data-gesture-phase={drag?.phase ?? 'idle'}
       data-insertion-position={insertionPreview?.position.toFixed(3) ?? ''}
       data-insertion-target={insertionPreview?.targetIndex ?? ''}
+      data-motion-energy={motionEnergy.toFixed(3)}
+      data-neighbor-response-ms={neighborResponseMs}
       aria-label="Twoje karty. Każdą możesz chwycić i przełożyć; stół podpowie, kiedy gest może stać się ruchem."
     >
       {visibleOrder.map((card, index) => {
