@@ -165,9 +165,10 @@
   opacity: .72;
 }
 
-.capture-state > strong {
+.capture-state-tricks {
   color: #e8eee9;
   font-size: .62rem;
+  font-weight: 800;
 }
 
 .capture-state.is-updated {
@@ -287,7 +288,7 @@
     font-size: .52rem !important;
   }
 
-  .capture-state > strong {
+  .capture-state-tricks {
     font-size: .56rem;
   }
 
