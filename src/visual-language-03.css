@@ -1,10 +1,8 @@
 /*
- * Run 02 — table feedback slice 02.
- * Spatialize trick play around the human seat and enrich the existing DOM card
- * face without introducing final artwork or any game-state authority.
+ * Run 04 — Friend Candidate P2-A.
+ * Recompose the existing real GameTable before importing tactile mechanisms.
  */
 
-/* Card face: keep rank/suit instantly readable, but make the object feel like a card. */
 .card {
   position: relative;
   overflow: hidden;
@@ -57,34 +55,30 @@
   filter: drop-shadow(0 1px 0 #fff8);
 }
 
-/*
- * The trick is a spatial table event, not a horizontal list. Relative classes
- * are derived from the human seat: self at the near edge, opponents left/right.
- */
 .trick:not(:has(> .muted)) {
   position: relative;
-  width: min(390px, 82vw);
-  min-height: 154px;
+  width: min(430px, 78vw);
+  min-height: 176px;
   display: block;
 }
 
 .trick .played {
   position: absolute;
-  width: 78px;
+  width: 88px;
   margin: 0;
   gap: 3px;
   transition: filter .15s ease;
 }
 
 .trick .played small {
-  max-width: 82px;
+  max-width: 88px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   padding: 2px 6px;
+  border: 1px solid #ffffff0c;
   border-radius: 999px;
-  background: #03150ea6;
-  box-shadow: inset 0 1px #ffffff0c;
+  background: #04140da8;
 }
 
 .trick .played-self {
@@ -106,16 +100,6 @@
   animation: trick-from-right .24s cubic-bezier(.18, .82, .24, 1) both;
 }
 
-.trick.completed .played {
-  filter: saturate(.9) brightness(.96);
-}
-
-.trick.completed .played-self,
-.trick.completed .played-left,
-.trick.completed .played-right {
-  animation-duration: .16s;
-}
-
 @keyframes trick-from-self {
   from { opacity: 0; transform: translateX(-50%) translateY(22px) scale(.9); }
   to { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
@@ -131,35 +115,266 @@
   to { opacity: 1; transform: translate(0, 0) scale(1) rotate(0); }
 }
 
-@media (max-width: 620px) {
-  .card::after {
-    right: 4px;
-    bottom: 4px;
-    font-size: .56rem;
+/* External first-impression hierarchy. */
+body {
+  background: radial-gradient(circle at 50% 34%, #17412f 0%, #0c261c 44%, #06120d 100%);
+}
+
+.app-shell {
+  position: relative;
+  width: min(1240px, 100%);
+  min-height: 100svh;
+  padding: 14px clamp(14px, 2.6vw, 30px) 18px;
+  gap: 10px;
+}
+
+.topbar {
+  align-items: center;
+  min-height: 44px;
+}
+
+.topbar > div:first-child {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.topbar .eyebrow {
+  opacity: .55;
+  font-size: .68rem;
+}
+
+.topbar h1 {
+  margin: 0;
+  font-size: clamp(1rem, 2vw, 1.25rem);
+  font-weight: 650;
+  color: #e4eee7;
+}
+
+.topbar-actions {
+  opacity: .72;
+}
+
+.scoreboard {
+  max-width: 760px;
+  width: 100%;
+  justify-self: center;
+  gap: clamp(6px, 1vw, 10px);
+}
+
+.score {
+  min-height: 44px;
+  padding: 7px 10px;
+  border-color: #ffffff10;
+  border-radius: 12px;
+  background: #04100bad;
+  box-shadow: none;
+}
+
+.score span { color: #c7d6cc; font-size: .78rem; }
+.score strong { color: #f7f3ea; font-size: 1rem; }
+.score small { min-height: 0; color: #829b8c; font-size: .66rem; }
+.score.human { border-color: #a8d7b337; background: #0a1d14c7; }
+
+.table {
+  position: relative;
+  min-height: min(66vh, 690px);
+  overflow: hidden;
+  border: 1px solid #ffffff10;
+  border-radius: clamp(24px, 3vw, 34px);
+  padding: clamp(18px, 3vw, 34px) clamp(18px, 4vw, 48px) clamp(136px, 16vw, 184px);
+  gap: 10px;
+  background: radial-gradient(ellipse at 50% 58%, #1b6a47 0%, #135638 35%, #0d3f2c 68%, #0a2d20 100%);
+  box-shadow: inset 0 1px #ffffff0c, inset 0 -90px 120px #02110b35, 0 24px 70px #0005;
+}
+
+.table::before {
+  content: '';
+  position: absolute;
+  inset: 12% 10% 24%;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, #9cd7b50a 0%, #ffffff00 68%);
+  pointer-events: none;
+}
+
+.opponents {
+  position: relative;
+  z-index: 2;
+  gap: clamp(54px, 18vw, 250px);
+  padding: 0 clamp(4px, 2vw, 22px);
+}
+
+.opponent {
+  min-height: 74px;
+  display: grid;
+  align-content: start;
+  justify-items: center;
+  gap: 2px;
+}
+
+.opponent strong { font-size: .9rem; }
+.opponent > span { color: #9bb3a4; font-size: .7rem; }
+.card-backs { height: 40px; margin-top: 7px; }
+.card-backs i { width: 24px; height: 36px; border-radius: 6px; box-shadow: 0 4px 10px #0004; }
+
+.center {
+  position: relative;
+  z-index: 2;
+  min-height: 250px;
+  gap: 8px;
+}
+
+.status-strip {
+  position: absolute;
+  top: 2px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: 92%;
+  gap: 6px;
+  padding: 6px;
+  border: 1px solid #ffffff0d;
+  border-radius: 999px;
+  background: #04140da8;
+  color: #8fa99a;
+  font-size: .72rem;
+  box-shadow: 0 6px 20px #0002;
+}
+
+.status-strip span { padding: 2px 7px; }
+.status-strip strong { color: #e8f0ea; font-size: .78rem; }
+.trick .card { width: 76px; flex-basis: 76px; }
+.muted { color: #aac0b3; font-size: .84rem; opacity: .76; }
+
+.decision {
+  position: relative;
+  z-index: 4;
+  min-height: 82px;
+  align-self: end;
+}
+
+.decision-card {
+  width: min(650px, 94%);
+  padding: 10px 12px;
+  border-color: #ffffff12;
+  border-radius: 16px;
+  background: #06150edc;
+  box-shadow: 0 12px 34px #0003;
+}
+
+.decision-card h2 { margin-bottom: 6px; font-size: .9rem; }
+.decision-help { margin-top: 6px; font-size: .7rem; }
+.decision button { min-height: 38px; border-radius: 999px; padding: 7px 12px; }
+
+.hand-area {
+  position: absolute;
+  z-index: 6;
+  left: clamp(8px, 2vw, 24px);
+  right: clamp(8px, 2vw, 24px);
+  bottom: clamp(10px, 1.6vw, 22px);
+  gap: 3px;
+  pointer-events: none;
+}
+
+.hand-heading {
+  width: min(860px, 94%);
+  margin: 0 auto;
+  padding: 0 8px;
+  color: #9eb3a5;
+  font-size: .68rem;
+  opacity: .76;
+}
+
+.hand {
+  --hand-card-width: clamp(68px, 8.1vw, 96px);
+  --hand-gap: clamp(-18px, -.5vw, -5px);
+  width: min(980px, 100%);
+  margin: 0 auto;
+  padding: 4px 12px 2px;
+  pointer-events: auto;
+}
+
+.hand > .card {
+  transform-origin: 50% 100%;
+  box-shadow: 0 12px 24px #0005;
+}
+
+.hand > .card:hover:not(:disabled),
+.hand > .card:focus-visible,
+.hand > .card.selected {
+  transform: translateY(-14px);
+}
+
+.hand > .card:disabled {
+  opacity: 1;
+  filter: saturate(.88) brightness(.97);
+}
+
+.footer { display: none; }
+
+@media (max-width: 760px) {
+  .app-shell { padding: 7px 7px 9px; gap: 6px; }
+  .topbar { min-height: 38px; padding: 0 2px; }
+  .topbar .eyebrow { display: none; }
+  .topbar h1 { font-size: 1rem; }
+  .topbar-actions button { min-height: 34px; padding: 6px 8px; font-size: .72rem; }
+
+  .scoreboard { gap: 4px; padding: 0 2px; }
+  .score { min-height: 38px; padding: 5px 7px; border-radius: 10px; }
+  .score span { font-size: .68rem; }
+  .score strong { font-size: .86rem; }
+  .score small { display: none; }
+
+  .table {
+    min-height: calc(100svh - 92px);
+    border-radius: 22px;
+    padding: 13px 10px 142px;
+    gap: 4px;
   }
 
-  .card .rank::after {
-    margin-top: 2px;
-    font-size: .64em;
+  .table::before { inset: 18% 2% 25%; }
+  .opponents { gap: 46px; padding: 0 3px; }
+  .opponent { min-height: 58px; }
+  .opponent strong { font-size: .76rem; }
+  .opponent > span { font-size: .62rem; }
+  .card-backs { height: 30px; margin-top: 4px; }
+  .card-backs i { width: 19px; height: 29px; margin-left: -8px; }
+
+  .center { min-height: 180px; }
+  .status-strip { top: -1px; gap: 0; padding: 4px; font-size: .62rem; }
+  .status-strip span { padding: 1px 5px; }
+  .status-strip strong { font-size: .66rem; }
+
+  .trick:not(:has(> .muted)) { width: min(310px, 92vw); min-height: 136px; }
+  .trick .card { width: 60px; flex-basis: 60px; }
+  .trick .played { width: 66px; }
+
+  .decision { min-height: 66px; }
+  .decision-card { width: min(420px, 98%); padding: 8px 9px; border-radius: 14px; }
+  .decision-card h2 { font-size: .8rem; margin-bottom: 4px; }
+  .decision-card p, .decision-help { font-size: .64rem; line-height: 1.25; }
+  .decision button { min-height: 36px; padding: 6px 10px; font-size: .78rem; }
+
+  .hand-area {
+    left: 3px;
+    right: 3px;
+    bottom: max(5px, env(safe-area-inset-bottom));
   }
 
-  .trick:not(:has(> .muted)) {
-    width: min(290px, 88vw);
-    min-height: 126px;
+  .hand-heading { width: 96%; font-size: .62rem; padding: 0 5px; }
+
+  .hand {
+    --hand-card-width: clamp(58px, 18vw, 76px);
+    --hand-gap: clamp(-32px, -6.5vw, -17px);
+    width: 100%;
+    padding: 3px 4px 2px;
   }
 
-  .trick .played {
-    width: 58px;
+  .hand > .card:hover:not(:disabled),
+  .hand > .card:focus-visible,
+  .hand > .card.selected {
+    transform: translateY(-10px);
   }
-
-  .trick .played small {
-    max-width: 64px;
-    padding: 1px 4px;
-    font-size: .66rem;
-  }
-
-  .trick .played-left { left: 7%; }
-  .trick .played-right { right: 7%; }
 }
 
 @media (prefers-reduced-motion: reduce) {
