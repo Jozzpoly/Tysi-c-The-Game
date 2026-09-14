@@ -141,8 +141,9 @@ async function view(session) {
     const revText = [...document.querySelectorAll('.footer span')]
       .map((node) => node.textContent?.trim() ?? '')
       .find((text) => /^rev \\d+$/.test(text));
-    const scores = [...document.querySelectorAll('main.app-shell > section.scoreboard .score strong')]
-      .map((node) => Number(node.textContent?.trim()));
+    const scores = [...document.querySelectorAll('.opponent .seat-score, .hand-score strong')]
+      .map((node) => Number(node.textContent?.trim()))
+      .filter(Number.isFinite);
     const hand = document.querySelector('.hand');
     return {
       body: document.body?.innerText ?? '',
@@ -363,6 +364,7 @@ async function runFullMatch(label, width, height, mobile) {
     assertLayout(`${label}: match complete`, current, width);
     if (counters.completedHands < 1) throw new Error(`${label}: match completed without observing a hand completion screen`);
     if (counters.reconnects !== 1) throw new Error(`${label}: mid-match reconnect was not exercised`);
+    if (current.scores.length !== 3) throw new Error(`${label}: expected three visible player scores, got ${current.scores.join('/')}`);
     if (Math.max(...current.scores) < 1000) throw new Error(`${label}: match ended without a >=1000 score: ${current.scores.join('/')}`);
 
     return {
