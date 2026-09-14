@@ -3,6 +3,7 @@ import {
   computeHandInsertionPreview,
   estimateHandStep,
   fractionalInsertionPosition,
+  stabilizeInsertionTarget,
 } from '../src/presentation/tactileHandLayout.js';
 
 const CENTERS = [100, 160, 220, 280, 340];
@@ -42,5 +43,31 @@ describe('tactile hand layout', () => {
     const preview = computeHandInsertionPreview({ sourceIndex: 2, heldCenterX: 220, centers: CENTERS });
     expect(preview.targetIndex).toBe(2);
     expect(preview.shiftsPx).toEqual([0, 0, 0, 0, 0]);
+  });
+
+  it('keeps release target stable around a slot boundary', () => {
+    let target = 2;
+    for (const position of [2.48, 2.51, 2.57, 2.61, 2.55, 2.60]) {
+      target = stabilizeInsertionTarget({ position, previousTarget: target, slotCount: 5 });
+      expect(target).toBe(2);
+    }
+    target = stabilizeInsertionTarget({ position: 2.63, previousTarget: target, slotCount: 5 });
+    expect(target).toBe(3);
+  });
+
+  it('requires a real reversal before switching the stable target back', () => {
+    let target = stabilizeInsertionTarget({ position: 2.7, previousTarget: 2, slotCount: 5 });
+    expect(target).toBe(3);
+    for (const position of [2.55, 2.48, 2.41, 2.39]) {
+      target = stabilizeInsertionTarget({ position, previousTarget: target, slotCount: 5 });
+      expect(target).toBe(3);
+    }
+    target = stabilizeInsertionTarget({ position: 2.37, previousTarget: target, slotCount: 5 });
+    expect(target).toBe(2);
+  });
+
+  it('does not make hysteresis impede a decisive multi-slot move', () => {
+    expect(stabilizeInsertionTarget({ position: 4.8, previousTarget: 1, slotCount: 6 })).toBe(5);
+    expect(stabilizeInsertionTarget({ position: 0.2, previousTarget: 5, slotCount: 6 })).toBe(0);
   });
 });
