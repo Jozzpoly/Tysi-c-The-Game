@@ -10,6 +10,7 @@ import './run04-mobile-hand.css';
 import './run04-tactile-hand.css';
 import './run04-tactile-fix.css';
 import './run04-touch-contract.css';
+import './run04-trick-lifecycle.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
