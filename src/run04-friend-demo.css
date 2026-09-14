@@ -1,28 +1,29 @@
 /*
- * Run 04 FC1-B — seat presence and playing locus.
+ * Run 04 — friend-demo visual foundation.
  *
- * Presentation-only. The defended hand/trick mechanics stay authoritative; this
- * layer makes the same state read as people occupying a table rather than labels
- * floating around a responsive dashboard.
+ * Presentation-only. This deliberately avoids selector-driven gameplay semantics:
+ * the rules, legal commands, trick lifecycle and authoritative handoff remain the
+ * defended source of truth. The goal is a denser, more game-like table that can
+ * safely carry the final friend-demo polish.
  */
 
 .table {
   border-color: #d7bd7330;
   background:
-    radial-gradient(ellipse at 50% 52%, #1b704b 0%, #125d3e 32%, #0d472f 66%, #092f21 100%);
+    radial-gradient(ellipse at 50% 50%, #1c714c 0%, #125d3e 31%, #0d472f 65%, #092f21 100%);
   box-shadow:
     inset 0 0 0 1px #0005,
-    inset 0 0 0 7px #03160f24,
-    inset 0 0 115px #00170b85,
+    inset 0 0 0 7px #03160f20,
+    inset 0 0 120px #00170b88,
     0 24px 74px #0006;
 }
 
-/* Opponents are seats first, metadata second. */
+/* Opponents read as occupied seats instead of metadata floating above cards. */
 .opponents {
   width: min(900px, 100%);
   margin-inline: auto;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: clamp(84px, 14vw, 190px);
+  gap: clamp(82px, 14vw, 186px);
   align-items: start;
   transform: translateY(3px);
 }
@@ -43,22 +44,21 @@
   align-items: center;
   justify-items: stretch;
   text-align: left;
-  border: 1px solid #ffffff0c;
+  border: 1px solid #ffffff0d;
   border-radius: 18px;
   background:
-    radial-gradient(circle at 28px 30px, #f4dfa30a 0 34px, transparent 35px),
-    linear-gradient(180deg, #03180f72, #0211092b 74%, transparent);
-  box-shadow: inset 0 1px #ffffff0d, 0 10px 28px #00170c22;
+    radial-gradient(circle at 28px 30px, #f4dfa30b 0 34px, transparent 35px),
+    linear-gradient(180deg, #03180f78, #02110930 75%, transparent);
+  box-shadow: inset 0 1px #ffffff0d, 0 10px 28px #00170c24;
 }
 
-/* Abstract human token: enough presence to read as a seat, not character art. */
 .opponent::before {
   content: '';
   grid-area: presence;
   align-self: start;
   width: 44px;
   height: 44px;
-  border: 1px solid #ead99a36;
+  border: 1px solid #ead99a38;
   border-radius: 50%;
   background:
     radial-gradient(circle at 50% 35%, #d9d6c5 0 18%, transparent 19%),
@@ -69,6 +69,9 @@
     0 5px 15px #0004,
     0 0 0 4px #04180f70;
 }
+
+.opponent:first-child { transform: rotate(-.45deg); }
+.opponent:last-child { transform: rotate(.45deg); }
 
 .opponent .seat-line {
   grid-area: identity;
@@ -135,42 +138,20 @@
 
 .opponent .card-backs i:first-child { margin-left: 0; }
 .opponent .card-backs i:nth-child(1) { transform: rotate(-4deg) translateY(2px); }
-.opponent .card-backs i:nth-child(2) { transform: rotate(-2.8deg) translateY(1px); }
+.opponent .card-backs i:nth-child(2) { transform: rotate(-2.6deg) translateY(1px); }
 .opponent .card-backs i:nth-last-child(2) { transform: rotate(2.4deg) translateY(1px); }
 .opponent .card-backs i:last-child { transform: rotate(4deg) translateY(2px); }
 
-.opponent:first-child { transform: rotate(-.55deg); }
-.opponent:last-child { transform: rotate(.55deg); }
-
-/* Existing semantic initiative/winner state now lights the whole seat, not a label. */
-.opponent:has(.seat-consequence.is-initiative),
-.opponent.trick-winner-source {
-  border-color: #e9d17c25;
-  background:
-    radial-gradient(circle at 28px 30px, #f4dfa314 0 35px, transparent 36px),
-    linear-gradient(180deg, #0b281a8c, #03140c38 78%, transparent);
-}
-
-.opponent:has(.seat-consequence.is-initiative)::before,
-.opponent.trick-winner-source::before {
-  border-color: #efd98a69;
-  box-shadow:
-    inset 0 1px #ffffff20,
-    0 5px 15px #0004,
-    0 0 0 4px #d8bd5b0d,
-    0 0 24px #d8bd5b1b;
-}
-
-/* Table facts become one small physical plaque instead of naked HUD text. */
+/* Shared table state becomes one object, with the live bid receiving first read. */
 .status-strip {
-  top: 4px;
+  top: 3px;
   gap: 0;
-  padding: 4px 8px;
-  border: 1px solid #ffffff0f;
+  padding: 5px 8px;
+  border: 1px solid #ffffff11;
   border-radius: 999px;
-  background: #03160fc7;
+  background: #03160fca;
   color: #9fb5a7;
-  box-shadow: inset 0 1px #ffffff0a, 0 5px 16px #0002;
+  box-shadow: inset 0 1px #ffffff0a, 0 5px 16px #0003;
   backdrop-filter: blur(3px);
 }
 
@@ -182,25 +163,31 @@
   border-left-color: #ffffff18;
 }
 
+.status-strip span:first-child strong {
+  color: #f0d68d;
+  font-size: 1.02rem;
+  font-weight: 900;
+}
+
 .status-strip strong {
   color: #eef3ef;
   font-weight: 780;
 }
 
-/* The trick locus is a real shared surface. Ownership comes from seat geometry. */
+/* Give the shared play area physical mass without changing any card ownership. */
 .center::before {
   width: min(500px, 66vw);
   aspect-ratio: 1.82;
   top: 54%;
-  border-color: #e0cd8c14;
+  border-color: #e0cd8c16;
   background:
-    radial-gradient(ellipse, #b9e1c50b 0%, #ffffff04 45%, transparent 72%);
-  box-shadow: inset 0 0 42px #001c101d, 0 0 46px #84c6a207;
+    radial-gradient(ellipse, #b9e1c50d 0%, #ffffff04 45%, transparent 72%);
+  box-shadow: inset 0 0 42px #001c1020, 0 0 46px #84c6a208;
 }
 
-.trick:not(:has(> .muted)) {
+.trick {
   width: min(470px, 80vw);
-  min-height: 184px;
+  min-height: 170px;
 }
 
 .trick .played {
@@ -213,67 +200,34 @@
   box-shadow: 0 13px 24px #0005, 0 1px 1px #0006, inset 0 0 0 1px #fff9;
 }
 
-/* Seat position already communicates who played it. Preserve text for AT/tests only. */
-.trick .played > small {
-  position: absolute !important;
-  width: 1px !important;
-  height: 1px !important;
-  padding: 0 !important;
-  margin: -1px !important;
-  overflow: hidden !important;
-  clip: rect(0 0 0 0) !important;
-  clip-path: inset(50%) !important;
-  white-space: nowrap !important;
-  border: 0 !important;
-}
-
 .trick > .muted {
-  opacity: .32;
+  padding: 5px 10px;
+  border: 1px solid #ffffff09;
+  border-radius: 999px;
+  background: #04170f45;
+  color: #b6c9bd;
+  opacity: .42;
+  font-size: .7rem;
   letter-spacing: .025em;
 }
 
-/* Routine turn guidance yields to the physical hand. Exceptional choices stay loud. */
-.decision:has(.decision-card.compact) {
-  min-height: 54px;
-  margin-top: -22px;
+/* The hand remains the strongest object in the scene. */
+.hand-area {
+  border: 0;
+  background: linear-gradient(180deg, transparent 0%, #04170f8f 28%, #03110bed 100%);
 }
 
-.decision-card.compact {
-  width: min(620px, 92%);
-  padding: 4px 10px;
-  gap: 3px;
+.hand-heading {
+  padding-inline: 7px;
 }
 
-.decision-card.compact h2 {
-  margin: 0;
-  color: #c2d2c8;
-  font-size: .68rem;
-  font-weight: 720;
-  letter-spacing: .08em;
-  text-transform: uppercase;
+.footer {
   opacity: .58;
 }
 
-.decision-card.compact .decision-help {
-  max-width: 560px;
-  margin-top: 2px;
-  color: #9bb0a2;
-  font-size: .61rem;
-  line-height: 1.22;
-  opacity: .48;
-}
-
-.decision-card.compact:has(.actions) h2 {
-  opacity: .72;
-}
-
-.decision-card.compact .actions {
-  margin-top: 2px;
-}
-
-.hand-area {
-  border: 0;
-  background: linear-gradient(180deg, transparent 0%, #04170f8c 28%, #03110bed 100%);
+.footer .message {
+  color: #d8c77f;
+  font-weight: 650;
 }
 
 @media (max-width: 760px) {
@@ -283,7 +237,7 @@
     box-shadow:
       inset 0 0 0 1px #0005,
       inset 0 0 0 4px #03160f20,
-      inset 0 0 80px #00170b72;
+      inset 0 0 82px #00170b74;
   }
 
   .opponents {
@@ -305,10 +259,6 @@
   .opponent::before {
     width: 32px;
     height: 32px;
-    background:
-      radial-gradient(circle at 50% 35%, #d9d6c5 0 18%, transparent 19%),
-      radial-gradient(ellipse at 50% 91%, #879a8d 0 32%, transparent 33%),
-      linear-gradient(145deg, #173c2b, #09251a 72%);
     box-shadow: inset 0 1px #ffffff14, 0 3px 10px #0004, 0 0 0 3px #04180f70;
   }
 
@@ -316,6 +266,7 @@
   .opponent .seat-line strong { font-size: .73rem; }
   .opponent .seat-score { font-size: .65rem; }
   .opponent .seat-role { font-size: .52rem !important; }
+
   .opponent .seat-cards {
     right: 6px;
     bottom: 6px;
@@ -344,6 +295,7 @@
 
   .status-strip span { padding: 1px 5px; }
   .status-strip strong { font-size: .62rem; }
+  .status-strip span:first-child strong { font-size: .76rem; }
 
   .center::before {
     width: 96%;
@@ -351,30 +303,14 @@
     top: 53%;
   }
 
-  .trick:not(:has(> .muted)) {
+  .trick {
     width: min(340px, 94vw);
-    min-height: 154px;
+    min-height: 146px;
   }
 
   .trick .played { width: 72px; }
   .trick .card { width: 66px; flex-basis: 66px; }
-
-  .decision:has(.decision-card.compact) {
-    min-height: 44px;
-    margin-top: -18px;
-  }
-
-  .decision-card.compact {
-    width: 96%;
-    padding: 3px 6px;
-  }
-
-  .decision-card.compact h2 { font-size: .62rem; }
-  .decision-card.compact .decision-help {
-    max-width: 330px;
-    font-size: .56rem;
-    line-height: 1.18;
-  }
+  .trick > .muted { font-size: .6rem; }
 
   .hand-area {
     background: linear-gradient(180deg, transparent 0%, #04170fa6 24%, #03110bf2 100%);
