@@ -252,7 +252,7 @@
   }
 
   .tactile-hand:has(> .hand-slot:nth-child(10)) > .hand-slot + .hand-slot {
-    margin-left: -33px;
+    margin-left: -32px;
   }
 
   .tactile-hand:has(> .hand-slot:nth-child(10)) .hand-slot > .card {
