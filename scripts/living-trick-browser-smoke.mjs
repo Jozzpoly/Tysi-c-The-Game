@@ -113,6 +113,13 @@ async function installLifecycleTrace(session) {
   await execute(session, `
     window.__livingTrickTrace = [];
     let lastSignature = '';
+    const readMarkers = () => [...document.querySelectorAll('[data-consequence-seat]')].map((node) => ({
+      seat: node.dataset.consequenceSeat ?? '',
+      tricks: Number(node.dataset.capturedTricks ?? 0),
+      points: Number(node.dataset.capturedPoints ?? 0),
+      initiative: node.dataset.nextInitiative === 'true',
+      updated: node.classList.contains('is-updated'),
+    }));
     const sample = () => {
       const trick = document.querySelector('.trick');
       if (!trick) return;
@@ -129,6 +136,7 @@ async function installLifecycleTrace(session) {
         winnerSeat: trick.dataset.winnerSeat ?? '',
         winnerPosition: trick.dataset.winnerPosition ?? '',
         played,
+        markers: readMarkers(),
         result: document.querySelector('.trick-result')?.textContent?.trim() ?? '',
         capture: document.querySelector('.capture-pulse')?.textContent?.trim() ?? '',
         enabledActions: document.querySelectorAll('.decision-card button:not(:disabled), .hand .card:not(:disabled)').length,
@@ -154,16 +162,29 @@ async function stageState(session, stage) {
   return execute(session, `
     const trick = document.querySelector('.trick');
     if (trick?.dataset.presentationKind !== 'trick-completion' || trick.dataset.trickStage !== ${JSON.stringify(stage)}) return null;
+    const readMarkers = () => [...document.querySelectorAll('[data-consequence-seat]')].map((node) => ({
+      seat: node.dataset.consequenceSeat ?? '',
+      tricks: Number(node.dataset.capturedTricks ?? 0),
+      points: Number(node.dataset.capturedPoints ?? 0),
+      initiative: node.dataset.nextInitiative === 'true',
+      updated: node.classList.contains('is-updated'),
+    }));
     return {
       stage: trick.dataset.trickStage,
       freshPlay: trick.dataset.freshPlay ?? '',
       winnerSeat: trick.dataset.winnerSeat ?? '',
       winnerPosition: trick.dataset.winnerPosition ?? '',
-      played: [...trick.querySelectorAll('.played')].map((node) => ({
-        seat: node.dataset.seat ?? '', card: node.dataset.card ?? '',
-        fresh: node.classList.contains('is-fresh-arrival'),
-        winner: node.classList.contains('is-trick-winner'),
-      })),
+      played: [...trick.querySelectorAll('.played')].map((node) => {
+        const card = node.querySelector('.card') ?? node;
+        const rect = card.getBoundingClientRect();
+        return {
+          seat: node.dataset.seat ?? '', card: node.dataset.card ?? '',
+          fresh: node.classList.contains('is-fresh-arrival'),
+          winner: node.classList.contains('is-trick-winner'),
+          left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom,
+        };
+      }),
+      markers: readMarkers(),
       result: document.querySelector('.trick-result')?.textContent?.trim() ?? '',
       capture: document.querySelector('.capture-pulse')?.textContent?.trim() ?? '',
       enabledActions: document.querySelectorAll('.decision-card button:not(:disabled), .hand .card:not(:disabled)').length,
@@ -171,6 +192,10 @@ async function stageState(session, stage) {
       scrollWidth: document.documentElement.scrollWidth,
     };
   `);
+}
+
+function markerFor(state, seat) {
+  return state?.markers?.find((marker) => marker.seat === String(seat)) ?? null;
 }
 
 async function runViewport(label, width, height, mobile) {
@@ -199,29 +224,72 @@ async function runViewport(label, width, height, mobile) {
       throw new Error(`${label}: authoritative winner is ambiguous: ${JSON.stringify(resolve)}`);
     }
     if (resolve.enabledActions !== 0) throw new Error(`${label}: input active during resolve`);
+    if (resolve.markers.length !== 3) throw new Error(`${label}: ownership markers missing during resolve ${JSON.stringify(resolve.markers)}`);
+    const resolveWinnerMarker = markerFor(resolve, resolve.winnerSeat);
+    if (!resolveWinnerMarker || resolveWinnerMarker.initiative || resolveWinnerMarker.updated) {
+      throw new Error(`${label}: winner consequence leaked during resolve ${JSON.stringify(resolveWinnerMarker)}`);
+    }
 
     const collect = await waitFor(`${label}: collect`, () => stageState(session, 'collect'), 3_000);
     if (collect.played.length !== 3 || collect.enabledActions !== 0) throw new Error(`${label}: invalid collect state ${JSON.stringify(collect)}`);
+    const collectWinnerMarker = markerFor(collect, resolve.winnerSeat);
+    if (!collectWinnerMarker || collectWinnerMarker.initiative || collectWinnerMarker.updated) {
+      throw new Error(`${label}: winner consequence leaked during collect ${JSON.stringify(collectWinnerMarker)}`);
+    }
+    if (collectWinnerMarker.tricks !== resolveWinnerMarker.tricks || collectWinnerMarker.points !== resolveWinnerMarker.points) {
+      throw new Error(`${label}: persistent capture advanced before consequence ${JSON.stringify({ resolveWinnerMarker, collectWinnerMarker })}`);
+    }
+
+    // Check the moving cards after collection has materially progressed. Scroll
+    // width cannot detect a transformed card hanging outside the visual viewport.
+    await sleep(115);
+    const collectLate = await stageState(session, 'collect') ?? collect;
+    for (const play of collectLate.played) {
+      if (play.left < -1 || play.right > collectLate.width + 1) {
+        throw new Error(`${label}: collected card escaped viewport ${JSON.stringify({ play, width: collectLate.width, winner: collectLate.winnerPosition })}`);
+      }
+    }
     await screenshot(session, `${label}-living-trick-collect`);
 
     // Consequence is intentionally brief. A screenshot round trip can consume its
-    // entire live window, so prove the semantic stage from the in-page observer
-    // rather than slowing the product down to accommodate WebDriver latency.
-    const consequence = await waitFor(`${label}: consequence trace`, async () => {
+    // entire live window, so prove the semantic stage from the in-page observer.
+    const consequence = await waitFor(`${label}: consequence ownership trace`, async () => {
       const entries = await trace(session);
-      return entries.find((entry) => entry.kind === 'trick-completion' && entry.stage === 'consequence') ?? false;
+      return entries.find((entry) => {
+        if (entry.kind !== 'trick-completion' || entry.stage !== 'consequence') return false;
+        const marker = markerFor(entry, resolve.winnerSeat);
+        const delta = Number(entry.capture.match(/\+?(\d+)\s*pkt/)?.[1] ?? NaN);
+        return marker
+          && Number.isFinite(delta)
+          && marker.tricks === collectWinnerMarker.tricks + 1
+          && marker.points === collectWinnerMarker.points + delta
+          && marker.initiative
+          && marker.updated;
+      }) ?? false;
     }, 3_000);
-    if (!consequence.capture.includes('pkt')) throw new Error(`${label}: point consequence did not attach to winner: ${JSON.stringify(consequence)}`);
+    const consequenceWinnerMarker = markerFor(consequence, resolve.winnerSeat);
+    if (!consequence.capture.includes('pkt') || !consequenceWinnerMarker) {
+      throw new Error(`${label}: point consequence did not attach to winner: ${JSON.stringify(consequence)}`);
+    }
     if (consequence.enabledActions !== 0) throw new Error(`${label}: input active during consequence`);
+    if (consequence.markers.filter((marker) => marker.initiative).length !== 1) {
+      throw new Error(`${label}: next initiative is spatially ambiguous ${JSON.stringify(consequence.markers)}`);
+    }
     const liveConsequence = await stageState(session, 'consequence');
     if (liveConsequence) await screenshot(session, `${label}-living-trick-consequence`);
 
-    // Settled is intentionally brief: the next actor may start shortly after the
-    // completion frame drains. Observe it in-page through MutationObserver rather
-    // than requiring a slower WebDriver round trip to land inside that window.
-    const settled = await waitFor(`${label}: settled trace`, async () => {
+    // Settled is intentionally brief: observe it in-page rather than requiring a
+    // slower WebDriver round trip to land inside that window.
+    const settled = await waitFor(`${label}: settled ownership trace`, async () => {
       const entries = await trace(session);
-      return entries.find((entry) => entry.kind === 'trick-completion' && entry.stage === 'settled') ?? false;
+      return entries.find((entry) => {
+        if (entry.kind !== 'trick-completion' || entry.stage !== 'settled') return false;
+        const marker = markerFor(entry, resolve.winnerSeat);
+        return marker
+          && marker.tricks === consequenceWinnerMarker.tricks
+          && marker.points === consequenceWinnerMarker.points
+          && marker.initiative;
+      }) ?? false;
     }, 3_000);
     if (settled.played.length !== 0 || settled.result !== '' || settled.capture !== '') {
       throw new Error(`${label}: completed trick leaked after settle: ${JSON.stringify(settled)}`);
@@ -252,8 +320,10 @@ async function runViewport(label, width, height, mobile) {
       freshPlay: resolve.freshPlay,
       winnerSeat: resolve.winnerSeat,
       winnerPosition: resolve.winnerPosition,
-      result: resolve.result,
+      captureBefore: collectWinnerMarker,
+      captureAfter: consequenceWinnerMarker,
       capture: consequence.capture,
+      initiativeSeat: consequence.markers.find((marker) => marker.initiative)?.seat ?? '',
       stages,
     };
   } finally {
