@@ -92,8 +92,7 @@
 }
 
 .opponent,
-.hand-owner,
-.hand-area {
+.hand-owner {
   position: relative;
 }
 
