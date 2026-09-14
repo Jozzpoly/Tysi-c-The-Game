@@ -54,6 +54,7 @@ interface ReleaseGhost {
 interface DragLayoutSnapshot {
   sourceIndex: number;
   centers: number[];
+  pointerToSourceCenterX: number;
 }
 
 type FloatingCardProps =
@@ -314,7 +315,10 @@ export function TactileHand({
   function applyInsertionPreview(state: TactilePointerState) {
     const layout = dragLayout.current;
     if (!layout || state.phase !== 'held') return;
-    const heldCenterX = state.x - state.offsetX + state.width / 2;
+    // Reorder semantics use the logical hand-slot centre, not the transformed
+    // card's axis-aligned bounding box. The visual fan can rotate/lift without
+    // moving the interaction axis under the player's finger.
+    const heldCenterX = state.x + layout.pointerToSourceCenterX;
     const rawPreview = computeHandInsertionPreview({
       sourceIndex: layout.sourceIndex,
       heldCenterX,
@@ -340,9 +344,12 @@ export function TactileHand({
     const rect = button.getBoundingClientRect();
     const handRect = handRef.current?.getBoundingClientRect() ?? rect;
     const sourceIndex = visibleOrder.indexOf(card);
+    const centers = readSlotCenters();
+    const sourceCenterX = centers[sourceIndex] ?? event.clientX;
     dragLayout.current = {
       sourceIndex,
-      centers: readSlotCenters(),
+      centers,
+      pointerToSourceCenterX: sourceCenterX - event.clientX,
     };
     latestPreview.current = null;
     stableTarget.current = sourceIndex;
