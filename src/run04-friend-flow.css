@@ -106,8 +106,8 @@
 .decision-card.compact h2 {
   margin: 0;
   font-size: .67rem;
-  letter-spacing: .06em;
-  text-transform: uppercase;
+  letter-spacing: .02em;
+  text-transform: none;
   opacity: .62;
 }
 
