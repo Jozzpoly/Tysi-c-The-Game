@@ -1,53 +1,14 @@
-name: Temporary Interaction Preview One Shot
+name: Temporary Interaction Preview One Shot (disabled)
 
 on:
-  push:
-    branches:
-      - run-02-tactile-interaction-system-02
+  workflow_dispatch:
 
 permissions:
   contents: read
 
-concurrency:
-  group: tysiac-interaction-owner-preview-one-shot
-  cancel-in-progress: true
-
 jobs:
-  preview:
+  disabled:
+    if: ${{ false }}
     runs-on: ubuntu-latest
-    timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: npm
-      - run: npm ci --no-audit --no-fund
-      - name: Run complete Foundation gate before temporary publishing
-        run: npm run check
-      - name: Deploy unclaimed temporary Cloudflare preview
-        id: temporary
-        run: node scripts/temporary-deploy.mjs
-      - name: Verify public desktop/mobile MatchRoom behavior
-        env:
-          TYSIAC_PUBLIC_URL: ${{ steps.temporary.outputs.deployment_url }}
-        run: node scripts/public-deploy-smoke.mjs
-      - name: Record verified temporary preview
-        env:
-          PUBLIC_URL: ${{ steps.temporary.outputs.deployment_url }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          if [[ -z "$PUBLIC_URL" ]]; then
-            echo "::error::Temporary deployment completed without a public workers.dev URL."
-            exit 1
-          fi
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "**PASS:** public health, duo desktop↔mobile command sync, hidden-hand separation, and refresh/reconnect." >> "$GITHUB_STEP_SUMMARY"
-          echo "Verified temporary URL: $PUBLIC_URL" >> "$GITHUB_STEP_SUMMARY"
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: temporary-interaction-public-smoke-${{ github.run_id }}
-          path: artifacts/browser/public-deploy-*.png
-          if-no-files-found: ignore
+      - run: echo "One-shot owner preview trigger disabled after verified deployment."
