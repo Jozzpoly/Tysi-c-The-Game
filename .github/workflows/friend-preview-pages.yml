@@ -24,10 +24,17 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci --no-audit --no-fund
-      - run: npm run build -- --base=/Tysi-c-The-Game/
+      - name: Build static client
+        run: |
+          npm run typegen
+          npx tsc -p tsconfig.app.json
+          npx tsc -p tsconfig.worker.json
+          npx vite build --base=/Tysi-c-The-Game/
+      - name: Inspect client output
+        run: test -f dist/client/index.html
       - uses: actions/upload-pages-artifact@v4
         with:
-          path: dist
+          path: dist/client
 
   deploy:
     needs: build
