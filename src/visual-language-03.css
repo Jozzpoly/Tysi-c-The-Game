@@ -1,5 +1,5 @@
 /*
- * Run 04 — Friend Candidate P2-A.
+ * Run 04 — Friend Candidate P2.
  * Recompose the existing real GameTable before importing tactile mechanisms.
  */
 
@@ -115,7 +115,6 @@
   to { opacity: 1; transform: translate(0, 0) scale(1) rotate(0); }
 }
 
-/* External first-impression hierarchy. */
 body {
   background: radial-gradient(circle at 50% 34%, #17412f 0%, #0c261c 44%, #06120d 100%);
 }
@@ -155,30 +154,9 @@ body {
   opacity: .72;
 }
 
-.scoreboard {
-  max-width: 760px;
-  width: 100%;
-  justify-self: center;
-  gap: clamp(6px, 1vw, 10px);
-}
-
-.score {
-  min-height: 44px;
-  padding: 7px 10px;
-  border-color: #ffffff10;
-  border-radius: 12px;
-  background: #04100bad;
-  box-shadow: none;
-}
-
-.score span { color: #c7d6cc; font-size: .78rem; }
-.score strong { color: #f7f3ea; font-size: 1rem; }
-.score small { min-height: 0; color: #829b8c; font-size: .66rem; }
-.score.human { border-color: #a8d7b337; background: #0a1d14c7; }
-
 .table {
   position: relative;
-  min-height: min(66vh, 690px);
+  min-height: min(72vh, 720px);
   overflow: hidden;
   border: 1px solid #ffffff10;
   border-radius: clamp(24px, 3vw, 34px);
@@ -205,16 +183,27 @@ body {
 }
 
 .opponent {
-  min-height: 74px;
+  min-height: 82px;
   display: grid;
   align-content: start;
   justify-items: center;
   gap: 2px;
+  color: #dce9df;
 }
 
-.opponent strong { font-size: .9rem; }
-.opponent > span { color: #9bb3a4; font-size: .7rem; }
-.card-backs { height: 40px; margin-top: 7px; }
+.seat-line {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 7px;
+}
+
+.opponent strong { font-size: .9rem; color: #eef4f0; }
+.seat-score { color: #f5e3a8; font-size: .82rem; font-weight: 800; }
+.opponent > span { color: #9bb3a4; font-size: .68rem; }
+.seat-role { min-height: .9em; color: #d7c988 !important; }
+.seat-cards { opacity: .8; }
+.card-backs { height: 40px; margin-top: 6px; }
 .card-backs i { width: 24px; height: 36px; border-radius: 6px; box-shadow: 0 4px 10px #0004; }
 
 .center {
@@ -262,7 +251,15 @@ body {
   box-shadow: 0 12px 34px #0003;
 }
 
+.decision-card.compact,
+.decision-card:has(.bid-actions) {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
+
 .decision-card h2 { margin-bottom: 6px; font-size: .9rem; }
+.decision-card.compact h2 { color: #dbe8e0; opacity: .76; }
 .decision-help { margin-top: 6px; font-size: .7rem; }
 .decision button { min-height: 38px; border-radius: 999px; padding: 7px 12px; }
 
@@ -277,12 +274,40 @@ body {
 }
 
 .hand-heading {
-  width: min(860px, 94%);
+  width: min(900px, 94%);
   margin: 0 auto;
   padding: 0 8px;
+  align-items: end;
   color: #9eb3a5;
   font-size: .68rem;
-  opacity: .76;
+  opacity: .9;
+}
+
+.hand-owner {
+  display: grid;
+  gap: 1px;
+}
+
+.hand-owner > span {
+  color: #869e90;
+  font-size: .62rem;
+  font-weight: 500;
+}
+
+.hand-score {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  color: #f5e3a8;
+}
+
+.hand-score strong {
+  font-size: .95rem;
+}
+
+.hand-score span {
+  color: #9eb3a5;
+  font-size: .58rem;
 }
 
 .hand {
@@ -319,14 +344,8 @@ body {
   .topbar h1 { font-size: 1rem; }
   .topbar-actions button { min-height: 34px; padding: 6px 8px; font-size: .72rem; }
 
-  .scoreboard { gap: 4px; padding: 0 2px; }
-  .score { min-height: 38px; padding: 5px 7px; border-radius: 10px; }
-  .score span { font-size: .68rem; }
-  .score strong { font-size: .86rem; }
-  .score small { display: none; }
-
   .table {
-    min-height: calc(100svh - 92px);
+    min-height: calc(100svh - 50px);
     border-radius: 22px;
     padding: 13px 10px 142px;
     gap: 4px;
@@ -334,9 +353,10 @@ body {
 
   .table::before { inset: 18% 2% 25%; }
   .opponents { gap: 46px; padding: 0 3px; }
-  .opponent { min-height: 58px; }
+  .opponent { min-height: 66px; }
   .opponent strong { font-size: .76rem; }
-  .opponent > span { font-size: .62rem; }
+  .seat-score { font-size: .72rem; }
+  .opponent > span { font-size: .59rem; }
   .card-backs { height: 30px; margin-top: 4px; }
   .card-backs i { width: 19px; height: 29px; margin-left: -8px; }
 
@@ -356,17 +376,19 @@ body {
   .decision button { min-height: 36px; padding: 6px 10px; font-size: .78rem; }
 
   .hand-area {
-    left: 3px;
-    right: 3px;
+    left: 6px;
+    right: 6px;
     bottom: max(5px, env(safe-area-inset-bottom));
   }
 
   .hand-heading { width: 96%; font-size: .62rem; padding: 0 5px; }
+  .hand-owner > span { font-size: .56rem; }
+  .hand-score strong { font-size: .84rem; }
 
   .hand {
     --hand-card-width: clamp(58px, 18vw, 76px);
     --hand-gap: clamp(-32px, -6.5vw, -17px);
-    width: 100%;
+    width: calc(100% - 4px);
     padding: 3px 4px 2px;
   }
 
