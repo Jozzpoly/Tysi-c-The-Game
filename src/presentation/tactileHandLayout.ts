@@ -6,6 +6,8 @@ export interface HandInsertionPreview {
   shiftsPx: readonly number[];
 }
 
+export const INSERTION_TARGET_HYSTERESIS = 0.12;
+
 function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
 }
@@ -50,6 +52,25 @@ export function fractionalInsertionPosition(
   }
 
   return lastIndex;
+}
+
+export function stabilizeInsertionTarget(input: {
+  position: number;
+  previousTarget: number;
+  slotCount: number;
+  hysteresis?: number;
+}): number {
+  if (input.slotCount <= 0) return 0;
+  const lastIndex = input.slotCount - 1;
+  const previous = clamp(Math.round(input.previousTarget), 0, lastIndex);
+  const candidate = clamp(Math.round(input.position), 0, lastIndex);
+  if (candidate === previous) return previous;
+
+  const margin = Math.max(0, Math.min(0.49, input.hysteresis ?? INSERTION_TARGET_HYSTERESIS));
+  if (candidate > previous) {
+    return input.position >= previous + 0.5 + margin ? candidate : previous;
+  }
+  return input.position <= previous - 0.5 - margin ? candidate : previous;
 }
 
 export function computeHandInsertionPreview(input: {
