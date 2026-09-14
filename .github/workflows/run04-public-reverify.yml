@@ -1,0 +1,33 @@
+name: Run 04 Public Reverify
+
+on:
+  push:
+    branches:
+      - run04/friend-preview-candidate-01
+    paths:
+      - .github/workflows/run04-public-reverify.yml
+
+permissions:
+  contents: read
+
+jobs:
+  public-reverify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: Verify existing public desktop/mobile MatchRoom behavior
+        env:
+          TYSIAC_PUBLIC_URL: https://tysiac-the-game.ionian-ankylosaurus.workers.dev
+        run: node scripts/public-deploy-smoke.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: run04-public-reverify-${{ github.run_id }}
+          path: artifacts/browser/public-deploy-*.png
+          if-no-files-found: ignore
