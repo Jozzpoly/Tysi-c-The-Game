@@ -71,7 +71,7 @@ export function LivingGameTable({ events = [], ...props }: GameTableProps) {
         data-next-initiative={initiative ? 'true' : 'false'}
       >
         <span className="capture-state-mark" aria-hidden="true">◆</span>
-        <strong>{tricks}</strong>
+        <span className="capture-state-tricks">{tricks}</span>
         <span>{points} pkt</span>
       </span>,
       anchor,
