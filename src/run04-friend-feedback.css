@@ -187,26 +187,77 @@
   }
 
   .table-event-toast::before {
-    padding: 4px 8px;
-    font-size: .6rem;
+    padding: 5px 9px;
+    font-size: .66rem;
+    font-weight: 730;
+    box-shadow: 0 9px 26px #0006, inset 0 1px #ffffff12;
   }
 
+  /* On a phone the consequence must survive peripheral attention: make the
+     winner's persistent ownership visibly stronger without adding another panel. */
   .opponent > .seat-consequence {
     right: 5px;
-    bottom: 7px;
-    padding: 2px 4px;
-    font-size: .5rem !important;
+    bottom: 6px;
+    padding: 3px 6px;
+    border: 1px solid #ead58b18;
+    font-size: .58rem !important;
+    font-weight: 720;
+    box-shadow: 0 4px 13px #0005;
+  }
+
+  .opponent > .seat-consequence.is-updated {
+    border-color: #f1d77b55;
+    background: #11291be8;
+    transform: translateY(-2px) scale(1.06);
+    box-shadow: 0 5px 17px #0006, 0 0 15px #e6cc6718;
+  }
+
+  .opponent > .seat-consequence.is-initiative::after {
+    width: 7px;
+    height: 7px;
+    top: -8px;
+    box-shadow: 0 0 0 3px #071b12, 0 0 12px #f1d77b88;
   }
 
   .opponent .capture-pulse {
     right: 5px;
-    top: 5px;
-    font-size: .6rem !important;
+    top: 4px;
+    padding: 3px 6px;
+    border-radius: 999px;
+    background: #11291be8;
+    font-size: .72rem !important;
+    font-weight: 850;
+    box-shadow: 0 5px 18px #0006, 0 0 18px #e6cc6720;
   }
 
   .opponent .seat-cards {
     right: 5px;
     top: 40px;
+  }
+
+  .hand-area > .seat-consequence {
+    top: 0;
+    padding: 3px 7px;
+    border: 1px solid #ead58b18;
+    border-radius: 999px;
+    background: #03150edb;
+    font-size: .6rem !important;
+    font-weight: 730;
+    box-shadow: 0 4px 13px #0005;
+  }
+
+  .hand-area > .seat-consequence.is-updated {
+    border-color: #f1d77b55;
+    background: #11291be8;
+    transform: translateY(-2px) scale(1.06);
+    box-shadow: 0 5px 17px #0006, 0 0 15px #e6cc6718;
+  }
+
+  .hand-area > .seat-consequence.is-initiative::after {
+    width: 7px;
+    height: 7px;
+    top: -8px;
+    box-shadow: 0 0 0 3px #071b12, 0 0 12px #f1d77b88;
   }
 
   .footer {
