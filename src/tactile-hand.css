@@ -282,42 +282,6 @@
     transform: translateY(-10px) rotate(0deg) scale(1.025);
   }
 
-  /* Ten exchange cards remain a defended 5x2 finger-sized layout. */
-  .hand:has(> .hand-slot:nth-child(10)) {
-    grid-template-columns: repeat(5, var(--hand-card-width));
-    column-gap: 8px;
-    row-gap: 12px;
-    justify-content: center;
-    min-height: 176px;
-    padding-top: 6px;
-  }
-
-  .hand:has(> .hand-slot:nth-child(10)) .hand-slot > .card {
-    transform: none;
-  }
-
-  .hand:has(> .hand-slot:nth-child(10)) .hand-slot:hover > .card,
-  .hand:has(> .hand-slot:nth-child(10)) .hand-slot.is-held > .card,
-  .hand:has(> .hand-slot:nth-child(10)) .hand-slot:focus-within > .card {
-    transform: translateY(-5px) scale(1.02);
-  }
-
-  .hand:has(> .hand-slot:nth-child(10)) .hand-slot > .card.selected {
-    transform: translateY(-8px) scale(1.025);
-  }
-
-  .app-shell:has(.hand > .hand-slot:nth-child(10)) .table {
-    min-height: 0;
-  }
-
-  .app-shell:has(.hand > .hand-slot:nth-child(10)) .center {
-    min-height: 92px;
-  }
-
-  .app-shell:has(.hand > .hand-slot:nth-child(10)) .trick {
-    min-height: 44px;
-  }
-
   .app-shell:has(.hand > .hand-slot.is-actionable) .decision:has(.decision-card.compact) {
     min-height: 56px;
   }
