@@ -31,6 +31,7 @@ import {
 } from './tactileMotion.js';
 
 const SUIT_SYMBOL = { spades: '♠', clubs: '♣', diamonds: '♦', hearts: '♥' } as const;
+const TACTILE_AUTHORITY_TIMEOUT_MS = 2200;
 
 interface TactileHandProps {
   cards: readonly CardId[];
@@ -127,11 +128,13 @@ function FloatingCard(props: FloatingCardProps) {
 
   return (
     <div
-      className={`card tactile-card-float ${red ? 'red' : ''} ${throwIntent ? 'throw-intent' : ''} ${commitReady ? 'commit-ready' : ''} ${props.dragging ? '' : 'releasing'}`}
+      className={`card tactile-card-float ${red ? 'red' : ''} ${throwIntent ? 'throw-intent' : ''} ${commitReady ? 'commit-ready' : ''} ${props.dragging ? '' : 'pending-handoff'}`}
       style={style}
       data-rank={rank}
       data-suit={symbol}
       data-gesture-phase={gesturePhase}
+      data-card-id={ghost.card}
+      data-authority-state={props.dragging ? '' : 'pending'}
       data-motion-tilt={tilt.toFixed(2)}
       aria-hidden="true"
     >
@@ -161,6 +164,7 @@ export function TactileHand({
   const stableTarget = useRef<number | null>(null);
   const suppressClick = useRef<CardId | null>(null);
   const releaseTimer = useRef<number | null>(null);
+  const handoffAnimation = useRef<Animation | null>(null);
   const cardsKey = cards.join('|');
 
   const visibleOrder = previousHandNumber.current === handNumber
@@ -176,6 +180,7 @@ export function TactileHand({
 
   useEffect(() => () => {
     if (releaseTimer.current !== null) window.clearTimeout(releaseTimer.current);
+    handoffAnimation.current?.cancel();
   }, []);
 
   function readSlotRects(): Map<string, DOMRect> {
@@ -223,6 +228,88 @@ export function TactileHand({
       );
     }
   }, [order]);
+
+  // A committed throw remains a local presentation object until the canonical
+  // hand actually loses that same card and the authoritative fresh-play target
+  // exists. Only then do we bridge the physical card into its real table slot.
+  useLayoutEffect(() => {
+    if (!releaseGhost || cards.includes(releaseGhost.card)) return;
+
+    const target = document.querySelector<HTMLElement>(
+      `.played-self.is-fresh-arrival[data-card="${releaseGhost.card}"]`,
+    );
+    const ghost = document.querySelector<HTMLElement>(
+      `.tactile-card-float.pending-handoff[data-card-id="${releaseGhost.card}"]`,
+    );
+    if (!target || !ghost) {
+      setReleaseGhost(null);
+      return;
+    }
+
+    if (releaseTimer.current !== null) {
+      window.clearTimeout(releaseTimer.current);
+      releaseTimer.current = null;
+    }
+
+    // Remove the generic self-arrival before paint. This local throw already has
+    // its own physical origin, so replaying a second fly-in would duplicate it.
+    target.classList.remove('is-fresh-arrival');
+    const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+    if (reduced) {
+      target.classList.add('is-local-handoff-complete');
+      setReleaseGhost(null);
+      return;
+    }
+
+    target.classList.add('is-local-handoff-target');
+    const targetCard = target.querySelector<HTMLElement>(':scope > .card') ?? target;
+    const targetRect = targetCard.getBoundingClientRect();
+    const startRect = ghost.getBoundingClientRect();
+    const distance = Math.hypot(targetRect.left - startRect.left, targetRect.top - startRect.top);
+    const duration = Math.round(Math.max(TACTILE_RELEASE_MS, Math.min(280, 165 + distance * .16)));
+    const startTransform = getComputedStyle(ghost).transform;
+
+    ghost.dataset.authorityState = 'handoff';
+    ghost.getAnimations().forEach((animation) => animation.cancel());
+    const animation = ghost.animate(
+      [
+        {
+          left: `${releaseGhost.left}px`,
+          top: `${releaseGhost.top}px`,
+          width: `${releaseGhost.width}px`,
+          height: `${releaseGhost.height}px`,
+          transform: startTransform,
+          opacity: .99,
+        },
+        {
+          left: `${targetRect.left}px`,
+          top: `${targetRect.top}px`,
+          width: `${targetRect.width}px`,
+          height: `${targetRect.height}px`,
+          transform: 'none',
+          opacity: 1,
+        },
+      ],
+      { duration, easing: 'cubic-bezier(.17,.82,.25,1)', fill: 'forwards' },
+    );
+    handoffAnimation.current = animation;
+
+    const complete = () => {
+      target.classList.remove('is-local-handoff-target');
+      target.classList.add('is-local-handoff-complete');
+      handoffAnimation.current = null;
+      setReleaseGhost((current) => current?.card === releaseGhost.card ? null : current);
+    };
+    animation.addEventListener('finish', complete, { once: true });
+    animation.addEventListener('cancel', () => target.classList.remove('is-local-handoff-target'), { once: true });
+
+    return () => {
+      if (handoffAnimation.current === animation) {
+        handoffAnimation.current = null;
+        animation.cancel();
+      }
+    };
+  }, [cardsKey, releaseGhost]);
 
   function applyInsertionPreview(state: TactilePointerState) {
     const layout = dragLayout.current;
@@ -346,16 +433,20 @@ export function TactileHand({
     }
 
     if (outcome === 'commit') {
-      setReleaseGhost({
+      const pendingGhost: ReleaseGhost = {
         card: drag.card,
         left: drag.x - drag.offsetX,
         top: drag.y - drag.offsetY,
         width: drag.width,
         height: drag.height,
         tilt: tactileCarryTiltDegrees(pointerMotionSample(drag)),
-      });
+      };
+      setReleaseGhost(pendingGhost);
       if (releaseTimer.current !== null) window.clearTimeout(releaseTimer.current);
-      releaseTimer.current = window.setTimeout(() => setReleaseGhost(null), TACTILE_RELEASE_MS);
+      releaseTimer.current = window.setTimeout(() => {
+        releaseTimer.current = null;
+        setReleaseGhost((current) => current?.card === pendingGhost.card ? null : current);
+      }, TACTILE_AUTHORITY_TIMEOUT_MS);
       onActivate(drag.card);
     } else if (outcome === 'return') {
       const reordered = commitPreviewOrder(drag.card);
@@ -410,6 +501,7 @@ export function TactileHand({
         const actionable = actionableCards.has(card);
         const throwable = throwableCards.has(card);
         const held = drag?.card === card;
+        const awaitingAuthority = releaseGhost?.card === card;
         const offset = index - (visibleOrder.length - 1) / 2;
         const rotate = Math.max(-5.5, Math.min(5.5, offset * 1.15));
         const lift = Math.min(6, Math.abs(offset) * 1.15);
@@ -424,7 +516,7 @@ export function TactileHand({
         return (
           <div
             key={card}
-            className={`hand-slot ${actionable ? 'is-actionable' : ''} ${throwable ? 'is-throwable' : ''} ${held ? 'is-held' : ''} ${held && drag?.moved ? 'is-dragging' : ''}`}
+            className={`hand-slot ${actionable ? 'is-actionable' : ''} ${throwable ? 'is-throwable' : ''} ${held ? 'is-held' : ''} ${held && drag?.moved ? 'is-dragging' : ''} ${awaitingAuthority ? 'is-awaiting-authority' : ''}`}
             data-card={card}
             data-index={index}
             data-actionable={actionable ? 'true' : 'false'}

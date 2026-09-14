@@ -119,6 +119,12 @@
   opacity: 0;
 }
 
+/* A legal throw physically leaves the hand while authority is pending. */
+.tactile-hand .hand-slot.is-awaiting-authority > .card {
+  opacity: 0 !important;
+  pointer-events: none;
+}
+
 .tactile-card-float {
   position: fixed;
   z-index: 1200;
@@ -149,8 +155,19 @@
     inset 0 0 0 1px #fff;
 }
 
-.tactile-card-float.releasing {
-  animation: run04-tactile-release .19s cubic-bezier(.15,.76,.3,1) forwards;
+.tactile-card-float.pending-handoff {
+  will-change: left, top, width, height, transform, opacity;
+}
+
+/* During a local throw the authoritative DOM target is geometry only until the
+ * same physical card reaches it. Reconnect/click/replay never receive this class. */
+.trick .played-self.is-local-handoff-target {
+  animation: none !important;
+  opacity: 0;
+}
+
+.trick .played-self.is-local-handoff-complete {
+  animation: none !important;
 }
 
 .tactile-commit-zone {
@@ -181,10 +198,6 @@
   box-shadow: 0 12px 34px #0006, 0 0 34px #e8c66f42, inset 0 1px #fff4c024;
 }
 
-@keyframes run04-tactile-release {
-  from { opacity: .99; transform: rotate(var(--drag-tilt)) scale(1.1); }
-  to { opacity: 0; transform: translateY(-72px) rotate(var(--drag-tilt)) scale(.87); }
-}
 
 @media (min-width: 761px) {
   /* Ten visible cards need readability more than fan curvature during exchange. */
@@ -246,9 +259,6 @@
     transform: translateY(-21px) rotate(var(--drag-tilt)) scale(1.1);
   }
 
-  .tactile-card-float.releasing {
-    animation-name: run04-tactile-release-peek;
-  }
 
   .tactile-commit-zone {
     min-width: 176px;
@@ -257,10 +267,6 @@
   }
 }
 
-@keyframes run04-tactile-release-peek {
-  from { opacity: .99; transform: translateY(-21px) rotate(var(--drag-tilt)) scale(1.1); }
-  to { opacity: 0; transform: translateY(-93px) rotate(var(--drag-tilt)) scale(.87); }
-}
 
 @media (prefers-reduced-motion: reduce) {
   .tactile-hand > .hand-slot,
