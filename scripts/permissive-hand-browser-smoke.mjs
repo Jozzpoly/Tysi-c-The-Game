@@ -152,10 +152,14 @@ async function run() {
     }
 
     const playCard = initial.cards[1];
+    const freeThrowTarget = {
+      x: playCard.x + 14,
+      y: Math.max(28, playCard.y - 104),
+    };
     await drag(
       session,
       { x: playCard.x, y: playCard.y },
-      { x: playCard.x + 14, y: Math.max(28, playCard.y - 104) },
+      freeThrowTarget,
       { hold: true },
     );
 
@@ -172,6 +176,8 @@ async function run() {
         bottom: rect.bottom,
         width: rect.width,
         height: rect.height,
+        centerX: rect.left + rect.width / 2,
+        centerY: rect.top + rect.height / 2,
         hasPositiveCommitZone: Boolean(document.querySelector('.tactile-commit-zone')),
       };
     `), 2_000);
@@ -187,6 +193,11 @@ async function run() {
     }
     if (freeThrow.hasPositiveCommitZone) {
       throw new Error('non-action card incorrectly received a legal-action affordance');
+    }
+
+    const fingerPeekPx = freeThrowTarget.y - freeThrow.centerY;
+    if (fingerPeekPx < 9 || fingerPeekPx > 32) {
+      throw new Error(`mobile held card is not visibly revealed above finger: ${JSON.stringify({ fingerPeekPx, freeThrowTarget, freeThrow })}`);
     }
 
     await screenshot(session, 'mobile-permissive-free-throw');
@@ -222,6 +233,7 @@ async function run() {
       openingCardsRemainFullStrength: true,
       freeThrowVisible: true,
       freeThrowHasNoFalsePositiveActionCue: !freeThrow.hasPositiveCommitZone,
+      fingerPeekPx,
       freeThrowRevision: `${initial.revision}->${afterFreeThrow.revision}`,
       reorderedCard: draggedLabel,
       reorderedToIndex: reordered.movedIndex,
