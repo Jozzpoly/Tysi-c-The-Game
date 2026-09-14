@@ -57,7 +57,7 @@ export function GameTable({ projection, seatNames, message = '', onCommand, onNe
   const seatAction = (seat: Seat, you: string, thirdPerson: string) => seat === humanSeat ? you : `${seatName(seat)} ${thirdPerson}`;
   const seatRole = (seat: Seat) => {
     const role = view.dealer === seat ? 'rozdaje' : view.declarer === seat ? 'gra' : '';
-    const bombs = view.bombsUsed[seat] > 0 ? `bomby ${view.bombsUsed[seat]}` : '';
+    const bombs = view.bombsUsed[seat] > 0 ? `bomby: ${view.bombsUsed[seat]}` : '';
     return [role, bombs].filter(Boolean).join(' · ');
   };
   const opponentSeats = ALL_SEATS.filter((seat) => seat !== humanSeat);
