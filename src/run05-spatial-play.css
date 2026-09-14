@@ -1,0 +1,116 @@
+/*
+ * Run 05 P2-B — Spatial play affordance.
+ *
+ * The real `.trick` rectangle is already the P2 acceptance geometry. This layer
+ * makes that same surface answer the carried card without changing its bounds:
+ * subtle availability while a legal card is held, then a stronger accepted
+ * response only after the card centre enters the canonical play zone.
+ */
+
+.trick {
+  position: relative;
+  isolation: isolate;
+}
+
+.trick::before {
+  content: '';
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  border: 1px solid transparent;
+  border-radius: 50% / 46%;
+  background: radial-gradient(ellipse at center, #f0d77d00 0%, #d9bd5f00 48%, #d9bd5f00 72%);
+  box-shadow: inset 0 0 0 1px transparent, 0 0 0 transparent;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity .14s ease,
+    border-color .14s ease,
+    background .14s ease,
+    box-shadow .16s ease;
+}
+
+.trick::after {
+  content: '';
+  position: absolute;
+  z-index: 3;
+  left: 50%;
+  bottom: 8px;
+  translate: -50% 0;
+  width: max-content;
+  color: #e8dba4;
+  font-size: .58rem;
+  font-weight: 780;
+  letter-spacing: .11em;
+  line-height: 1;
+  text-transform: uppercase;
+  text-shadow: 0 2px 8px #0009;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .12s ease, translate .14s cubic-bezier(.18,.82,.24,1), color .12s ease;
+}
+
+.trick > .played,
+.trick > .muted {
+  position: relative;
+  z-index: 1;
+}
+
+/* Picking up a legal card makes the table discoverable, but the surface stays
+ * quiet enough that free hand reordering remains the dominant interaction. */
+.table:has(.tactile-hand[data-gesture-phase='held'] > .hand-slot.is-held.is-throwable) .trick::before {
+  opacity: .5;
+  border-color: #e8d17a3d;
+  background: radial-gradient(ellipse at center, #f0d77d10 0%, #d9bd5f08 48%, #d9bd5f00 74%);
+  box-shadow: inset 0 0 28px #e5cd7410, 0 0 32px #d8bf5f0b;
+}
+
+.table:has(.tactile-hand[data-gesture-phase='held'] > .hand-slot.is-held.is-throwable) .trick::after {
+  content: 'Zagraj tutaj';
+  opacity: .34;
+}
+
+/* Accepted is a spatial state, not a button state. The exact same rectangle
+ * gains weight; its geometry is never transformed, so feedback cannot move the
+ * acceptance boundary under the pointer. */
+.table:has(.tactile-hand[data-gesture-phase='accepted'] > .hand-slot.is-held.is-throwable) .trick::before {
+  opacity: 1;
+  border-color: #f0d77da3;
+  background: radial-gradient(ellipse at center, #f0d77d25 0%, #d9bd5f12 48%, #d9bd5f00 76%);
+  box-shadow:
+    inset 0 0 0 1px #fff1b017,
+    inset 0 0 42px #f0d77d16,
+    0 0 30px #d9bd5f22;
+}
+
+.table:has(.tactile-hand[data-gesture-phase='accepted'] > .hand-slot.is-held.is-throwable) .trick::after {
+  content: 'Puść kartę';
+  color: #fff0b5;
+  opacity: .88;
+  translate: -50% -2px;
+}
+
+.table:has(.tactile-hand[data-gesture-phase='accepted'] > .hand-slot.is-held.is-throwable) .trick > .muted {
+  opacity: .28;
+}
+
+/* The old fixed pill was useful while the interaction was threshold-based. P2
+ * makes the real shared surface carry the affordance instead. */
+.tactile-commit-zone {
+  display: none !important;
+}
+
+@media (max-width: 760px) {
+  .trick::after {
+    bottom: 7px;
+    font-size: .54rem;
+    letter-spacing: .095em;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .trick::before,
+  .trick::after {
+    transition: none !important;
+  }
+}
