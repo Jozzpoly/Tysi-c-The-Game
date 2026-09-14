@@ -156,14 +156,15 @@ async function run() {
     const source = initial.slots[0];
     const targetA = initial.slots[3];
     const targetB = initial.slots[4];
-    const heldTargetX = (targetA.x + targetB.x) / 2;
+    const boundaryX = (targetA.x + targetB.x) / 2;
+    const armTargetX = targetA.x + (targetB.x - targetA.x) * .75;
 
     await touch(session, 'touchStart', [{ x: source.x, y: source.y, radiusX: 7, radiusY: 7, force: 1 }]);
     await sleep(35);
     const steps = 8;
     for (let step = 1; step <= steps; step += 1) {
       const ratio = step / steps;
-      await moveTouch(session, source.x + (heldTargetX - source.x) * ratio, source.y);
+      await moveTouch(session, source.x + (boundaryX - source.x) * ratio, source.y);
       await sleep(28);
     }
 
@@ -214,24 +215,24 @@ async function run() {
     }
     await screenshot(session, 'mobile-living-hand-gap-reversed');
 
-    // Re-open the same gap and record every real browser state. This trace is
-    // deliberately diagnostic: hysteresis must be explained by measured state,
-    // not by timing guesses in the harness.
+    // Deliberately cross the hysteresis threshold far enough to arm target 4.
+    // Only after that do we return to the mathematical 3/4 boundary and jitter.
     const reopenTrace = [];
     for (let step = 1; step <= 6; step += 1) {
       const ratio = step / 6;
-      const x = reversalX + (heldTargetX - reversalX) * ratio;
+      const x = reversalX + (armTargetX - reversalX) * ratio;
       await moveTouch(session, x, source.y);
       await sleep(60);
       reopenTrace.push({ step, ratio, x, ...compactHandState(await handState(session)) });
     }
     await sleep(100);
     const reopened = await handState(session);
-    if (!(reopened.phase === 'held' && reopened.insertionPosition > 3 && reopened.insertionTarget === 4)) {
+    if (!(reopened.phase === 'held' && reopened.insertionPosition > 3.62 && reopened.insertionTarget === 4)) {
       await screenshot(session, 'mobile-living-hand-reopen-diagnostic-fail');
       throw new Error(`reopened insertion gap missing: ${JSON.stringify({
         reversed: compactHandState(reversed),
-        heldTargetX,
+        boundaryX,
+        armTargetX,
         reversalX,
         reopenTrace,
         final: compactHandState(reopened),
@@ -239,10 +240,12 @@ async function run() {
     }
     if (!sameOrder(reopened, openingLabels)) throw new Error('reopened gap committed order before release');
 
+    // Hover around the 3/4 mathematical boundary after target 4 is armed. The
+    // continuous gap may cross 3.5, while stable release target must remain 4.
     const jitterOffsets = [-3, 2, -2, 3, -1, 1];
     const jitterStates = [];
     for (const offset of jitterOffsets) {
-      await moveTouch(session, heldTargetX + offset, source.y);
+      await moveTouch(session, boundaryX + offset, source.y);
       await sleep(55);
       const state = await handState(session);
       if (state.phase !== 'held') throw new Error(`jitter left held phase: ${JSON.stringify(state)}`);
