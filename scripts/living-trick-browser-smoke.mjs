@@ -307,8 +307,6 @@ async function runViewport(label, width, height, mobile) {
 
     const resolveDistance = averageDistanceToPile(resolve, resolveWinnerPile);
 
-    // Check the moving cards after collection has materially progressed. Scroll
-    // width cannot detect a transformed card hanging outside the visual viewport.
     await sleep(115);
     const collectLate = await stageState(session, 'collect') ?? collect;
     const collectLateWinnerPile = pileFor(collectLate, resolve.winnerSeat) ?? collectWinnerPile;
@@ -325,8 +323,9 @@ async function runViewport(label, width, height, mobile) {
     }
     await screenshot(session, `${label}-living-trick-collect`);
 
-    // DOM mutations prove canonical ownership. Computed visibility is sampled live:
-    // CSS opacity transitions do not emit MutationObserver records as they progress.
+    // The short consequence stage proves when ownership changes. Visibility itself
+    // is asserted after settle, where the physical pile must persist without a
+    // WebDriver race against the ~200ms consequence window.
     const consequence = await waitFor(`${label}: consequence ownership trace`, async () => {
       const entries = await trace(session);
       return entries.find((entry) => {
@@ -359,25 +358,7 @@ async function runViewport(label, width, height, mobile) {
       || consequence.piles.filter((pile) => pile.initiative).length !== 1) {
       throw new Error(`${label}: next initiative is spatially ambiguous ${JSON.stringify({ markers: consequence.markers, piles: consequence.piles })}`);
     }
-    const liveConsequence = await waitFor(`${label}: visible consequence pile`, async () => {
-      const state = await stageState(session, 'consequence');
-      if (!state) return false;
-      const pile = pileFor(state, resolve.winnerSeat);
-      return pile
-        && pile.tricks === consequenceWinnerPile.tricks
-        && pile.points === consequenceWinnerPile.points
-        && pile.initiative
-        && !pile.empty
-        && pile.visible
-        ? state
-        : false;
-    }, 1_500);
-    const liveConsequenceWinnerPile = pileFor(liveConsequence, resolve.winnerSeat);
-    if (!liveConsequenceWinnerPile) throw new Error(`${label}: live consequence pile missing`);
-    await screenshot(session, `${label}-living-trick-consequence`);
 
-    // Settled is intentionally brief: observe it in-page rather than requiring a
-    // slower WebDriver round trip to land inside that window.
     const settled = await waitFor(`${label}: settled ownership trace`, async () => {
       const entries = await trace(session);
       return entries.find((entry) => {
@@ -392,13 +373,34 @@ async function runViewport(label, width, height, mobile) {
           && pile.tricks === consequenceWinnerPile.tricks
           && pile.points === consequenceWinnerPile.points
           && pile.initiative
-          && !pile.empty
-          && pile.visible;
+          && !pile.empty;
       }) ?? false;
     }, 3_000);
     if (settled.played.length !== 0 || settled.result !== '' || settled.capture !== '') {
       throw new Error(`${label}: completed trick leaked after settle: ${JSON.stringify(settled)}`);
     }
+
+    const liveSettled = await waitFor(`${label}: persistent visible pile`, () => stageState(session, 'settled').then((state) => {
+      if (!state || state.played.length !== 0) return false;
+      const marker = markerFor(state, resolve.winnerSeat);
+      const pile = pileFor(state, resolve.winnerSeat);
+      return marker
+        && pile
+        && marker.tricks === consequenceWinnerMarker.tricks
+        && marker.points === consequenceWinnerMarker.points
+        && marker.initiative
+        && pile.tricks === consequenceWinnerPile.tricks
+        && pile.points === consequenceWinnerPile.points
+        && pile.initiative
+        && !pile.empty
+        && pile.visible
+        && pile.layers >= 1
+        ? state
+        : false;
+    }), 3_000);
+    const liveSettledPile = pileFor(liveSettled, resolve.winnerSeat);
+    if (!liveSettledPile) throw new Error(`${label}: persistent settled pile missing`);
+    await screenshot(session, `${label}-living-trick-settled`);
 
     const layout = await execute(session, `return {
       width: document.documentElement.clientWidth,
@@ -433,11 +435,11 @@ async function runViewport(label, width, height, mobile) {
         empty: collectWinnerPile.empty,
       },
       physicalPileAfter: {
-        tricks: consequenceWinnerPile.tricks,
-        points: consequenceWinnerPile.points,
-        layers: consequenceWinnerPile.layers,
-        initiative: consequenceWinnerPile.initiative,
-        visible: liveConsequenceWinnerPile.visible,
+        tricks: liveSettledPile.tricks,
+        points: liveSettledPile.points,
+        layers: liveSettledPile.layers,
+        initiative: liveSettledPile.initiative,
+        visible: liveSettledPile.visible,
       },
       collectDistanceRatio: Number((collectDistance / resolveDistance).toFixed(3)),
       capture: consequence.capture,
