@@ -8,6 +8,16 @@
   display: none;
 }
 
+/* Never expose QA/revision chrome on the friend-facing surface. */
+.footer {
+  display: none !important;
+}
+
+/* Completed hands with no cards should not leave an empty private-territory label. */
+.hand-area:has(.hand:empty) {
+  display: none;
+}
+
 /* Musik is a game object, not a tiny diagnostic thumbnail. */
 .talon {
   position: relative;
