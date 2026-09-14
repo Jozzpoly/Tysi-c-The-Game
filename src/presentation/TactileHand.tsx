@@ -333,7 +333,7 @@ export function TactileHand({
       const reordered = commitPreviewOrder(drag.card);
       if (reordered) {
         window.requestAnimationFrame(() => {
-          window.requestAnimation(() => animateReturnToHand(drag));
+          window.requestAnimationFrame(() => animateReturnToHand(drag));
         });
       } else {
         animateReturnToHand(drag);
