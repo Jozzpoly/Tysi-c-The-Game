@@ -73,8 +73,18 @@ async function cdp(session, cmd, params = {}) {
   });
 }
 
-async function touch(session, type, points) {
-  await cdp(session, 'Input.dispatchTouchEvent', { type, touchPoints: points });
+async function touchActions(session, actions) {
+  await webdriver(`/session/${session}/actions`, {
+    method: 'POST',
+    body: JSON.stringify({
+      actions: [{
+        type: 'pointer',
+        id: 'tactile-motion-touch',
+        parameters: { pointerType: 'touch' },
+        actions,
+      }],
+    }),
+  });
 }
 
 async function screenshot(session, name) {
@@ -115,7 +125,7 @@ function labels(candidate) {
   return candidate.slots.map((slot) => slot.label);
 }
 
-async function sampleGesture(session, label, intervalMs) {
+async function sampleGesture(session, label, moveDurationMs) {
   const before = await waitFor(`${label} idle opening hand`, async () => {
     const candidate = await state(session);
     return candidate.heading === 'Twoja licytacja'
@@ -127,19 +137,21 @@ async function sampleGesture(session, label, intervalMs) {
   });
   const openingLabels = labels(before);
   const source = before.slots[0];
+  const x = Math.round(source.x);
+  const y = Math.round(source.y);
 
-  await touch(session, 'touchStart', [{ x: source.x, y: source.y, radiusX: 7, radiusY: 7, force: 1 }]);
-  for (const distance of [8, 16, 24]) {
-    await sleep(intervalMs);
-    await touch(session, 'touchMove', [{
-      x: source.x + distance,
-      y: source.y,
-      radiusX: 7,
-      radiusY: 7,
-      force: 1,
-    }]);
-  }
-  await sleep(45);
+  // One WebDriver action sequence is deliberate: Chrome executes the timing
+  // internally, so the requested 14 ms vs 155 ms move durations are not
+  // distorted by one HTTP round-trip per pointermove.
+  await touchActions(session, [
+    { type: 'pointerMove', duration: 0, origin: 'viewport', x, y },
+    { type: 'pointerDown', button: 0 },
+    { type: 'pause', duration: 40 },
+    { type: 'pointerMove', duration: moveDurationMs, origin: 'viewport', x: x + 8, y },
+    { type: 'pointerMove', duration: moveDurationMs, origin: 'viewport', x: x + 16, y },
+    { type: 'pointerMove', duration: moveDurationMs, origin: 'viewport', x: x + 24, y },
+  ]);
+  await sleep(20);
 
   const held = await waitFor(`${label} held motion state`, async () => {
     const candidate = await state(session);
@@ -160,7 +172,7 @@ async function sampleGesture(session, label, intervalMs) {
   }
   await screenshot(session, `mobile-tactile-motion-${label}`);
 
-  await touch(session, 'touchEnd', []);
+  await touchActions(session, [{ type: 'pointerUp', button: 0 }]);
   const settled = await waitFor(`${label} return settle`, async () => {
     const candidate = await state(session);
     return candidate.phase === 'idle' ? candidate : false;
@@ -214,6 +226,9 @@ async function run() {
     }
     if (slow.insertionTarget !== fast.insertionTarget || slow.insertionTarget !== 0) {
       throw new Error(`motion changed stable insertion semantics: ${JSON.stringify({ slow, fast })}`);
+    }
+    if (slow.revision !== fast.revision || !slow.orderUnchanged || !fast.orderUnchanged) {
+      throw new Error(`motion rehearsal touched authority/order: ${JSON.stringify({ slow, fast })}`);
     }
 
     return { slow, fast };
