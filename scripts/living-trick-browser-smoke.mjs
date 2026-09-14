@@ -204,10 +204,17 @@ async function runViewport(label, width, height, mobile) {
     if (collect.played.length !== 3 || collect.enabledActions !== 0) throw new Error(`${label}: invalid collect state ${JSON.stringify(collect)}`);
     await screenshot(session, `${label}-living-trick-collect`);
 
-    const consequence = await waitFor(`${label}: consequence`, () => stageState(session, 'consequence'), 3_000);
+    // Consequence is intentionally brief. A screenshot round trip can consume its
+    // entire live window, so prove the semantic stage from the in-page observer
+    // rather than slowing the product down to accommodate WebDriver latency.
+    const consequence = await waitFor(`${label}: consequence trace`, async () => {
+      const entries = await trace(session);
+      return entries.find((entry) => entry.kind === 'trick-completion' && entry.stage === 'consequence') ?? false;
+    }, 3_000);
     if (!consequence.capture.includes('pkt')) throw new Error(`${label}: point consequence did not attach to winner: ${JSON.stringify(consequence)}`);
     if (consequence.enabledActions !== 0) throw new Error(`${label}: input active during consequence`);
-    await screenshot(session, `${label}-living-trick-consequence`);
+    const liveConsequence = await stageState(session, 'consequence');
+    if (liveConsequence) await screenshot(session, `${label}-living-trick-consequence`);
 
     // Settled is intentionally brief: the next actor may start shortly after the
     // completion frame drains. Observe it in-page through MutationObserver rather
