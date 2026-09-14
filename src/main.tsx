@@ -16,6 +16,7 @@ import './run04-friend-feedback.css';
 import './run04-friend-flow.css';
 import './run05-physical-table.css';
 import './run05-spatial-play.css';
+import './run05-material-transfer.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

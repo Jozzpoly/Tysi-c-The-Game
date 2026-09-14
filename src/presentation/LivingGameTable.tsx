@@ -1,7 +1,8 @@
-import { useEffect, useLayoutEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { Seat } from '../core/index.js';
 import { GameTable, type GameTableProps } from './GameTable.js';
+import { MaterialTalonTransfer } from './MaterialTalonTransfer.js';
 import { TRICK_COMPLETION_TIMELINE, planTrickPresentation } from './trickPresentation.js';
 
 const ALL_SEATS: readonly Seat[] = [0, 1, 2];
@@ -15,6 +16,39 @@ export function LivingGameTable({ events = [], ...props }: GameTableProps) {
   const [consequenceReady, setConsequenceReady] = useState(false);
   const [anchors, setAnchors] = useState<(HTMLElement | null)[]>([null, null, null]);
   const [centerAnchor, setCenterAnchor] = useState<HTMLElement | null>(null);
+  const [completedTalonTransferKey, setCompletedTalonTransferKey] = useState<string | null>(null);
+
+  const talonEvent = useMemo(() => {
+    for (let index = events.length - 1; index >= 0; index -= 1) {
+      const event = events[index];
+      if (event.type === 'talon-revealed') return event;
+    }
+    return null;
+  }, [events]);
+  const talonTransferKey = talonEvent && view.declarer !== null
+    ? `${view.handNumber}:${view.revision}:${view.declarer}:${talonEvent.cards.join('|')}`
+    : null;
+  const talonTransferActive = Boolean(
+    talonTransferKey
+    && talonEvent
+    && view.declarer !== null
+    && view.phase === 'exchange'
+    && !prefersReducedMotion
+    && completedTalonTransferKey !== talonTransferKey,
+  );
+  const talonMaterialSettled = Boolean(
+    view.revealedTalon
+    && view.phase !== 'auction'
+    && view.phase !== 'trick'
+    && view.phase !== 'complete'
+    && !talonTransferActive,
+  );
+  const tableProjection = talonTransferActive
+    ? { ...props.projection, legalCommands: [] }
+    : props.projection;
+  const completeTalonTransfer = useCallback(() => {
+    if (talonTransferKey) setCompletedTalonTransferKey(talonTransferKey);
+  }, [talonTransferKey]);
 
   const displayedConsequenceReady = completedTrick === null
     ? true
@@ -160,9 +194,30 @@ export function LivingGameTable({ events = [], ...props }: GameTableProps) {
     'scene-feedback',
   ) : null;
 
+  const talonMaterialState = centerAnchor && view.revealedTalon && view.phase !== 'trick' && view.phase !== 'complete'
+    ? createPortal(
+      <span
+        className={`material-talon-state ${talonTransferActive ? 'is-active' : talonMaterialSettled ? 'is-settled' : ''}`}
+        data-talon-material-state={talonTransferActive ? 'active' : talonMaterialSettled ? 'settled' : 'idle'}
+        aria-hidden="true"
+      />,
+      centerAnchor,
+      'material-talon-state',
+    )
+    : null;
+
   return (
     <>
-      <GameTable {...props} events={events} />
+      <GameTable {...props} projection={tableProjection} events={events} />
+      {talonTransferActive && talonEvent && view.declarer !== null && (
+        <MaterialTalonTransfer
+          cards={talonEvent.cards}
+          declarer={view.declarer}
+          humanSeat={view.seat}
+          onComplete={completeTalonTransfer}
+        />
+      )}
+      {talonMaterialState}
       {sceneFeedback}
       {markers}
     </>
