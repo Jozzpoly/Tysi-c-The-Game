@@ -204,9 +204,12 @@
     opacity: .96;
   }
 
+  /* A large hand must still expose the centre of every card as its own touch
+   * target. 78px cards at a 41px semantic step keep 8 cards inside 390px while
+   * preserving a small ownership margin between neighbouring centres. */
   .tactile-hand {
-    --hand-card-width: clamp(76px, 21vw, 84px) !important;
-    --hand-card-step: clamp(36px, 10vw, 40px) !important;
+    --hand-card-width: 78px !important;
+    --hand-card-step: 41px !important;
     width: calc(100% - 2px);
     min-height: 150px;
     padding: 15px 2px 7px;
