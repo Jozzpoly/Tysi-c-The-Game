@@ -1,0 +1,297 @@
+/*
+ * Run 05 P1 — Physical Table V2 proof.
+ *
+ * This file intentionally loads after the frozen FC1 visual stack. It is allowed
+ * to replace composition aggressively, while rules/projection/authority stay in
+ * the existing core. The first proof is mobile-first: a materially larger hand,
+ * persistent captured piles, and trick collection aimed at the real pile DOM.
+ */
+
+/* --- Persistent spatial ownership ------------------------------------------------ */
+
+.captured-pile {
+  position: absolute;
+  z-index: 11;
+  width: 46px;
+  height: 62px;
+  pointer-events: none;
+  opacity: 1;
+  transform-origin: 50% 72%;
+  transition: opacity .16s ease, filter .18s ease, scale .2s cubic-bezier(.18,.82,.24,1);
+}
+
+.captured-pile.is-empty {
+  /* Keep real geometry as the collection target without drawing a fake pile. */
+  opacity: 0;
+}
+
+.captured-pile-cards {
+  position: absolute;
+  inset: 0;
+  display: block;
+}
+
+.captured-pile-cards i {
+  position: absolute;
+  left: 4px;
+  top: 3px;
+  width: 38px;
+  height: 54px;
+  border: 1px solid #e9d38d54;
+  border-radius: 6px;
+  background:
+    linear-gradient(135deg, transparent 0 40%, #d6ba6440 41% 44%, transparent 45% 100%),
+    linear-gradient(45deg, transparent 0 40%, #d6ba6435 41% 44%, transparent 45% 100%),
+    radial-gradient(circle at 50% 42%, #d9c37736 0 16%, transparent 17%),
+    linear-gradient(145deg, #174d37, #08261b 68%, #061a12);
+  box-shadow:
+    0 6px 13px #0006,
+    inset 0 0 0 2px #02150e70,
+    inset 0 0 0 3px #d8c0711c;
+}
+
+.captured-pile-cards i:nth-child(1) { translate: -3px 3px; rotate: -7deg; }
+.captured-pile-cards i:nth-child(2) { translate: 2px 1px; rotate: 4deg; }
+.captured-pile-cards i:nth-child(3) { translate: -1px -1px; rotate: -2deg; }
+.captured-pile-cards i:nth-child(4) { translate: 3px -3px; rotate: 6deg; }
+
+.captured-pile-value {
+  position: absolute;
+  right: -8px;
+  bottom: -3px;
+  z-index: 3;
+  min-width: 23px;
+  padding: 2px 5px;
+  border: 1px solid #e7d18b52;
+  border-radius: 999px;
+  background: #03150ee8;
+  color: #f1dda0;
+  box-shadow: 0 4px 12px #0006;
+  font-size: .55rem;
+  font-weight: 850;
+  line-height: 1;
+  text-align: center;
+}
+
+.opponent:first-child > .captured-pile {
+  right: -11px;
+  bottom: -9px;
+  rotate: 4deg;
+}
+
+.opponent:last-child > .captured-pile {
+  left: -11px;
+  bottom: -9px;
+  rotate: -4deg;
+}
+
+.hand-area > .captured-pile {
+  right: clamp(12px, 4vw, 38px);
+  top: 28px;
+  rotate: 3deg;
+}
+
+.captured-pile.is-updated {
+  animation: run05-pile-receive .28s cubic-bezier(.16,.86,.24,1) both;
+  filter: brightness(1.14);
+}
+
+.captured-pile.is-initiative::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: -8px;
+  width: 7px;
+  height: 7px;
+  translate: -50% 0;
+  border-radius: 50%;
+  background: #f0d77d;
+  box-shadow: 0 0 0 4px #f0d77d1b, 0 0 16px #f0d77d70;
+}
+
+@keyframes run05-pile-receive {
+  0% { scale: .88; }
+  55% { scale: 1.12; }
+  100% { scale: 1; }
+}
+
+/* Preserve the semantic ownership node for accessibility and lifecycle tests,
+ * but stop making a tiny text counter carry the visual meaning of ownership. */
+.seat-consequence {
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0 0 0 0) !important;
+  clip-path: inset(50%) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+  opacity: 0 !important;
+}
+
+.seat-consequence::after { display: none !important; }
+
+/* --- Trick collection into the actual winner pile ------------------------------- */
+
+.trick.completed .played {
+  transition:
+    translate .24s cubic-bezier(.18,.82,.24,1),
+    scale .24s cubic-bezier(.18,.82,.24,1),
+    rotate .24s cubic-bezier(.18,.82,.24,1),
+    opacity .16s ease,
+    filter .16s ease;
+}
+
+.trick.completed.trick-stage-collect .played,
+.trick.completed.trick-stage-consequence .played {
+  translate: var(--run05-collect-x, 0px) var(--run05-collect-y, 0px) !important;
+  scale: var(--run05-collect-scale, .58) !important;
+  rotate: var(--run05-collect-rotate, 0deg) !important;
+}
+
+.trick.completed.trick-stage-collect .played {
+  opacity: .94;
+  filter: saturate(.9) brightness(.96);
+}
+
+.trick.completed.trick-stage-consequence .played {
+  opacity: .06;
+  filter: saturate(.72) brightness(.82);
+}
+
+/* --- Mobile-first hand territory ------------------------------------------------- */
+
+@media (max-width: 760px) {
+  .table {
+    padding-bottom: 228px;
+  }
+
+  .center {
+    min-height: 198px;
+  }
+
+  .trick {
+    width: min(350px, 96vw);
+    min-height: 158px;
+  }
+
+  .trick .played {
+    width: 78px;
+  }
+
+  .trick .card {
+    width: 72px;
+    flex-basis: 72px;
+  }
+
+  .hand-area {
+    left: 4px;
+    right: 4px;
+    bottom: max(5px, env(safe-area-inset-bottom));
+    min-height: 188px;
+    padding-top: 4px;
+    background:
+      radial-gradient(ellipse at 50% 100%, #0d3928c7 0%, transparent 66%),
+      linear-gradient(180deg, transparent 0%, #04170fb5 20%, #03110bf7 100%);
+  }
+
+  .hand-heading {
+    width: calc(100% - 8px);
+    margin-bottom: 2px;
+    padding-inline: 8px;
+    font-size: .66rem;
+    opacity: .96;
+  }
+
+  .tactile-hand {
+    --hand-card-width: clamp(76px, 21vw, 84px) !important;
+    --hand-card-step: clamp(36px, 10vw, 40px) !important;
+    width: calc(100% - 2px);
+    min-height: 150px;
+    padding: 15px 2px 7px;
+    grid-template-columns: repeat(var(--hand-spread-count), minmax(0, var(--hand-card-step))) var(--hand-card-width);
+    align-items: end;
+  }
+
+  .tactile-hand > .hand-slot {
+    width: var(--hand-card-width);
+    min-width: var(--hand-card-width);
+  }
+
+  .tactile-hand .hand-slot:hover > .card,
+  .tactile-hand .hand-slot.is-held > .card,
+  .tactile-hand .hand-slot:focus-within > .card {
+    transform: translateY(-18px) rotate(0deg) scale(1.035);
+  }
+
+  .tactile-hand .hand-slot > .card.selected,
+  .tactile-hand .hand-slot:hover > .card.selected,
+  .tactile-hand .hand-slot:focus-within > .card.selected {
+    transform: translateY(-23px) rotate(0deg) scale(1.04);
+  }
+
+  /* Ten-card exchange stays a single hand, but no longer collapses back to FC1's
+   * tiny 52px cards. The extra cards are paid for with overlap, not scale loss. */
+  .tactile-hand:has(> .hand-slot:nth-child(10)) {
+    --hand-card-width: 66px !important;
+    display: flex;
+    width: 100%;
+    min-height: 138px;
+    padding: 15px 0 7px;
+    justify-content: center;
+    align-items: end;
+    gap: 0;
+  }
+
+  .tactile-hand:has(> .hand-slot:nth-child(10)) > .hand-slot {
+    flex: 0 0 66px;
+    width: 66px;
+    min-width: 66px;
+    max-width: 66px;
+  }
+
+  .tactile-hand:has(> .hand-slot:nth-child(10)) > .hand-slot + .hand-slot {
+    margin-left: -32px;
+  }
+
+  .captured-pile {
+    width: 42px;
+    height: 57px;
+  }
+
+  .captured-pile-cards i {
+    width: 35px;
+    height: 50px;
+  }
+
+  .opponent:first-child > .captured-pile {
+    right: -5px;
+    bottom: -7px;
+  }
+
+  .opponent:last-child > .captured-pile {
+    left: -5px;
+    bottom: -7px;
+  }
+
+  .hand-area > .captured-pile {
+    right: 9px;
+    top: 31px;
+  }
+
+  .captured-pile-value {
+    right: -6px;
+    bottom: -2px;
+    min-width: 21px;
+    font-size: .52rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .captured-pile,
+  .trick.completed .played {
+    animation: none !important;
+    transition: none !important;
+  }
+}
