@@ -73,14 +73,17 @@ async function createSession() {
   return value.sessionId;
 }
 
-async function mouse(session, type, x, y, pressed = false) {
-  await cdp(session, 'Input.dispatchMouseEvent', {
-    type,
-    x,
-    y,
-    button: type === 'mouseMoved' ? 'none' : 'left',
-    buttons: pressed ? 1 : 0,
-    clickCount: type === 'mouseMoved' ? 0 : 1,
+async function mouseActions(session, actions) {
+  await webdriver(`/session/${session}/actions`, {
+    method: 'POST',
+    body: JSON.stringify({
+      actions: [{
+        type: 'pointer',
+        id: 'tactile-mouse',
+        parameters: { pointerType: 'mouse' },
+        actions,
+      }],
+    }),
   });
 }
 
@@ -97,19 +100,26 @@ async function state(session) {
     const hand = document.querySelector('.tactile-hand');
     const slots = [...document.querySelectorAll('.hand > .hand-slot')].map((slot, index) => {
       const rect = slot.getBoundingClientRect();
+      const card = slot.querySelector(':scope > .card');
+      const cardRect = card?.getBoundingClientRect() ?? rect;
       const x = rect.left + rect.width / 2;
       const y = rect.top + rect.height / 2;
-      const hit = document.elementFromPoint(x, y);
+      const cardX = cardRect.left + cardRect.width / 2;
+      const cardY = cardRect.top + cardRect.height / 2;
+      const hit = document.elementFromPoint(cardX, cardY);
       return {
         index,
-        label: slot.querySelector(':scope > .card')?.getAttribute('aria-label') ?? '',
+        label: card?.getAttribute('aria-label') ?? '',
         card: slot.dataset.card ?? '',
         x,
         y,
+        cardX,
+        cardY,
+        cardWidth: cardRect.width,
+        cardHeight: cardRect.height,
         shift: Number(slot.dataset.previewShiftX ?? 0),
-        hitCard: hit?.closest?.('.hand-slot')?.dataset?.card ?? '',
-        hitTag: hit?.tagName ?? '',
-        hitClass: typeof hit?.className === 'string' ? hit.className : '',
+        visualCenterHitCard: hit?.closest?.('.hand-slot')?.dataset?.card ?? '',
+        visualCenterHitTag: hit?.tagName ?? '',
       };
     });
     return {
@@ -168,32 +178,38 @@ async function run() {
     });
     const labels = initial.slots.map((slot) => slot.label);
     const source = initial.slots[0];
-    const targetX = (initial.slots[3].x + initial.slots[4].x) / 2;
+    if (source.visualCenterHitCard !== source.card) {
+      throw new Error(`desktop visual card center is not draggable: ${JSON.stringify(source)}`);
+    }
+    const targetCenterX = (initial.slots[3].x + initial.slots[4].x) / 2;
     await installPointerTrace(session);
 
-    await mouse(session, 'mousePressed', source.x, source.y, true);
-    await sleep(45);
-    const afterPress = await state(session);
+    const dragActions = [
+      { type: 'pointerMove', duration: 0, origin: 'viewport', x: Math.round(source.cardX), y: Math.round(source.cardY) },
+      { type: 'pointerDown', button: 0 },
+      { type: 'pause', duration: 40 },
+    ];
     for (let step = 1; step <= 8; step += 1) {
       const ratio = step / 8;
-      await mouse(session, 'mouseMoved', source.x + (targetX - source.x) * ratio, source.y, true);
-      await sleep(28);
+      dragActions.push({
+        type: 'pointerMove',
+        duration: 28,
+        origin: 'viewport',
+        x: Math.round(source.cardX + (targetCenterX - source.cardX) * ratio),
+        y: Math.round(source.cardY),
+      });
     }
+    await mouseActions(session, dragActions);
+    await sleep(45);
+
     const afterMoves = await state(session);
     const trace = await pointerTrace(session);
-
     const shiftedAfterMoves = afterMoves.slots.filter((slot) => Math.abs(slot.shift) > 6);
     if (!(afterMoves.phase === 'held' && afterMoves.insertionPosition > 3 && shiftedAfterMoves.length >= 2)) {
       await screenshot(session, 'desktop-living-hand-diagnostic-fail');
       throw new Error(`desktop living gap missing: ${JSON.stringify({
         source,
-        targetX,
-        sourceHitMatches: source.hitCard === source.card,
-        afterPress: {
-          phase: afterPress.phase,
-          insertionPosition: afterPress.insertionPosition,
-          insertionTarget: afterPress.insertionTarget,
-        },
+        targetCenterX,
         afterMoves: {
           phase: afterMoves.phase,
           insertionPosition: afterMoves.insertionPosition,
@@ -215,7 +231,7 @@ async function run() {
     if (physicallyMoved.length < 2) throw new Error(`desktop neighbors did not yield: ${JSON.stringify(preview)}`);
     await screenshot(session, 'desktop-living-hand-gap-open');
 
-    await mouse(session, 'mouseReleased', targetX, source.y, false);
+    await mouseActions(session, [{ type: 'pointerUp', button: 0 }]);
     const settled = await waitFor('desktop reorder settle', async () => {
       const candidate = await state(session);
       const movedIndex = candidate.slots.findIndex((slot) => slot.label === labels[0]);
@@ -226,15 +242,17 @@ async function run() {
     }
     await screenshot(session, 'desktop-living-hand-settled');
 
+    const finalTrace = await pointerTrace(session);
     return {
-      sourceHitMatches: source.hitCard === source.card,
-      pressPhase: afterPress.phase,
+      sourceVisualCenterHitsSelf: true,
       previewOrderUnchanged: true,
       previewRevision: `${initial.revision}->${preview.revision}`,
       insertionPosition: preview.insertionPosition,
       shiftedNeighbors: preview.shifted.map((slot) => ({ index: slot.index, shift: slot.shift })),
       physicallyMovedNeighbors: physicallyMoved.length,
-      pointerEvents: trace.map(({ type, targetCard, phase }) => ({ type, targetCard, phase })),
+      pointerCaptureObserved: finalTrace.some((entry) => entry.type === 'gotpointercapture'),
+      pointerCaptureLostBeforeRelease: finalTrace.some((entry) => entry.type === 'lostpointercapture')
+        && finalTrace.findIndex((entry) => entry.type === 'lostpointercapture') < finalTrace.findIndex((entry) => entry.type === 'pointerup'),
       releasedToIndex: settled.movedIndex,
       releaseRevision: `${initial.revision}->${settled.revision}`,
     };
