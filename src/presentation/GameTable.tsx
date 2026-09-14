@@ -55,6 +55,11 @@ export function GameTable({ projection, seatNames, message = '', onCommand, onNe
 
   const seatName = (seat: Seat) => seatNames[seat];
   const seatAction = (seat: Seat, you: string, thirdPerson: string) => seat === humanSeat ? you : `${seatName(seat)} ${thirdPerson}`;
+  const seatRole = (seat: Seat) => {
+    const role = view.dealer === seat ? 'rozdaje' : view.declarer === seat ? 'gra' : '';
+    const bombs = view.bombsUsed[seat] > 0 ? `bomby ${view.bombsUsed[seat]}` : '';
+    return [role, bombs].filter(Boolean).join(' · ');
+  };
   const opponentSeats = ALL_SEATS.filter((seat) => seat !== humanSeat);
   const playPosition = (seat: Seat) => seat === humanSeat ? 'self' : seat === opponentSeats[0] ? 'left' : 'right';
   const humanCards = view.ownHand;
@@ -127,26 +132,16 @@ export function GameTable({ projection, seatNames, message = '', onCommand, onNe
         </div>
       </header>
 
-      <section className="scoreboard" aria-label="Wynik meczu">
-        {view.scores.map((score, seat) => {
-          const role = view.dealer === seat ? 'rozdaje' : view.declarer === seat ? 'gra' : '';
-          const bombs = view.bombsUsed[seat] > 0 ? `bomby: ${view.bombsUsed[seat]}` : '';
-          return (
-            <div className={`score ${seat === humanSeat ? 'human' : ''}`} key={seat}>
-              <span>{seatName(seat as Seat)}</span>
-              <strong>{score}</strong>
-              <small>{[role, bombs].filter(Boolean).join(' · ')}</small>
-            </div>
-          );
-        })}
-      </section>
-
       <section className="table">
         <div className="opponents">
           {opponentSeats.map((seat) => (
             <div className="opponent" key={seat}>
-              <strong>{seatName(seat)}</strong>
-              <span>{view.opponentCardCounts[seat]} kart</span>
+              <div className="seat-line">
+                <strong>{seatName(seat)}</strong>
+                <span className="seat-score">{view.scores[seat]}</span>
+              </div>
+              <span className="seat-role">{seatRole(seat) || '\u00a0'}</span>
+              <span className="seat-cards">{view.opponentCardCounts[seat]} kart</span>
               <div className="card-backs" aria-hidden="true">
                 {Array.from({ length: Math.min(view.opponentCardCounts[seat], 8) }, (_, index) => <i key={index} />)}
               </div>
@@ -299,7 +294,16 @@ export function GameTable({ projection, seatNames, message = '', onCommand, onNe
       </section>
 
       <section className="hand-area">
-        <div className="hand-heading"><strong>Twoje karty</strong><span>{humanCards.length}</span></div>
+        <div className="hand-heading">
+          <div className="hand-owner">
+            <strong>Twoje karty</strong>
+            <span>{seatRole(humanSeat) || `${humanCards.length} kart`}</span>
+          </div>
+          <div className="hand-score" aria-label={`Twój wynik ${view.scores[humanSeat]}`}>
+            <strong>{view.scores[humanSeat]}</strong>
+            <span>pkt</span>
+          </div>
+        </div>
         <div className="hand" style={handStyle}>
           {humanCards.map((card) => {
             const exchangeMode = view.phase === 'exchange' && exchanges.length > 0;
