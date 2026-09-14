@@ -110,6 +110,31 @@ try {
     throw new Error(`mobile remote controls overlap heading: ${JSON.stringify(geometry)}`);
   }
 
+  await clickLeading(session, 'Jak grać');
+  await waitText(session, 'Tysiąc w 60 sekund');
+  const guide = await execute(session, `
+    const overlay = document.querySelector('.rules-overlay');
+    const dialog = document.querySelector('.rules-dialog');
+    if (!overlay || !dialog) return null;
+    const rect = dialog.getBoundingClientRect();
+    const x = Math.max(1, Math.min(innerWidth - 2, rect.left + Math.min(36, rect.width / 2)));
+    const y = Math.max(1, Math.min(innerHeight - 2, rect.top + Math.min(36, rect.height / 2)));
+    const top = document.elementFromPoint(x, y);
+    return {
+      portalToBody: overlay.parentElement === document.body,
+      dialogTopmost: Boolean(top && dialog.contains(top)),
+      rect: { left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom, width: rect.width, height: rect.height },
+      viewport: { width: innerWidth, height: innerHeight },
+      overlayZ: getComputedStyle(overlay).zIndex,
+    };
+  `);
+  if (!guide?.portalToBody || !guide.dialogTopmost) throw new Error(`rules overlay is not app-global/topmost: ${JSON.stringify(guide)}`);
+  if (guide.rect.left < -1 || guide.rect.right > guide.viewport.width + 1 || guide.rect.top < -1 || guide.rect.bottom > guide.viewport.height + 1) {
+    throw new Error(`rules dialog escapes mobile viewport: ${JSON.stringify(guide)}`);
+  }
+  await clickLeading(session, 'Wracam do stołu');
+  await waitFor('rules guide closes', () => execute(session, `return !document.querySelector('.rules-overlay');`));
+
   await clickLeading(session, 'Wróć do startu');
   await waitText(session, 'Usiądź do stołu');
   const homeUrl = await execute(session, 'return location.href;');
