@@ -92,7 +92,8 @@
 }
 
 .opponent,
-.hand-owner {
+.hand-owner,
+.hand-area {
   position: relative;
 }
 
@@ -151,6 +152,14 @@
   opacity: 0;
 }
 
+.capture-state.is-empty.is-initiative {
+  opacity: 1;
+}
+
+.capture-state.is-empty.is-initiative > * {
+  opacity: 0;
+}
+
 .capture-state-mark {
   color: #d8c57d;
   font-size: .48rem;
@@ -165,37 +174,47 @@
 .capture-state.is-updated {
   color: #f1dda0 !important;
   opacity: 1;
-  transform: translateY(-1px);
   filter: brightness(1.08);
 }
 
-/* Next initiative is spatial ownership, not another turn banner. */
-.opponent.next-initiative-source .seat-line strong,
-.hand-area.next-initiative-source .hand-owner > strong {
-  color: #fff3c6;
-  text-shadow: 0 0 16px #ead27a33;
+.seat-consequence {
+  position: absolute;
+  z-index: 7;
+  left: 50%;
+  bottom: -17px;
+  width: max-content;
+  margin: 0;
+  transform: translateX(-50%);
+  pointer-events: none;
 }
 
-.opponent.next-initiative-source .card-backs {
-  transform: translateY(-1px);
-  filter: brightness(1.08) saturate(1.05);
+.hand-area > .seat-consequence {
+  top: 3px;
+  bottom: auto;
 }
 
-.opponent.next-initiative-source .seat-line::after,
-.hand-area.next-initiative-source .hand-owner::before {
+.seat-consequence.is-updated {
+  transform: translate(-50%, -1px);
+}
+
+/* Next initiative stays with the owner instead of becoming another turn banner. */
+.seat-consequence.is-initiative {
+  color: #fff0b9 !important;
+  opacity: 1;
+  filter: brightness(1.12);
+}
+
+.seat-consequence.is-initiative::after {
   content: '';
+  position: absolute;
+  left: 50%;
+  top: -7px;
   width: 5px;
   height: 5px;
-  flex: 0 0 5px;
+  translate: -50% 0;
   border-radius: 50%;
   background: #ead27a;
   box-shadow: 0 0 0 3px #ead27a18, 0 0 12px #ead27a45;
-}
-
-.hand-area.next-initiative-source .hand-owner::before {
-  position: absolute;
-  left: -11px;
-  top: .36rem;
 }
 
 @keyframes trick-capture-pulse {
@@ -271,6 +290,14 @@
 
   .capture-state > strong {
     font-size: .56rem;
+  }
+
+  .seat-consequence {
+    bottom: -13px;
+  }
+
+  .hand-area > .seat-consequence {
+    top: 1px;
   }
 }
 
