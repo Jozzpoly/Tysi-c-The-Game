@@ -234,24 +234,46 @@ async function run() {
     }
     if (!sameOrder(reopened, openingLabels)) throw new Error('reopened gap committed order before release');
 
-    const jitterOffsets = [-3, 2, -2, 3, -1, 1];
+    // Calibrate pointer X against the actual semantic insertion coordinate. The
+    // Run 04 hand geometry/fan means the visual midpoint between slot centres is
+    // not guaranteed to be semantic position 3.5 for a card grabbed off-centre.
+    // Hysteresis is a semantic contract, so rehearse positions inside the model's
+    // real 3/4 boundary instead of inheriting pixel offsets from the donor layout.
+    const sampleDx = armTargetX - boundaryX;
+    const sampleDp = reopened.insertionPosition - preview.insertionPosition;
+    if (!Number.isFinite(sampleDx) || !Number.isFinite(sampleDp) || Math.abs(sampleDx) < 1 || Math.abs(sampleDp) < .1) {
+      throw new Error(`cannot calibrate semantic insertion position: ${JSON.stringify({
+        boundaryX,
+        armTargetX,
+        previewPosition: preview.insertionPosition,
+        reopenedPosition: reopened.insertionPosition,
+      })}`);
+    }
+    const xForInsertionPosition = (position) => boundaryX
+      + (position - preview.insertionPosition) * sampleDx / sampleDp;
+
+    const jitterPositions = [3.47, 3.53, 3.48, 3.52, 3.49, 3.51];
     const jitterStates = [];
-    for (const offset of jitterOffsets) {
-      await moveTouch(session, boundaryX + offset, source.y);
+    for (const requestedPosition of jitterPositions) {
+      const x = xForInsertionPosition(requestedPosition);
+      await moveTouch(session, x, source.y);
       await sleep(55);
       const state = await handState(session);
       if (state.phase !== 'held') throw new Error(`jitter left held phase: ${JSON.stringify(state)}`);
+      if (Math.abs(state.insertionPosition - requestedPosition) > .05) {
+        throw new Error(`semantic jitter calibration drifted: ${JSON.stringify({ requestedPosition, actualPosition: state.insertionPosition, x })}`);
+      }
       if (state.insertionTarget !== 4) {
-        throw new Error(`hysteresis target chattered at offset ${offset}: ${JSON.stringify({ position: state.insertionPosition, target: state.insertionTarget })}`);
+        throw new Error(`hysteresis target chattered at semantic position ${requestedPosition}: ${JSON.stringify({ position: state.insertionPosition, target: state.insertionTarget })}`);
       }
       if (!sameOrder(state, openingLabels)) throw new Error('hysteresis jitter committed order before release');
       if (state.revision !== initial.revision) throw new Error('hysteresis jitter changed game revision');
-      jitterStates.push({ offset, position: state.insertionPosition, target: state.insertionTarget });
+      jitterStates.push({ requestedPosition, position: state.insertionPosition, target: state.insertionTarget, x });
     }
     const crossedBelow = jitterStates.some((entry) => entry.position < 3.5);
     const crossedAbove = jitterStates.some((entry) => entry.position > 3.5);
     if (!crossedBelow || !crossedAbove) {
-      throw new Error(`hysteresis rehearsal did not straddle boundary: ${JSON.stringify(jitterStates)}`);
+      throw new Error(`hysteresis rehearsal did not straddle semantic boundary: ${JSON.stringify(jitterStates)}`);
     }
 
     await touch(session, 'touchEnd', []);
