@@ -47,6 +47,45 @@ export function LivingGameTable({ events = [], ...props }: GameTableProps) {
     setCenterAnchor((current) => current === nextCenter ? current : nextCenter);
   }, [view.revision, view.seat]);
 
+  // Run 05 P1: collection geometry is derived from the real destination pile.
+  // The lifecycle remains authoritative; these custom properties only tell the
+  // presentation layer where the already-completed trick should visually land.
+  useLayoutEffect(() => {
+    if (!completedTrick) return;
+
+    const trick = document.querySelector<HTMLElement>('.trick');
+    const target = document.querySelector<HTMLElement>(`[data-capture-pile-seat="${completedTrick.winner}"]`);
+    if (!trick || !target) return;
+
+    const targetRect = target.getBoundingClientRect();
+    const targetX = targetRect.left + targetRect.width / 2;
+    const targetY = targetRect.top + targetRect.height / 2;
+    const played = [...trick.querySelectorAll<HTMLElement>('.played')];
+
+    played.forEach((node, index) => {
+      const card = node.querySelector<HTMLElement>(':scope > .card') ?? node;
+      const rect = card.getBoundingClientRect();
+      const sourceX = rect.left + rect.width / 2;
+      const sourceY = rect.top + rect.height / 2;
+      const scale = Math.max(.42, Math.min(.68, targetRect.width / Math.max(1, rect.width)));
+      const rotate = (index - 1) * 3.2;
+
+      node.style.setProperty('--run05-collect-x', `${targetX - sourceX}px`);
+      node.style.setProperty('--run05-collect-y', `${targetY - sourceY}px`);
+      node.style.setProperty('--run05-collect-scale', scale.toFixed(3));
+      node.style.setProperty('--run05-collect-rotate', `${rotate}deg`);
+    });
+
+    return () => {
+      for (const node of played) {
+        node.style.removeProperty('--run05-collect-x');
+        node.style.removeProperty('--run05-collect-y');
+        node.style.removeProperty('--run05-collect-scale');
+        node.style.removeProperty('--run05-collect-rotate');
+      }
+    };
+  }, [anchors, completedTrick, view.revision]);
+
   const initiativeSeat = view.phase === 'trick'
     && view.trick.length === 0
     && view.trickLeader !== null
@@ -63,20 +102,37 @@ export function LivingGameTable({ events = [], ...props }: GameTableProps) {
     const points = Math.max(0, view.capturedCardPoints[seat] - (pendingCapture ? completedTrick?.points ?? 0 : 0));
     const updated = completedTrick?.winner === seat && displayedConsequenceReady;
     const initiative = initiativeSeat === seat;
+    const pileLayers = Math.min(4, tricks);
 
     return [createPortal(
-      <span
-        className={`capture-state seat-consequence ${seat === view.seat ? 'seat-consequence-self' : ''} ${tricks === 0 && points === 0 ? 'is-empty' : ''} ${updated ? 'is-updated' : ''} ${initiative ? 'is-initiative' : ''}`}
-        aria-label={`Zdobyte lewy: ${tricks}; punkty w kartach: ${points}${initiative ? '; następna inicjatywa' : ''}`}
-        data-consequence-seat={seat}
-        data-captured-tricks={tricks}
-        data-captured-points={points}
-        data-next-initiative={initiative ? 'true' : 'false'}
-      >
-        <span className="capture-state-mark" aria-hidden="true">◆</span>
-        <span className="capture-state-tricks">{tricks}</span>
-        <span>{points} pkt</span>
-      </span>,
+      <>
+        <span
+          className={`captured-pile ${seat === view.seat ? 'captured-pile-self' : ''} ${tricks === 0 ? 'is-empty' : ''} ${updated ? 'is-updated' : ''} ${initiative ? 'is-initiative' : ''}`}
+          aria-hidden="true"
+          data-capture-pile-seat={seat}
+          data-captured-tricks={tricks}
+          data-captured-points={points}
+          data-next-initiative={initiative ? 'true' : 'false'}
+          data-pile-layers={pileLayers}
+        >
+          <span className="captured-pile-cards">
+            {Array.from({ length: pileLayers }, (_, index) => <i key={index} />)}
+          </span>
+          {tricks > 0 && <span className="captured-pile-value">{points}</span>}
+        </span>
+        <span
+          className={`capture-state seat-consequence ${seat === view.seat ? 'seat-consequence-self' : ''} ${tricks === 0 && points === 0 ? 'is-empty' : ''} ${updated ? 'is-updated' : ''} ${initiative ? 'is-initiative' : ''}`}
+          aria-label={`Zdobyte lewy: ${tricks}; punkty w kartach: ${points}${initiative ? '; następna inicjatywa' : ''}`}
+          data-consequence-seat={seat}
+          data-captured-tricks={tricks}
+          data-captured-points={points}
+          data-next-initiative={initiative ? 'true' : 'false'}
+        >
+          <span className="capture-state-mark" aria-hidden="true">◆</span>
+          <span className="capture-state-tricks">{tricks}</span>
+          <span>{points} pkt</span>
+        </span>
+      </>,
       anchor,
       String(seat),
     )];
