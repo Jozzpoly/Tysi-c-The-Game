@@ -414,22 +414,19 @@ async function runViewport(label, width, height, mobile) {
       throw new Error(`${label}: completed trick leaked after settle: ${JSON.stringify(settled)}`);
     }
 
-    // Persistence is deliberately checked after the presentation frame is allowed
-    // to expire. The physical pile is canonical table state, not a child of the
-    // 80ms `settled` animation stage.
+    // Initiative is a causal handoff signal and is already proven above during
+    // consequence/settled. After the presentation frame, the winner may legally
+    // have played into the next trick. Physical ownership must persist regardless.
     const persistent = await waitFor(`${label}: persistent visible pile`, async () => {
       const state = await persistentOwnershipState(session);
-      if (state.played !== 0) return false;
       const marker = markerFor(state, resolve.winnerSeat);
       const pile = pileFor(state, resolve.winnerSeat);
       return marker
         && pile
         && marker.tricks === consequenceWinnerMarker.tricks
         && marker.points === consequenceWinnerMarker.points
-        && marker.initiative
         && pile.tricks === consequenceWinnerPile.tricks
         && pile.points === consequenceWinnerPile.points
-        && pile.initiative
         && !pile.empty
         && pile.visible
         && pile.layers >= 1
@@ -479,6 +476,7 @@ async function runViewport(label, width, height, mobile) {
       collectDistanceRatio: Number((collectDistance / resolveDistance).toFixed(3)),
       capture: consequence.capture,
       initiativeSeat: consequence.markers.find((marker) => marker.initiative)?.seat ?? '',
+      nextTrickCardsObserved: persistent.played,
       presentationExpired: persistent.presentationKind !== 'trick-completion',
       stages,
     };
