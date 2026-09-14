@@ -77,6 +77,20 @@ async function touch(session, type, points) {
   await cdp(session, 'Input.dispatchTouchEvent', { type, touchPoints: points });
 }
 
+async function moveTouch(session, start, end, steps = 8) {
+  for (let step = 1; step <= steps; step += 1) {
+    const ratio = step / steps;
+    await touch(session, 'touchMove', [{
+      x: start.x + (end.x - start.x) * ratio,
+      y: start.y + (end.y - start.y) * ratio,
+      radiusX: 7,
+      radiusY: 7,
+      force: 1,
+    }]);
+    await sleep(24);
+  }
+}
+
 async function clickButtonStartingWith(session, text) {
   const clicked = await execute(session, `
     const button = [...document.querySelectorAll('button')]
@@ -94,6 +108,35 @@ async function revision(session) {
       .map((node) => node.textContent?.trim() ?? '')
       .find((value) => /^rev \\d+$/.test(value));
     return text ? Number(text.slice(4)) : null;
+  `);
+}
+
+async function readPlayable(session, cardId = '') {
+  return execute(session, `
+    if (document.querySelector('.decision-card h2')?.textContent?.trim() !== 'Twój ruch') return null;
+    const slot = ${cardId ? `document.querySelector('.hand-slot.is-throwable[data-card="${cardId}"]')` : `document.querySelector('.hand-slot.is-throwable')`};
+    const card = slot?.querySelector(':scope > .card');
+    const trick = document.querySelector('.trick');
+    if (!slot || !card || !trick) return null;
+    const rect = card.getBoundingClientRect();
+    const zone = trick.getBoundingClientRect();
+    return {
+      card: slot.dataset.card ?? '',
+      x: rect.left + rect.width / 2,
+      y: rect.top + rect.height / 2,
+      width: rect.width,
+      height: rect.height,
+      zone: {
+        left: zone.left,
+        right: zone.right,
+        top: zone.top,
+        bottom: zone.bottom,
+        x: zone.left + zone.width / 2,
+        y: zone.top + zone.height / 2,
+        width: zone.width,
+        height: zone.height,
+      },
+    };
   `);
 }
 
@@ -146,8 +189,6 @@ async function runViewport(label, width, height, mobile) {
       width, height, screenWidth: width, screenHeight: height,
       deviceScaleFactor: 1, mobile, positionX: 0, positionY: 0, dontSetVisibleSize: false,
     });
-    // Use the same physical touch throw on both layouts. The desktop half proves
-    // desktop geometry; the mobile half proves the coarse-pointer presentation.
     await cdp(session, 'Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 5 });
     await webdriver(`/session/${session}/url`, {
       method: 'POST', body: JSON.stringify({ url: `${BASE_URL}?seed=1&seat=0` }),
@@ -158,44 +199,79 @@ async function runViewport(label, width, height, mobile) {
     `));
     await clickButtonStartingWith(session, 'Pas');
 
-    const playable = await waitFor(`${label}: legal throw`, () => execute(session, `
-      if (document.querySelector('.decision-card h2')?.textContent?.trim() !== 'Twój ruch') return null;
-      const slot = document.querySelector('.hand-slot.is-throwable');
-      const card = slot?.querySelector(':scope > .card');
-      if (!slot || !card) return null;
-      const rect = card.getBoundingClientRect();
-      return {
-        card: slot.dataset.card ?? '',
-        x: rect.left + rect.width / 2,
-        y: rect.top + rect.height / 2,
-        width: rect.width,
-        height: rect.height,
-      };
-    `), 25_000);
+    const playable = await waitFor(`${label}: legal throw`, () => readPlayable(session), 25_000);
     if (!playable.card) throw new Error(`${label}: throwable card has no CardId`);
 
-    const beforeRevision = await revision(session);
-    await installTrace(session, playable.card);
-
-    const distance = Math.max(126, playable.height * 1.05);
-    const end = { x: playable.x, y: Math.max(42, playable.y - distance) };
+    // P2 falsification: moving a legal card very far away from the hand is not a
+    // game action unless the carried card centre actually finishes inside .trick.
+    const beforeOutsideRevision = await revision(session);
+    const outside = {
+      x: Math.max(playable.zone.left + 8, Math.min(playable.zone.right - 8, playable.x)),
+      y: Math.max(18, playable.zone.top - Math.max(24, playable.height * .42)),
+    };
     await touch(session, 'touchStart', [{ x: playable.x, y: playable.y, radiusX: 7, radiusY: 7, force: 1 }]);
     await sleep(30);
-    for (let step = 1; step <= 8; step += 1) {
-      const ratio = step / 8;
-      await touch(session, 'touchMove', [{
-        x: playable.x,
-        y: playable.y + (end.y - playable.y) * ratio,
-        radiusX: 7, radiusY: 7, force: 1,
-      }]);
-      await sleep(24);
+    await moveTouch(session, { x: playable.x, y: playable.y }, outside, 10);
+
+    const outsideState = await waitFor(`${label}: outside-zone held state`, () => execute(session, `
+      const id = ${JSON.stringify(playable.card)};
+      const ghost = document.querySelector('.tactile-card-float[data-card-id="' + id + '"]:not(.pending-handoff)');
+      if (!ghost || ghost.classList.contains('commit-ready')) return null;
+      const rect = ghost.getBoundingClientRect();
+      const trick = document.querySelector('.trick')?.getBoundingClientRect();
+      if (!trick) return null;
+      return {
+        phase: ghost.dataset.gesturePhase ?? '',
+        centerX: rect.left + rect.width / 2,
+        centerY: rect.top + rect.height / 2,
+        zoneTop: trick.top,
+        zoneBottom: trick.bottom,
+        commitReady: ghost.classList.contains('commit-ready'),
+      };
+    `), 2_000);
+    if (outsideState.phase !== 'held' || outsideState.commitReady) {
+      throw new Error(`${label}: distance still arms play outside spatial zone ${JSON.stringify(outsideState)}`);
     }
 
-    const armed = await waitFor(`${label}: throw armed`, () => execute(session, `
-      const ghost = document.querySelector('.tactile-card-float.commit-ready');
-      return ghost?.dataset.cardId === ${JSON.stringify(playable.card)};
+    await touch(session, 'touchEnd', []);
+    await sleep(320);
+    const afterOutsideRevision = await revision(session);
+    const sourceAfterOutside = await execute(session, `
+      return Boolean(document.querySelector('.hand-slot[data-card="${playable.card}"]'))
+        && !document.querySelector('.tactile-card-float.pending-handoff[data-card-id="${playable.card}"]');
+    `);
+    if (afterOutsideRevision !== beforeOutsideRevision || !sourceAfterOutside) {
+      throw new Error(`${label}: outside-zone release changed game truth ${beforeOutsideRevision} -> ${afterOutsideRevision}`);
+    }
+
+    // Reacquire the same card after its physical return/reorder, then place its
+    // centre in the real canonical trick area.
+    const valid = await waitFor(`${label}: same card returned`, () => readPlayable(session, playable.card), 3_000);
+    await installTrace(session, playable.card);
+    const beforeCommitRevision = await revision(session);
+    const inside = { x: valid.zone.x, y: valid.zone.y };
+    await touch(session, 'touchStart', [{ x: valid.x, y: valid.y, radiusX: 7, radiusY: 7, force: 1 }]);
+    await sleep(30);
+    await moveTouch(session, { x: valid.x, y: valid.y }, inside, 10);
+
+    const armed = await waitFor(`${label}: spatial play armed`, () => execute(session, `
+      const id = ${JSON.stringify(playable.card)};
+      const ghost = document.querySelector('.tactile-card-float.commit-ready[data-card-id="' + id + '"]');
+      const trick = document.querySelector('.trick');
+      if (!ghost || !trick) return null;
+      const rect = ghost.getBoundingClientRect();
+      const zone = trick.getBoundingClientRect();
+      const center = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+      return {
+        phase: ghost.dataset.gesturePhase ?? '',
+        center,
+        zone: { left: zone.left, right: zone.right, top: zone.top, bottom: zone.bottom },
+        centerInside: center.x >= zone.left && center.x <= zone.right && center.y >= zone.top && center.y <= zone.bottom,
+      };
     `), 2_000);
-    if (!armed) throw new Error(`${label}: legal throw never became commit-ready`);
+    if (armed.phase !== 'accepted' || !armed.centerInside) {
+      throw new Error(`${label}: spatial zone armed without physical membership ${JSON.stringify(armed)}`);
+    }
 
     await touch(session, 'touchEnd', []);
 
@@ -218,8 +294,8 @@ async function runViewport(label, width, height, mobile) {
     if (final.targetCard !== playable.card || !final.targetVisible || final.sourceStillInHand) {
       throw new Error(`${label}: authority ended on wrong physical representation ${JSON.stringify({ playable, final })}`);
     }
-    if (!(Number.isInteger(beforeRevision) && Number.isInteger(afterRevision) && afterRevision > beforeRevision)) {
-      throw new Error(`${label}: canonical revision did not advance ${beforeRevision} -> ${afterRevision}`);
+    if (!(Number.isInteger(beforeCommitRevision) && Number.isInteger(afterRevision) && afterRevision > beforeCommitRevision)) {
+      throw new Error(`${label}: canonical revision did not advance ${beforeCommitRevision} -> ${afterRevision}`);
     }
 
     const ghostObserved = trace.some((entry) => entry.ghost && entry.ghostVisible);
@@ -240,7 +316,16 @@ async function runViewport(label, width, height, mobile) {
     return {
       label,
       card: playable.card,
-      revision: `${beforeRevision}->${afterRevision}`,
+      outsideZoneRelease: {
+        revision: `${beforeOutsideRevision}->${afterOutsideRevision}`,
+        phase: outsideState.phase,
+        returnedToHand: sourceAfterOutside,
+      },
+      spatialAcceptance: {
+        centerInsideZone: armed.centerInside,
+        phase: armed.phase,
+      },
+      revision: `${beforeCommitRevision}->${afterRevision}`,
       ghostObserved,
       authorityObserved,
       targetHiddenDuringBridge: hiddenTargetObserved,

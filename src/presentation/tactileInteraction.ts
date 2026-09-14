@@ -48,6 +48,7 @@ export interface AdvanceTactilePointerInput {
   y: number;
   timeMs: number;
   canCommit: boolean;
+  inPlayZone: boolean;
 }
 
 function clamp(value: number, min: number, max: number) {
@@ -82,8 +83,10 @@ export function beginTactilePointer(input: BeginTactilePointerInput): TactilePoi
 export function advanceTactilePointer(state: TactilePointerState, input: AdvanceTactilePointerInput): TactilePointerState {
   const distance = Math.hypot(input.x - state.startX, input.y - state.startY);
   const moved = state.moved || distance >= TACTILE_DRAG_SLOP;
-  const commitDistance = Math.max(62, state.height * 0.72);
-  const throwIntent = moved && input.y <= state.startY - commitDistance;
+  // Run 05 P2: table intent is spatial. The presentation adapter measures the
+  // real shared trick area and tells this pure gesture model whether the carried
+  // card centre is inside it. Distance from the hand is no longer game intent.
+  const throwIntent = moved && input.inPlayZone;
   const commitReady = throwIntent && input.canCommit;
 
   const dt = Math.max(1, input.timeMs - state.lastTimeMs);

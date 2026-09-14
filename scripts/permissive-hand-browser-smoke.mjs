@@ -153,8 +153,8 @@ async function run() {
     const freeThrowTarget = { x: playCard.x + 14, y: Math.max(28, playCard.y - 104) };
     await drag(session, { x: playCard.x, y: playCard.y }, freeThrowTarget, { hold: true });
 
-    const freeThrow = await waitFor('free throw body', () => execute(session, `
-      const card = document.querySelector('.tactile-card-float.throw-intent');
+    const freeThrow = await waitFor('free held card body', () => execute(session, `
+      const card = document.querySelector('.tactile-card-float[data-gesture-phase="held"]');
       if (!card) return false;
       const rect = card.getBoundingClientRect();
       const style = getComputedStyle(card);
@@ -164,6 +164,7 @@ async function run() {
         width: rect.width, height: rect.height,
         centerX: rect.left + rect.width / 2,
         centerY: rect.top + rect.height / 2,
+        hasFalseTableIntent: card.classList.contains('throw-intent'),
         hasPositiveCommitZone: Boolean(document.querySelector('.tactile-commit-zone')),
       };
     `), 2_000);
@@ -172,10 +173,10 @@ async function run() {
       || freeThrow.width < 40 || freeThrow.height < 60
       || freeThrow.right <= 0 || freeThrow.bottom <= 0
       || freeThrow.left >= 390 || freeThrow.top >= 844) {
-      throw new Error(`non-action card is not physically present during free throw: ${JSON.stringify(freeThrow)}`);
+      throw new Error(`non-action card is not physically present during free drag: ${JSON.stringify(freeThrow)}`);
     }
-    if (freeThrow.hasPositiveCommitZone) {
-      throw new Error('non-action card incorrectly received a legal-action affordance');
+    if (freeThrow.hasFalseTableIntent || freeThrow.hasPositiveCommitZone) {
+      throw new Error(`non-action card incorrectly received table-action intent: ${JSON.stringify(freeThrow)}`);
     }
 
     const fingerPeekPx = freeThrowTarget.y - freeThrow.centerY;
@@ -214,8 +215,9 @@ async function run() {
     return {
       openingCards: initial.cards.length,
       openingCardsRemainFullStrength: true,
-      freeThrowVisible: true,
-      freeThrowHasNoFalsePositiveActionCue: !freeThrow.hasPositiveCommitZone,
+      freeDragVisible: true,
+      freeDragHasNoFalseTableIntent: !freeThrow.hasFalseTableIntent,
+      freeDragHasNoFalsePositiveActionCue: !freeThrow.hasPositiveCommitZone,
       fingerPeekPx,
       freeThrowRevision: `${initial.revision}->${afterFreeThrow.revision}`,
       reorderedCard: draggedLabel,

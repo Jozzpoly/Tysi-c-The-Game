@@ -201,6 +201,11 @@ export function TactileHand({
       });
   }
 
+  function readPlayZoneRect(): DOMRect | null {
+    if (throwableCards.size === 0) return null;
+    return document.querySelector<HTMLElement>('.trick')?.getBoundingClientRect() ?? null;
+  }
+
   useLayoutEffect(() => {
     const previous = beforeRects.current;
     if (!previous || !handRef.current) return;
@@ -343,6 +348,7 @@ export function TactileHand({
     if (!button) return;
     const rect = button.getBoundingClientRect();
     const handRect = handRef.current?.getBoundingClientRect() ?? rect;
+    const playRect = readPlayZoneRect();
     const sourceIndex = visibleOrder.indexOf(card);
     const centers = readSlotCenters();
     const sourceCenterX = centers[sourceIndex] ?? event.clientX;
@@ -366,17 +372,26 @@ export function TactileHand({
       height: rect.height,
       offsetX: event.clientX - rect.left,
       offsetY: event.clientY - rect.top,
-      zoneTop: Math.max(14, handRect.top - 76),
+      zoneTop: playRect ? playRect.top + playRect.height / 2 : Math.max(14, handRect.top - 76),
     }));
   }
 
   function moveDrag(event: ReactPointerEvent<HTMLDivElement>) {
     if (!drag || event.pointerId !== drag.pointerId) return;
+    const playRect = readPlayZoneRect();
+    const cardCenterX = event.clientX - drag.offsetX + drag.width / 2;
+    const cardCenterY = event.clientY - drag.offsetY + drag.height / 2;
+    const inPlayZone = Boolean(playRect
+      && cardCenterX >= playRect.left
+      && cardCenterX <= playRect.right
+      && cardCenterY >= playRect.top
+      && cardCenterY <= playRect.bottom);
     const next = advanceTactilePointer(drag, {
       x: event.clientX,
       y: event.clientY,
       timeMs: event.timeStamp,
       canCommit: throwableCards.has(drag.card),
+      inPlayZone,
     });
 
     if (next.moved) {
@@ -456,7 +471,10 @@ export function TactileHand({
       }, TACTILE_AUTHORITY_TIMEOUT_MS);
       onActivate(drag.card);
     } else if (outcome === 'return') {
-      const reordered = commitPreviewOrder(drag.card);
+      // Releasing from the shared table zone is a failed play attempt, not a hand
+      // reorder. Only a release that is still in free-hand space may commit the
+      // latest insertion preview.
+      const reordered = drag.phase === 'held' ? commitPreviewOrder(drag.card) : false;
       if (reordered) {
         window.requestAnimationFrame(() => {
           window.requestAnimationFrame(() => animateReturnToHand(drag));
