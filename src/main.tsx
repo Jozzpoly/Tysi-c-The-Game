@@ -9,6 +9,7 @@ import './tactile-hand.css';
 import './tactile-hand-fit.css';
 import './tactile-positive-feedback.css';
 import './tactile-living-hand.css';
+import './tactile-finger-peek.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
