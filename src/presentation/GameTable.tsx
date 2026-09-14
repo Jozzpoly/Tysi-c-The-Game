@@ -55,8 +55,13 @@ export function GameTable({ projection, seatNames, events = [], message = '', on
   const [selectedTransfer, setSelectedTransfer] = useState<CardId[]>([]);
   const [confirmBomb, setConfirmBomb] = useState(false);
   const [trickCompletionStage, setTrickCompletionStage] = useState<TrickCompletionStage>('settled');
+  const [trickStageRevision, setTrickStageRevision] = useState<number | null>(null);
   const trickPresentation = useMemo(() => planTrickPresentation(events), [events]);
-  const presentationBlocksInput = trickPresentation.kind === 'trick-completion' && trickCompletionStage !== 'settled';
+  const prefersReducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+  const displayedTrickStage: TrickCompletionStage = trickPresentation.kind === 'trick-completion' && trickStageRevision !== view.revision
+    ? prefersReducedMotion ? 'consequence' : 'arrival'
+    : trickCompletionStage;
+  const presentationBlocksInput = trickPresentation.kind === 'trick-completion' && displayedTrickStage !== 'settled';
   const humanCommands = presentationBlocksInput ? [] : projection.legalCommands;
 
   useEffect(() => {
@@ -66,15 +71,16 @@ export function GameTable({ projection, seatNames, events = [], message = '', on
 
   useEffect(() => {
     if (trickPresentation.kind !== 'trick-completion') {
+      setTrickStageRevision(null);
       setTrickCompletionStage('settled');
       return;
     }
 
-    const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
     const timers: number[] = [];
-    setTrickCompletionStage(reducedMotion ? 'consequence' : 'arrival');
+    setTrickStageRevision(view.revision);
+    setTrickCompletionStage(prefersReducedMotion ? 'consequence' : 'arrival');
 
-    if (!reducedMotion) {
+    if (!prefersReducedMotion) {
       timers.push(window.setTimeout(() => setTrickCompletionStage('resolve'), TRICK_COMPLETION_TIMELINE.resolveMs));
       timers.push(window.setTimeout(() => setTrickCompletionStage('collect'), TRICK_COMPLETION_TIMELINE.collectMs));
       timers.push(window.setTimeout(() => setTrickCompletionStage('consequence'), TRICK_COMPLETION_TIMELINE.consequenceMs));
@@ -82,7 +88,7 @@ export function GameTable({ projection, seatNames, events = [], message = '', on
     timers.push(window.setTimeout(() => setTrickCompletionStage('settled'), TRICK_COMPLETION_TIMELINE.settleMs));
 
     return () => timers.forEach((timer) => window.clearTimeout(timer));
-  }, [trickPresentation.kind, view.revision]);
+  }, [prefersReducedMotion, trickPresentation.kind, view.revision]);
 
   const seatName = (seat: Seat) => seatNames[seat];
   const seatAction = (seat: Seat, you: string, thirdPerson: string) => seat === humanSeat ? you : `${seatName(seat)} ${thirdPerson}`;
@@ -156,7 +162,7 @@ export function GameTable({ projection, seatNames, events = [], message = '', on
   }[view.phase];
 
   const completedTrick = trickPresentation.kind === 'trick-completion' ? trickPresentation.completedTrick : null;
-  const showingCompletedTrick = completedTrick !== null && trickCompletionStage !== 'settled';
+  const showingCompletedTrick = completedTrick !== null && displayedTrickStage !== 'settled';
   const visibleTrick = view.trick.length > 0
     ? view.trick
     : showingCompletedTrick && completedTrick
@@ -185,7 +191,7 @@ export function GameTable({ projection, seatNames, events = [], message = '', on
         <div className="opponents">
           {opponentSeats.map((seat) => (
             <div
-              className={`opponent ${showingCompletedTrick && completedWinner === seat && trickCompletionStage !== 'arrival' ? 'trick-winner-source' : ''}`}
+              className={`opponent ${showingCompletedTrick && completedWinner === seat && displayedTrickStage !== 'arrival' ? 'trick-winner-source' : ''}`}
               key={seat}
               data-seat-anchor={seat}
             >
@@ -198,7 +204,7 @@ export function GameTable({ projection, seatNames, events = [], message = '', on
               <div className="card-backs" aria-hidden="true">
                 {Array.from({ length: Math.min(view.opponentCardCounts[seat], 8) }, (_, index) => <i key={index} />)}
               </div>
-              {showingCompletedTrick && completedWinner === seat && trickCompletionStage === 'consequence' && (
+              {showingCompletedTrick && completedWinner === seat && displayedTrickStage === 'consequence' && (
                 <span className="capture-pulse">+{completedTrick?.points ?? 0} pkt</span>
               )}
             </div>
@@ -222,11 +228,11 @@ export function GameTable({ projection, seatNames, events = [], message = '', on
           )}
 
           <div
-            className={`trick ${showingCompletedTrick ? 'completed' : ''} trick-stage-${trickCompletionStage}`}
+            className={`trick ${showingCompletedTrick ? 'completed' : ''} trick-stage-${displayedTrickStage}`}
             aria-label="Aktualna lewa"
             data-presentation-kind={trickPresentation.kind}
             data-fresh-play={freshPlay ? `${freshPlay.seat}:${freshPlay.card}` : ''}
-            data-trick-stage={trickCompletionStage}
+            data-trick-stage={displayedTrickStage}
             data-winner-seat={completedWinner ?? ''}
             data-winner-position={completedWinnerPosition}
           >
@@ -250,8 +256,8 @@ export function GameTable({ projection, seatNames, events = [], message = '', on
               })
             )}
           </div>
-          {showingCompletedTrick && completedTrick && trickCompletionStage !== 'arrival' && (
-            <div className={`trick-result trick-result-${trickCompletionStage}`}>
+          {showingCompletedTrick && completedTrick && displayedTrickStage !== 'arrival' && (
+            <div className={`trick-result trick-result-${displayedTrickStage}`}>
               Lewa {completedTrick.index}: {seatName(completedTrick.winner)} · {completedTrick.points} pkt
             </div>
           )}
@@ -369,14 +375,14 @@ export function GameTable({ projection, seatNames, events = [], message = '', on
       </section>
 
       <section
-        className={`hand-area ${showingCompletedTrick && completedWinner === humanSeat && trickCompletionStage !== 'arrival' ? 'trick-winner-source' : ''}`}
+        className={`hand-area ${showingCompletedTrick && completedWinner === humanSeat && displayedTrickStage !== 'arrival' ? 'trick-winner-source' : ''}`}
         data-seat-anchor={humanSeat}
       >
         <div className="hand-heading">
           <div className="hand-owner">
             <strong>Twoje karty</strong>
             <span>{seatRole(humanSeat) || `${humanCards.length} kart`}</span>
-            {showingCompletedTrick && completedWinner === humanSeat && trickCompletionStage === 'consequence' && (
+            {showingCompletedTrick && completedWinner === humanSeat && displayedTrickStage === 'consequence' && (
               <span className="capture-pulse">+{completedTrick?.points ?? 0} pkt</span>
             )}
           </div>
