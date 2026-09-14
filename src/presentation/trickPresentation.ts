@@ -1,6 +1,7 @@
 import type { CompletedTrick, GameEvent, PlayedCard } from '../core/index.js';
 
 export type TrickPresentationKind = 'static' | 'ordinary-play' | 'trick-completion';
+export type TrickCompletionStage = 'arrival' | 'resolve' | 'collect' | 'consequence' | 'settled';
 
 export interface TrickPresentationPlan {
   kind: TrickPresentationKind;
@@ -12,6 +13,13 @@ export interface TrickPresentationPlan {
 export const NORMAL_PRESENTATION_MS = 480;
 export const MARRIAGE_PRESENTATION_MS = 680;
 export const TRICK_COMPLETION_PRESENTATION_MS = 900;
+
+export const TRICK_COMPLETION_TIMELINE = {
+  resolveMs: 220,
+  collectMs: 390,
+  consequenceMs: 620,
+  settleMs: 820,
+} as const;
 
 function lastEventOfType<T extends GameEvent['type']>(
   events: readonly GameEvent[],
@@ -28,6 +36,15 @@ export function presentationFrameDuration(events: readonly GameEvent[]): number 
   if (events.some((event) => event.type === 'trick-completed')) return TRICK_COMPLETION_PRESENTATION_MS;
   if (events.some((event) => event.type === 'marriage-declared')) return MARRIAGE_PRESENTATION_MS;
   return NORMAL_PRESENTATION_MS;
+}
+
+export function trickCompletionStageAt(elapsedMs: number): TrickCompletionStage {
+  const elapsed = Math.max(0, Number.isFinite(elapsedMs) ? elapsedMs : 0);
+  if (elapsed < TRICK_COMPLETION_TIMELINE.resolveMs) return 'arrival';
+  if (elapsed < TRICK_COMPLETION_TIMELINE.collectMs) return 'resolve';
+  if (elapsed < TRICK_COMPLETION_TIMELINE.consequenceMs) return 'collect';
+  if (elapsed < TRICK_COMPLETION_TIMELINE.settleMs) return 'consequence';
+  return 'settled';
 }
 
 export function planTrickPresentation(events: readonly GameEvent[]): TrickPresentationPlan {
