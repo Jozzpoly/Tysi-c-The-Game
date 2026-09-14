@@ -71,10 +71,10 @@
   opacity: .34;
 }
 
-/* Accepted is a spatial state, not a button state. The exact same rectangle
- * gains weight; its geometry is never transformed, so feedback cannot move the
- * acceptance boundary under the pointer. */
-.app-shell:has(.tactile-hand[data-gesture-phase='accepted'] > .hand-slot.is-held.is-throwable) .trick::before {
+/* `commit-ready` is the carried object's direct presentation truth for accepted
+ * play. Driving the surface from that object avoids coupling the shared table
+ * feedback to the internal hand-slot hierarchy. */
+.app-shell:has(.tactile-card-float.commit-ready:not(.pending-handoff)) .trick::before {
   opacity: 1;
   border-color: #f0d77da3;
   background: radial-gradient(ellipse at center, #f0d77d25 0%, #d9bd5f12 48%, #d9bd5f00 76%);
@@ -84,14 +84,14 @@
     0 0 30px #d9bd5f22;
 }
 
-.app-shell:has(.tactile-hand[data-gesture-phase='accepted'] > .hand-slot.is-held.is-throwable) .trick::after {
+.app-shell:has(.tactile-card-float.commit-ready:not(.pending-handoff)) .trick::after {
   content: 'Puść kartę';
   color: #fff0b5;
   opacity: .88;
   translate: -50% -2px;
 }
 
-.app-shell:has(.tactile-hand[data-gesture-phase='accepted'] > .hand-slot.is-held.is-throwable) .trick > .muted {
+.app-shell:has(.tactile-card-float.commit-ready:not(.pending-handoff)) .trick > .muted {
   opacity: .28;
 }
 
