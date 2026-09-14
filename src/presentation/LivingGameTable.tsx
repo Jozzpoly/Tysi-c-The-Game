@@ -10,17 +10,26 @@ export function LivingGameTable({ events = [], ...props }: GameTableProps) {
   const view = props.projection.observation;
   const plan = useMemo(() => planTrickPresentation(events), [events]);
   const completedTrick = plan.kind === 'trick-completion' ? plan.completedTrick : null;
-  const [consequenceReady, setConsequenceReady] = useState(completedTrick === null);
+  const prefersReducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+  const [consequenceRevision, setConsequenceRevision] = useState<number | null>(null);
+  const [consequenceReady, setConsequenceReady] = useState(false);
   const [anchors, setAnchors] = useState<(HTMLElement | null)[]>([null, null, null]);
+
+  const displayedConsequenceReady = completedTrick === null
+    ? true
+    : prefersReducedMotion
+      ? true
+      : consequenceRevision === view.revision && consequenceReady;
 
   useEffect(() => {
     if (!completedTrick) {
-      setConsequenceReady(true);
+      setConsequenceRevision(null);
+      setConsequenceReady(false);
       return;
     }
 
-    const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
-    if (reducedMotion) {
+    setConsequenceRevision(view.revision);
+    if (prefersReducedMotion) {
       setConsequenceReady(true);
       return;
     }
@@ -28,7 +37,7 @@ export function LivingGameTable({ events = [], ...props }: GameTableProps) {
     setConsequenceReady(false);
     const timer = window.setTimeout(() => setConsequenceReady(true), TRICK_COMPLETION_TIMELINE.consequenceMs);
     return () => window.clearTimeout(timer);
-  }, [completedTrick, view.revision]);
+  }, [completedTrick, prefersReducedMotion, view.revision]);
 
   useLayoutEffect(() => {
     const next = ALL_SEATS.map((seat) => document.querySelector<HTMLElement>(`[data-seat-anchor="${seat}"]`));
@@ -38,7 +47,7 @@ export function LivingGameTable({ events = [], ...props }: GameTableProps) {
   const initiativeSeat = view.phase === 'trick'
     && view.trick.length === 0
     && view.trickLeader !== null
-    && (!completedTrick || consequenceReady)
+    && (!completedTrick || displayedConsequenceReady)
       ? view.trickLeader
       : null;
 
@@ -46,10 +55,10 @@ export function LivingGameTable({ events = [], ...props }: GameTableProps) {
     const anchor = anchors[seat];
     if (!anchor) return [];
 
-    const pendingCapture = completedTrick?.winner === seat && !consequenceReady;
+    const pendingCapture = completedTrick?.winner === seat && !displayedConsequenceReady;
     const tricks = Math.max(0, view.capturedTricks[seat] - (pendingCapture ? 1 : 0));
     const points = Math.max(0, view.capturedCardPoints[seat] - (pendingCapture ? completedTrick?.points ?? 0 : 0));
-    const updated = completedTrick?.winner === seat && consequenceReady;
+    const updated = completedTrick?.winner === seat && displayedConsequenceReady;
     const initiative = initiativeSeat === seat;
 
     return [createPortal(
@@ -60,13 +69,13 @@ export function LivingGameTable({ events = [], ...props }: GameTableProps) {
         data-captured-tricks={tricks}
         data-captured-points={points}
         data-next-initiative={initiative ? 'true' : 'false'}
-        key={seat}
       >
         <span className="capture-state-mark" aria-hidden="true">◆</span>
         <strong>{tricks}</strong>
         <span>{points} pkt</span>
       </span>,
       anchor,
+      String(seat),
     )];
   });
 
