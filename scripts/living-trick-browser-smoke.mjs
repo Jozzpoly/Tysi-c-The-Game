@@ -122,8 +122,7 @@ async function installLifecycleTrace(session) {
         fresh: node.classList.contains('is-fresh-arrival'),
         winner: node.classList.contains('is-trick-winner'),
       }));
-      const entry = {
-        t: performance.now(),
+      const semantic = {
         kind: trick.dataset.presentationKind ?? '',
         stage: trick.dataset.trickStage ?? '',
         freshPlay: trick.dataset.freshPlay ?? '',
@@ -134,10 +133,10 @@ async function installLifecycleTrace(session) {
         capture: document.querySelector('.capture-pulse')?.textContent?.trim() ?? '',
         enabledActions: document.querySelectorAll('.decision-card button:not(:disabled), .hand .card:not(:disabled)').length,
       };
-      const signature = JSON.stringify(entry);
+      const signature = JSON.stringify(semantic);
       if (signature !== lastSignature) {
         lastSignature = signature;
-        window.__livingTrickTrace.push(entry);
+        window.__livingTrickTrace.push({ t: performance.now(), ...semantic });
       }
     };
     const observer = new MutationObserver(sample);
@@ -210,12 +209,22 @@ async function runViewport(label, width, height, mobile) {
     if (consequence.enabledActions !== 0) throw new Error(`${label}: input active during consequence`);
     await screenshot(session, `${label}-living-trick-consequence`);
 
-    const settled = await waitFor(`${label}: settled`, () => stageState(session, 'settled'), 3_000);
+    // Settled is intentionally brief: the next actor may start shortly after the
+    // completion frame drains. Observe it in-page through MutationObserver rather
+    // than requiring a slower WebDriver round trip to land inside that window.
+    const settled = await waitFor(`${label}: settled trace`, async () => {
+      const entries = await trace(session);
+      return entries.find((entry) => entry.kind === 'trick-completion' && entry.stage === 'settled') ?? false;
+    }, 3_000);
     if (settled.played.length !== 0 || settled.result !== '' || settled.capture !== '') {
       throw new Error(`${label}: completed trick leaked after settle: ${JSON.stringify(settled)}`);
     }
-    if (settled.scrollWidth > settled.width + 1) throw new Error(`${label}: horizontal overflow after settle`);
-    await screenshot(session, `${label}-living-trick-settled`);
+
+    const layout = await execute(session, `return {
+      width: document.documentElement.clientWidth,
+      scrollWidth: document.documentElement.scrollWidth,
+    };`);
+    if (layout.scrollWidth > layout.width + 1) throw new Error(`${label}: horizontal overflow after settle`);
 
     const lifecycleTrace = await trace(session);
     const completionEntries = lifecycleTrace.filter((entry) => entry.kind === 'trick-completion');
