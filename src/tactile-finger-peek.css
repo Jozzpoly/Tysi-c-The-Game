@@ -1,0 +1,43 @@
+/*
+ * Level 3 — mobile finger visibility.
+ *
+ * This layer moves only the rendered floating card. Pointer coordinates remain
+ * untouched, so reorder geometry, throw intent, legality and authority continue
+ * to use the physical finger position.
+ */
+
+@media (pointer: coarse), (max-width: 620px) {
+  .tactile-card-float:not(.releasing) {
+    transform: translateY(-16px) rotate(var(--drag-tilt)) scale(1.055);
+  }
+
+  .tactile-card-float.throw-intent:not(.releasing) {
+    transform: translateY(-18px) rotate(var(--drag-tilt)) scale(1.07);
+  }
+
+  .tactile-card-float.commit-ready:not(.releasing) {
+    transform: translateY(-21px) rotate(var(--drag-tilt)) scale(1.1);
+  }
+
+  /* Commit release starts from the same peeked pose to avoid a visual snap. */
+  .tactile-card-float.releasing {
+    animation-name: tactile-card-release-peek;
+  }
+}
+
+@keyframes tactile-card-release-peek {
+  from {
+    opacity: .99;
+    transform: translateY(-21px) rotate(var(--drag-tilt)) scale(1.1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-93px) rotate(var(--drag-tilt)) scale(.87);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tactile-card-float.releasing {
+    animation: none !important;
+  }
+}
