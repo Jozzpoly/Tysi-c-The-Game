@@ -147,8 +147,10 @@ async function affordanceState(session, card) {
       surfaceOpacity: Number(surface.opacity),
       cueOpacity: Number(cue.opacity),
       cueContent: cue.content,
+      surfaceBorder: surface.borderColor,
       legacyDisplay: legacy ? getComputedStyle(legacy).display : 'missing',
       ghostReady: ghost.classList.contains('commit-ready'),
+      acceptedSelectorMatches: Boolean(document.querySelector('.app-shell:has(.tactile-card-float.commit-ready:not(.pending-handoff))')),
     };
   `);
 }
@@ -192,15 +194,23 @@ async function runViewport(label, width, height, mobile) {
 
     const inside = { x: playable.zone.x, y: playable.zone.y };
     await moveTouch(session, outside, inside);
-    const accepted = await waitFor(`${label}: accepted surface`, async () => {
+    const acceptedGesture = await waitFor(`${label}: accepted gesture`, async () => {
       const state = await affordanceState(session, playable.card);
-      return state?.phase === 'accepted' && state.ghostReady && state.surfaceOpacity > available.surfaceOpacity + .2
-        && state.cueOpacity > available.cueOpacity + .2
-        ? state
-        : false;
+      return state?.phase === 'accepted' && state.ghostReady ? state : false;
     }, 2_000);
-    if (!accepted.cueContent.toLowerCase().includes('puść')) {
-      throw new Error(`${label}: accepted surface has no release cue ${JSON.stringify(accepted)}`);
+
+    // Gesture truth and CSS feedback have different clocks. Let the browser finish
+    // the short visual transition, then assert the resulting computed surface.
+    await sleep(220);
+    const accepted = await affordanceState(session, playable.card);
+    if (!accepted
+      || accepted.phase !== 'accepted'
+      || !accepted.ghostReady
+      || !accepted.acceptedSelectorMatches
+      || accepted.surfaceOpacity < .75
+      || accepted.cueOpacity < .65
+      || !accepted.cueContent.toLowerCase().includes('puść')) {
+      throw new Error(`${label}: accepted visual surface disagrees with accepted gesture ${JSON.stringify({ acceptedGesture, accepted })}`);
     }
     await screenshot(session, `${label}-spatial-play-accepted`);
 
@@ -211,7 +221,7 @@ async function runViewport(label, width, height, mobile) {
         && !document.querySelector('.tactile-card-float[data-card-id="${playable.card}"]');
     `), 3_000);
 
-    return { label, card: playable.card, available, accepted };
+    return { label, card: playable.card, available, acceptedGesture, accepted };
   } finally {
     try { await webdriver(`/session/${session}`, { method: 'DELETE' }); } catch {}
   }
