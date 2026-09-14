@@ -1,0 +1,36 @@
+name: Clean Owner Preview
+
+on:
+  push:
+    branches:
+      - run-02-tactile-interaction-system-02
+    paths:
+      - 'static-preview/**'
+      - '.github/workflows/pages-owner-preview.yml'
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: tysiac-owner-pages-preview
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+      - name: Upload preview
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: static-preview
+      - name: Deploy clean preview
+        id: deployment
+        uses: actions/deploy-pages@v4
