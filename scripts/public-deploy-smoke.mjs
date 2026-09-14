@@ -188,9 +188,10 @@ async function clickLeading(session, text) {
 
 async function prepareFreshJoiner(session, room) {
   await waitPublicHome(session);
+  const storageKey = `tysiac:seat-token:${room}`;
   const clean = await execute(session, `
-    localStorage.removeItem(${JSON.stringify(`tysiac:seat-token:${'${ROOM}'}`)}.replace('${ROOM}', ${JSON.stringify(room)}));
-    return localStorage.getItem('tysiac:seat-token:' + ${JSON.stringify(room)}) === null;
+    localStorage.removeItem(${JSON.stringify(storageKey)});
+    return localStorage.getItem(${JSON.stringify(storageKey)}) === null;
   `);
   if (!clean) throw new Error('cannot establish clean public joiner storage');
 }
