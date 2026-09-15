@@ -135,6 +135,13 @@ Immediate deployment success cannot prove elapsed time.
 
 The same stable origin must therefore be rechecked after the initial deployment without redeploying it. `Stable Origin Recheck (NO REDEPLOY)` checks out the exact candidate SHA, asserts that the public origin still reports that SHA and `stable` deployment class, then re-runs public multiplayer and copied-invite evidence without publishing a replacement.
 
+The recheck has two equivalent request paths:
+
+1. manual `workflow_dispatch` with the exact canonical origin and candidate SHA;
+2. declarative repository request by creating/updating `.github/deploy/stable-recheck.json` on `main` with exactly the canonical `origin` and immutable `sha` to recheck.
+
+Both paths must resolve the same canonical root + exact SHA pair, verify checkout identity, and execute only read/probe behavior. The recheck workflow is forbidden from containing `wrangler deploy`, `cloudflare/wrangler-action`, `temporary-deploy.mjs`, or any other publication step. The declarative JSON exists only to make the later evidence point auditable and agent-triggerable without pretending that a new deployment is a persistence check.
+
 Until such a later recheck exists, report `account-owned non-temporary origin: PASS` but do not report `long-horizon availability: PASS`.
 
 ### F. Real-human friend gate
@@ -176,6 +183,8 @@ Stable deployment can be requested manually with `candidate_sha`, or declarative
 
 Changing `.github/deploy/stable-candidate.txt` is an operational publication request, not ordinary documentation churn. Repository history provides the audit trail of who requested which candidate.
 
+A later persistence check can similarly be requested through `.github/deploy/stable-recheck.json`, but that workflow must never publish or redeploy anything. Its purpose is specifically to prove that the already-existing canonical origin still serves the already-deployed exact SHA after elapsed time.
+
 Temporary preview remains manual because it requires explicit Cloudflare Terms/Privacy acceptance for each temporary deployment.
 
 The workflows are intentionally named so that GitHub Actions itself communicates the evidence boundary.
@@ -192,6 +201,7 @@ Allowed examples:
 - `public provenance for SHA X: PASS`
 - `actual copied invite behavior: PASS`
 - `short-window repeatability: PASS`
+- `same canonical origin/SHA later recheck: PASS`
 - `long-horizon availability: not yet proven`
 - `real-human friend test: FAIL / pending`
 
@@ -202,6 +212,7 @@ Forbidden promotion:
 - workflow-definition SHA -> candidate/game SHA;
 - branch selection -> exact deployed candidate identity;
 - versioned preview URL -> canonical friend origin;
+- fresh redeploy -> evidence that the old origin survived elapsed time;
 - automation PASS -> `real-human test passed`;
 - current reachability -> `will remain available` without the non-temporary mechanism and later recheck.
 
@@ -218,6 +229,8 @@ Forbidden promotion:
 - public provenance mismatch: wrong build/deployment-class failure;
 - public health/assets failure: routing/runtime/deployment defect;
 - copied invite malformed/leaking credentials: product/security defect;
+- malformed recheck JSON/origin/SHA: recheck request failure;
+- recheck workflow contains publication behavior: persistence-evidence contract failure;
 - second client cannot join: multiplayer product defect;
 - reconnect/sync failure: runtime defect;
 - stable origin later unreachable without intentional deletion/config change: operational availability defect;

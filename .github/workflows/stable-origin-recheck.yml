@@ -16,6 +16,10 @@ on:
         required: true
         type: boolean
         default: false
+  push:
+    branches: [main]
+    paths:
+      - .github/deploy/stable-recheck.json
 
 permissions:
   contents: read
@@ -26,18 +30,37 @@ concurrency:
 
 jobs:
   recheck:
-    if: ${{ inputs.confirm_no_redeploy }}
+    if: ${{ github.event_name == 'push' || inputs.confirm_no_redeploy }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
     steps:
-      - name: Validate canonical origin and exact candidate SHA
+      - name: Checkout recheck request source
+        uses: actions/checkout@v4
+
+      - name: Resolve canonical origin and exact candidate SHA
+        id: target
         env:
-          ORIGIN: ${{ inputs.origin }}
-          EXPECTED_SHA: ${{ inputs.expected_sha }}
+          MANUAL_ORIGIN: ${{ inputs.origin }}
+          MANUAL_SHA: ${{ inputs.expected_sha }}
         shell: bash
         run: |
           set -euo pipefail
+          if [[ "$GITHUB_EVENT_NAME" == "push" ]]; then
+            REQUEST_FILE=.github/deploy/stable-recheck.json
+            if [[ ! -f "$REQUEST_FILE" ]]; then
+              echo "::error::Declarative recheck trigger fired without $REQUEST_FILE"
+              exit 1
+            fi
+            ORIGIN="$(node -e "const fs=require('fs'); const v=JSON.parse(fs.readFileSync('$REQUEST_FILE','utf8')); process.stdout.write(String(v.origin ?? ''));")"
+            EXPECTED_SHA="$(node -e "const fs=require('fs'); const v=JSON.parse(fs.readFileSync('$REQUEST_FILE','utf8')); process.stdout.write(String(v.sha ?? ''));")"
+            TRIGGER_SOURCE="declarative-file"
+          else
+            ORIGIN="$MANUAL_ORIGIN"
+            EXPECTED_SHA="$MANUAL_SHA"
+            TRIGGER_SOURCE="workflow-dispatch"
+          fi
+
           if [[ ! "$ORIGIN" =~ ^https://tysiac-the-game\.[a-z0-9-]+\.workers\.dev/?$ ]]; then
             echo "::error::origin must be the canonical tysiac-the-game.<account>.workers.dev root produced by Stable Multiplayer Deploy"
             echo "::error::Versioned preview URLs, foreign hosts, paths, query strings and fragments are not valid long-horizon evidence targets."
@@ -48,14 +71,19 @@ jobs:
             exit 1
           fi
 
+          echo "origin=$ORIGIN" >> "$GITHUB_OUTPUT"
+          echo "sha=$EXPECTED_SHA" >> "$GITHUB_OUTPUT"
+          echo "source=$TRIGGER_SOURCE" >> "$GITHUB_OUTPUT"
+          echo "Resolved no-redeploy recheck: $ORIGIN @ $EXPECTED_SHA ($TRIGGER_SOURCE)"
+
       - name: Checkout the exact candidate harness
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.expected_sha }}
+          ref: ${{ steps.target.outputs.sha }}
 
       - name: Verify checkout identity
         env:
-          EXPECTED_SHA: ${{ inputs.expected_sha }}
+          EXPECTED_SHA: ${{ steps.target.outputs.sha }}
         shell: bash
         run: |
           set -euo pipefail
@@ -74,25 +102,26 @@ jobs:
 
       - name: Prove the same stable build is still serving
         env:
-          TYSIAC_PUBLIC_URL: ${{ inputs.origin }}
-          TYSIAC_EXPECTED_SHA: ${{ inputs.expected_sha }}
+          TYSIAC_PUBLIC_URL: ${{ steps.target.outputs.origin }}
+          TYSIAC_EXPECTED_SHA: ${{ steps.target.outputs.sha }}
           TYSIAC_EXPECTED_DEPLOY_CLASS: stable
         run: node scripts/public-provenance-smoke.mjs
 
       - name: Recheck public multiplayer behavior without redeploying
         env:
-          TYSIAC_PUBLIC_URL: ${{ inputs.origin }}
+          TYSIAC_PUBLIC_URL: ${{ steps.target.outputs.origin }}
         run: node scripts/public-deploy-smoke.mjs
 
       - name: Recheck the actual copied friend invite without redeploying
         env:
-          TYSIAC_PUBLIC_URL: ${{ inputs.origin }}
+          TYSIAC_PUBLIC_URL: ${{ steps.target.outputs.origin }}
         run: node scripts/public-share-link-smoke.mjs
 
       - name: Record long-horizon evidence point
         env:
-          ORIGIN: ${{ inputs.origin }}
-          EXPECTED_SHA: ${{ inputs.expected_sha }}
+          ORIGIN: ${{ steps.target.outputs.origin }}
+          EXPECTED_SHA: ${{ steps.target.outputs.sha }}
+          TRIGGER_SOURCE: ${{ steps.target.outputs.source }}
         shell: bash
         run: |
           set -euo pipefail
@@ -100,6 +129,7 @@ jobs:
           echo "### Stable origin recheck — no redeploy" >> "$GITHUB_STEP_SUMMARY"
           echo "Canonical origin: $ORIGIN" >> "$GITHUB_STEP_SUMMARY"
           echo "Expected/served SHA: $EXPECTED_SHA" >> "$GITHUB_STEP_SUMMARY"
+          echo "Trigger source: $TRIGGER_SOURCE" >> "$GITHUB_STEP_SUMMARY"
           echo "Checked at: $CHECKED_AT" >> "$GITHUB_STEP_SUMMARY"
           echo "**PASS:** the same canonical account-owned stable origin still served the exact candidate SHA, and public multiplayer + exact copied-invite behavior still worked without redeploying." >> "$GITHUB_STEP_SUMMARY"
           echo "This is elapsed-time evidence. It still does not replace the required real-human Owner+friend test." >> "$GITHUB_STEP_SUMMARY"
