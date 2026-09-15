@@ -1,65 +1,66 @@
 # Historical handoff — SUPERSEDED
 
 Date created: 2026-09-12
-Superseded: 2026-09-13
+Last authority correction: 2026-09-15
 
 > **Do not execute this file as the current handoff.**
 >
-> The fresh critical restart requested here was completed. The project now has a newer executable foundation and a different Run 02 evidence model.
+> It is retained only as project history. The project has since passed through Run 02, the Friend Preview campaign, Run 05 presentation work, and the 2026-09-15 friend-link incident/recovery.
 
-For current continuation, read in this order:
+For current continuation read, in this order:
 
-1. `docs/EXECUTION_STATE.md` — live implementation/evidence truth;
-2. `AGENTS.md` — current Owner/agent responsibilities and evidence rules;
-3. `docs/RUN_02.md` — current dual-track execution model;
-4. `docs/PROJECT.md` — durable product/architecture model.
+1. `docs/EXECUTION_STATE.md` — current live state and P0 priority;
+2. `docs/INCIDENT_2026-09-15_FRIEND_LINK.md` — open critical incident and acceptance gate;
+3. `docs/DEPLOYMENT.md` — public/stable/friend-link evidence authority;
+4. `AGENTS.md` — current Owner/agent, claim and critical-gate rules;
+5. `docs/PROJECT.md` — durable architecture/product model.
+
+`docs/RUN_02.md` is historical context. It must not be used as current execution authority.
 
 ## Historical purpose
 
-This handoff originally requested a broad restart rather than blindly continuing the first exploratory plan. Its important contribution was to force a fresh reconstruction of product intent, Tysiąc rule evidence, architecture and development sequence before substantial implementation.
-
-That restart produced the current Foundation/Run 02 project state. In particular, conclusions that survived include:
+This handoff originally requested a broad restart rather than blindly continuing the first exploratory plan. Useful surviving conclusions include:
 
 - desktop and mobile as equal product targets;
-- a deterministic pure TypeScript game core;
+- deterministic pure TypeScript game core;
 - server-authoritative hidden state;
-- a projection-driven human/bot boundary;
+- projection-driven human/bot boundary;
 - Cloudflare Worker + SQLite Durable Object as current-best online authority;
-- explicit candidate rule profiles instead of pretending one canonical Polish Tysiąc exists;
-- evidence labels that separate documentation, reference observation, project pins and executable implementation behavior.
+- explicit candidate rule profiles rather than a fake universal Polish canon;
+- separation between game-truth and Owner-led experience evidence.
 
-## Owner intent that still survives
+Those principles survived, but the current project state has evolved materially.
 
-- codename/project: **Tysiąc The Game**;
-- repository: `Jozzpoly/Tysi-c-The-Game`;
-- browser-first desktop/mobile product;
-- private multiplayer and first-class bots;
-- eventually support several real Tysiąc rule families without becoming a generic card-game framework;
-- the Owner is not the rules oracle;
-- the agent carries unusually large research/technical responsibility;
-- concise, navigable user-facing progress is preferred.
+## Important later corrections
 
-## Important later correction
+### Evidence now has three tracks
 
-The old handoff said broadly that Owner judgement remained authoritative for product value and feel. Run 02 has now made that boundary more precise:
+Run 02 established game truth and experience truth.
 
-- **Owner is primary oracle for experience truth** — visual hierarchy, interaction/touch feel, feedback, perceived pacing, responsive composition, onboarding and professional presentation;
-- **Owner is not an oracle for game truth** — rule identity, strategic bot quality or authentic Tysiąc gameplay;
-- those game-truth questions require sources/reference probes, executable evidence and knowledgeable-player/domain feedback.
+The friend-link incident demonstrated that operations/external truth must be first-class as well:
 
-Presentation and game-truth work now proceed in parallel rather than waiting for an Owner gameplay-validation gate.
+- deployment class;
+- exact public candidate SHA;
+- actual copied invite;
+- later no-redeploy availability;
+- real second-human use.
+
+No other evidence track may substitute for a blocking external failure.
+
+### Critical Owner gates are hard blockers
+
+If an explicit Owner requirement conflicts with available evidence, progression stops until the contradiction is resolved. Green adjacent tests cannot promote the state to PASS.
+
+### Temporary preview is not a friend candidate
+
+`wrangler deploy --temporary` is diagnostic infrastructure only. Stable friend testing requires the account-owned non-temporary deployment path plus the acceptance ladder in `docs/DEPLOYMENT.md`.
+
+### Candidate identity is immutable
+
+Stable deployment must be tied to one exact full Git SHA. Branch names and workflow-definition SHA are insufficient identity evidence.
 
 ## Historical instruction — fulfilled
 
-The original file asked the next conversation to:
+The original request to reread/research/rebuild the foundation was completed. Do not repeat that whole restart by default.
 
-- reread the repository critically;
-- redo domain research;
-- challenge the technical and rules architecture;
-- rebuild the evidence model;
-- revise repository truth;
-- then begin a serious implementation run.
-
-That instruction is complete and must **not** be repeated by default.
-
-Future conversations should recover the current live state and continue from it unless new evidence gives a concrete reason for another bounded re-audit.
+Current work is a bounded incident-driven recovery plus Run 05 continuation. Recover current authority, inspect current evidence and continue from there.

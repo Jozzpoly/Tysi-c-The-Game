@@ -1,0 +1,112 @@
+name: Stable Origin Recheck (NO REDEPLOY)
+
+on:
+  workflow_dispatch:
+    inputs:
+      origin:
+        description: "Exact canonical stable workers.dev origin produced by Stable Multiplayer Deploy"
+        required: true
+        type: string
+      expected_sha:
+        description: "Exact 40-character SHA that must still be serving on that origin"
+        required: true
+        type: string
+      confirm_no_redeploy:
+        description: "Recheck the existing origin without deploying anything"
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tysiac-stable-origin-recheck
+  cancel-in-progress: false
+
+jobs:
+  recheck:
+    if: ${{ inputs.confirm_no_redeploy }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Validate canonical origin and exact candidate SHA
+        env:
+          ORIGIN: ${{ inputs.origin }}
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ ! "$ORIGIN" =~ ^https://tysiac-the-game\.[a-z0-9-]+\.workers\.dev/?$ ]]; then
+            echo "::error::origin must be the canonical tysiac-the-game.<account>.workers.dev root produced by Stable Multiplayer Deploy"
+            echo "::error::Versioned preview URLs, foreign hosts, paths, query strings and fragments are not valid long-horizon evidence targets."
+            exit 1
+          fi
+          if [[ ! "$EXPECTED_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error::expected_sha must be a full 40-character lowercase git SHA"
+            exit 1
+          fi
+
+      - name: Checkout the exact candidate harness
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.expected_sha }}
+
+      - name: Verify checkout identity
+        env:
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          ACTUAL_SHA="$(git rev-parse HEAD)"
+          if [[ "$ACTUAL_SHA" != "$EXPECTED_SHA" ]]; then
+            echo "::error::Checked out $ACTUAL_SHA but expected_sha is $EXPECTED_SHA"
+            exit 1
+          fi
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci --no-audit --no-fund
+
+      - name: Prove the same stable build is still serving
+        env:
+          TYSIAC_PUBLIC_URL: ${{ inputs.origin }}
+          TYSIAC_EXPECTED_SHA: ${{ inputs.expected_sha }}
+          TYSIAC_EXPECTED_DEPLOY_CLASS: stable
+        run: node scripts/public-provenance-smoke.mjs
+
+      - name: Recheck public multiplayer behavior without redeploying
+        env:
+          TYSIAC_PUBLIC_URL: ${{ inputs.origin }}
+        run: node scripts/public-deploy-smoke.mjs
+
+      - name: Recheck the actual copied friend invite without redeploying
+        env:
+          TYSIAC_PUBLIC_URL: ${{ inputs.origin }}
+        run: node scripts/public-share-link-smoke.mjs
+
+      - name: Record long-horizon evidence point
+        env:
+          ORIGIN: ${{ inputs.origin }}
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          CHECKED_AT="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+          echo "### Stable origin recheck — no redeploy" >> "$GITHUB_STEP_SUMMARY"
+          echo "Canonical origin: $ORIGIN" >> "$GITHUB_STEP_SUMMARY"
+          echo "Expected/served SHA: $EXPECTED_SHA" >> "$GITHUB_STEP_SUMMARY"
+          echo "Checked at: $CHECKED_AT" >> "$GITHUB_STEP_SUMMARY"
+          echo "**PASS:** the same canonical account-owned stable origin still served the exact candidate SHA, and public multiplayer + exact copied-invite behavior still worked without redeploying." >> "$GITHUB_STEP_SUMMARY"
+          echo "This is elapsed-time evidence. It still does not replace the required real-human Owner+friend test." >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: stable-origin-recheck-${{ github.run_id }}
+          path: artifacts/browser/public-*.png
+          if-no-files-found: ignore

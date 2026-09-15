@@ -1,145 +1,224 @@
-# Foundation public deployment
+# Deployment authority — multiplayer and friend-link contract
 
-This document describes the current Cloudflare deployment boundary for Tysiąc The Game.
+Date: 2026-09-15
+Status: **P0 authority**
 
-The repository is proven locally through core, workerd, desktop/mobile Chrome, remote room/reconnect Chrome, production build and Wrangler dry-run. A public deployment is a separate evidence class and must not be inferred from those local results.
+This document defines what each public deployment proves and what may be presented to the Owner or a friend.
 
-## Target
+The 2026-09-15 friend-link incident showed that correct technical facts existed in the repository but were not treated as blocking authority. A functional temporary preview and a durable friend surface are different products and different evidence classes.
 
-- Worker name: `tysiac-the-game`
-- public route: `workers.dev`
-- authoritative room storage: SQLite-backed `MatchRoom` Durable Object
-- permanent deployment workflow: `.github/workflows/deploy-foundation.yml`
-- temporary preview workflow: `.github/workflows/temporary-foundation.yml`
-- both triggers: **manual only** (`workflow_dispatch`)
+## Current P0 truth
 
-Normal pushes and pull requests do not deploy.
+The friend-test stage is **FAIL / NOT COMPLETE** until an account-owned non-temporary origin is deployed and the real-human Owner+friend gate passes.
 
-## Preferred bounded evidence: temporary preview
+A temporary URL must never be described as `stable`, `persistent`, `friend-ready`, `safe to keep`, or equivalent merely because it works now.
 
-Cloudflare Wrangler 4.102+ supports unauthenticated `wrangler deploy --temporary`. Temporary accounts support the Foundation stack used here, including Workers Static Assets and Durable Objects.
+## Deployment classes
 
-The temporary workflow intentionally avoids permanent account credentials and is useful for bounded public-runtime and Owner-preview checks.
+### 1. Temporary Preview — bounded diagnostics only
 
-In GitHub:
+Workflow: `.github/workflows/temporary-foundation.yml`
 
-1. Open **Actions**.
-2. Open **Temporary Foundation Preview**.
-3. Choose **Run workflow** on `main`.
-4. Explicitly enable both checkboxes:
-   - acceptance of Cloudflare Terms of Service and Privacy Policy for this temporary deployment;
-   - confirmation that an unclaimed public `workers.dev` preview should be created.
-5. Run it.
+Visible name: `Temporary Preview (EXPIRES — DO NOT SHARE)`
 
-Those confirmations are deliberately not inferred by automation.
+Mechanism: `scripts/temporary-deploy.mjs` -> `wrangler deploy --temporary`
 
-The workflow:
+Properties:
 
-1. installs the locked dependency graph;
-2. runs the complete `npm run check` Foundation gate;
-3. executes `scripts/temporary-deploy.mjs`;
-4. deploys with `wrangler deploy --temporary` without permanent Cloudflare credentials;
-5. exposes only the public `workers.dev` URL to later steps;
-6. runs `scripts/public-deploy-smoke.mjs` against that URL;
-7. uploads public desktop/mobile screenshots.
+- unauthenticated temporary Cloudflare account;
+- intentionally unclaimed;
+- expected to expire automatically;
+- useful for bounded public-runtime verification;
+- **not acceptable as the Owner/friend candidate origin**;
+- **not persistence evidence**.
 
-`temporary-deploy.mjs` captures Wrangler output rather than streaming it. The Cloudflare claim URL is treated as a bearer credential and is redacted rather than printed or stored as a CI artifact. The preview is intentionally left unclaimed and should expire automatically with the temporary account.
+A green temporary workflow means only that the exact runtime behavior exercised by its smoke tests worked during that run. It must never be promoted into a statement about future availability.
 
-A successful temporary upload without successful public browser verification is **not** a public-runtime PASS.
+### 2. Stable Multiplayer Deploy — candidate friend origin
 
-## Temporary-preview freshness contract
+Workflow: `.github/workflows/deploy-foundation.yml`
 
-A historical successful preview run proves that the public boundary worked **at that time**. It does not prove the unclaimed URL still exists later.
+Visible name: `Stable Multiplayer Deploy`
 
-Therefore:
+Mechanism:
 
-- never present an old temporary URL as the current playable build merely because its workflow run is green;
-- before giving a temporary preview to the Owner, prefer a freshly created run for the intended `main` SHA;
-- if reusing an existing URL, verify that it is still reachable immediately before presenting it;
-- record which commit SHA the preview actually represents;
-- if the current `main` has meaningful presentation/runtime changes after the preview SHA, create a new preview rather than silently asking the Owner to test the stale build.
+- the workflow definition lives on the default branch so it can be manually dispatched reliably;
+- the operator supplies one **exact candidate SHA** (`candidate_sha`), not merely a branch name;
+- the workflow validates that SHA, checks out exactly that commit and verifies `git rev-parse HEAD` matches it before testing or publishing;
+- authenticated Cloudflare account;
+- repository secrets `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN`;
+- normal `wrangler deploy`, never `--temporary`;
+- public provenance is stamped with the supplied candidate SHA and deployment class `stable`;
+- Worker name `tysiac-the-game` from `wrangler.jsonc`;
+- `workers_dev: true` unless a deliberate custom-domain migration replaces it;
+- SQLite-backed `MATCH_ROOM` Durable Object remains the authoritative room backend.
 
-A dead expired preview is expected lifecycle for this deployment mode, not a game outage. Repeated Owner/friend testing is evidence that a durable public deployment may now be worth the operational setup.
+For the current P0 recovery, the accepted friend origin is specifically the canonical root:
 
-## Permanent deployment
+`https://tysiac-the-game.<account-subdomain>.workers.dev`
 
-Use this after temporary public evidence succeeds and repeated sessions justify a stable target, or directly if the Owner prefers a permanent target.
+The stable workflow rejects versioned preview URLs, foreign hosts, extra paths, query strings and fragments as the candidate origin. A future custom-domain migration must be a deliberate change to this contract rather than an accidental side effect of deployment output.
 
-### One-time Owner setup
+This distinction matters: the SHA of the workflow definition and the SHA of the game candidate can be different. Readiness evidence attaches to `candidate_sha`, not to whichever branch/ref happened to be selected in the GitHub UI.
 
-Do not paste Cloudflare credentials into chat or commit them to this repository.
+## Stable-deploy evidence ladder
 
-1. In the target Cloudflare account, make sure a `workers.dev` account subdomain is configured.
-2. Create a Cloudflare API token for Workers deployment, scoped as narrowly as practical to the target account.
-3. In this GitHub repository, add these Actions repository secrets:
-   - `CLOUDFLARE_ACCOUNT_ID`
-   - `CLOUDFLARE_API_TOKEN`
+A single word such as `verified` is not sufficient. Evidence must be reported by property.
 
-The API token is a deployment capability. It belongs in GitHub Secrets, not in `wrangler.jsonc`, source files, issues, logs or chat.
+### A. Candidate identity + deployment mechanism
 
-### Deploy
+PASS only when all are true:
 
-In GitHub:
+1. `candidate_sha` is a full immutable 40-character Git SHA;
+2. checkout HEAD equals that exact candidate SHA;
+3. Cloudflare account credentials are present in GitHub Secrets;
+4. the workflow uses normal authenticated `wrangler deploy`;
+5. `wrangler deployments list` succeeds against the owned account after deployment;
+6. the returned deployment target is the canonical `https://tysiac-the-game.<account-subdomain>.workers.dev` root;
+7. the stable workflow contains no `--temporary` path.
 
-1. Open **Actions**.
-2. Open **Deploy Foundation**.
-3. Choose **Run workflow** on `main`.
-4. Enable the explicit publish confirmation.
-5. Run it.
+This proves which exact commit was published and that it used the account-owned non-temporary mechanism at the intended canonical origin. It does not by itself prove gameplay, copied-link correctness, long-horizon availability or human usability.
 
-The workflow is intentionally ordered as a transaction-like evidence gate:
+### B. Immediate public runtime
 
-1. install dependencies;
-2. verify both Cloudflare secrets exist;
-3. run the complete `npm run check` Foundation gate;
-4. deploy through Cloudflare's Wrangler Action using the pinned Wrangler version;
-5. require a public deployment URL;
-6. run `scripts/public-deploy-smoke.mjs` against that real URL;
-7. upload public desktop/mobile screenshots.
+PASS only when `scripts/public-deploy-smoke.mjs` proves against the deployed public HTTPS origin:
 
-## Public verification contract
+- Worker health;
+- built SPA assets;
+- real duo room creation;
+- independent desktop/mobile clients;
+- private/disjoint human hands;
+- distinct private reconnect credentials;
+- command synchronization through the public WebSocket path;
+- refresh/reconnect recovery;
+- viewport/overflow safety;
+- no seat-token leakage in normal URL/UI.
 
-Both deployment paths use the same post-deploy smoke. Real headless Chrome sessions against the public HTTPS URL must prove:
+The stable workflow repeats this smoke after a short delay. That is repeatability evidence, not a substitute for long-horizon persistence.
 
-- Worker health endpoint is reachable;
-- desktop browser creates a real duo room;
-- mobile 390×844 browser opens the room share URL and initially owns no seat credential;
-- joining issues a distinct private credential;
-- both human hands are private/disjoint;
-- one legal auction command crosses the public WebSocket path and both clients converge on the same revision;
-- refresh restores the same room/credential and a non-stale projection;
-- mobile page/hand do not horizontally overflow;
-- reconnect tokens do not appear in ordinary URLs or rendered UI.
+### C. Exact copied friend invite
 
-Only after this passes may that exact deployed build's public MatchRoom/browser boundary be marked proven.
+PASS only when `scripts/public-share-link-smoke.mjs` uses the real `Kopiuj link dla znajomego` control and proves that the exact URL produced by the UI:
 
-## Failure handling
+- is HTTPS;
+- remains on the stable deployment origin;
+- contains only the room identifier;
+- contains no reconnect/seat credential;
+- contains no inherited fragment or unrelated query state;
+- opens in a clean second browser;
+- allows that second browser to join the same room and receive a distinct private seat credential.
 
-Do not weaken local gates or public smoke to make a deployment green.
+The smoke deliberately starts the host from a URL containing an unrelated fragment so the no-fragment property is actually falsifiable.
 
-Classify failures first:
+Constructing a `?room=...` URL inside the test harness is not sufficient evidence for this property.
 
-- expired historical temporary URL: expected temporary-preview lifecycle;
-- temporary provisioning rejected/rate-limited: Cloudflare temporary-account boundary, not a game defect;
-- missing permanent secrets / invalid token / wrong account: authorization setup;
-- missing permanent `workers.dev` subdomain: one-time Cloudflare account setup;
-- Wrangler upload/migration failure: deployment/configuration defect;
-- public health failure after upload: routing/runtime/deployment propagation defect;
-- browser create/join/reconnect failure: product/runtime defect;
-- screenshot/layout failure: public presentation regression.
+### D. Public provenance
 
-The public smoke retries health for a bounded period rather than treating the first request as authoritative.
+PASS only when `/api/match` reports:
 
-## What this does not prove
+- `buildSha` equal to the exact candidate SHA supplied to the stable deployment;
+- `deployClass: stable`.
 
-Even a green public deploy does not prove:
+This prevents a correct-looking hostname from being mistaken for evidence that the intended build is actually serving.
 
-- that an unclaimed temporary URL will still exist later;
-- long-duration production soak;
-- arbitrary mobile suspension/resume conditions;
-- all WAN/network transitions;
-- gameplay quality with real humans;
-- exact PlayOK rule identity;
-- subjective visual/interaction quality.
+### E. Long-horizon availability
 
-Those require their own evidence sources.
+Immediate deployment success cannot prove elapsed time.
+
+The same stable origin must therefore be rechecked after the initial deployment without redeploying it. `Stable Origin Recheck (NO REDEPLOY)` checks out the exact candidate SHA, asserts that the public origin still reports that SHA and `stable` deployment class, then re-runs public multiplayer and copied-invite evidence without publishing a replacement.
+
+Until such a later recheck exists, report `account-owned non-temporary origin: PASS` but do not report `long-horizon availability: PASS`.
+
+### F. Real-human friend gate
+
+Automation is necessary but cannot complete the project milestone.
+
+The stage remains FAIL until:
+
+1. the Owner opens the stable origin;
+2. creates a real duo room;
+3. uses the real in-game copy-link action;
+4. sends that exact invite to the friend;
+5. the friend opens it in their own real browser/device context;
+6. joins the same room;
+7. both players exchange real game actions successfully;
+8. reconnect/refresh is acceptable in actual use;
+9. the Owner reports that the real-human test succeeded.
+
+Only then may the friend-link milestone be marked PASS.
+
+## One-time Cloudflare setup
+
+Secrets must never be pasted into chat, committed to source, written to issues, or printed into logs.
+
+Required GitHub Actions repository secrets:
+
+- `CLOUDFLARE_ACCOUNT_ID`
+- `CLOUDFLARE_API_TOKEN`
+
+The API token should be scoped as narrowly as practical for Workers deployment to the intended account.
+
+The account must have a `workers.dev` account subdomain configured unless the project deliberately moves to a custom domain.
+
+## Workflow rules
+
+Normal pushes and pull requests do not publish a stable deployment.
+
+Stable deployment is manual because publishing a real account-owned public runtime is an operational action. The operator must paste the exact candidate SHA to be deployed; selecting or remembering a branch is not the evidence boundary.
+
+Temporary preview is also manual because it requires explicit Cloudflare Terms/Privacy acceptance for each temporary deployment.
+
+The workflows are intentionally named so that GitHub Actions itself communicates the evidence boundary.
+
+## Claim language
+
+Allowed examples:
+
+- `Foundation CI: PASS`
+- `temporary public runtime during run X: PASS`
+- `exact candidate SHA checkout: PASS`
+- `account-owned non-temporary deploy mechanism: PASS`
+- `canonical workers.dev origin: PASS`
+- `public provenance for SHA X: PASS`
+- `actual copied invite behavior: PASS`
+- `short-window repeatability: PASS`
+- `long-horizon availability: not yet proven`
+- `real-human friend test: FAIL / pending`
+
+Forbidden promotion:
+
+- temporary runtime PASS -> `stable link`;
+- normal deploy PASS -> `friend-ready` without public runtime evidence;
+- workflow-definition SHA -> candidate/game SHA;
+- branch selection -> exact deployed candidate identity;
+- versioned preview URL -> canonical friend origin;
+- automation PASS -> `real-human test passed`;
+- current reachability -> `will remain available` without the non-temporary mechanism and later recheck.
+
+## Failure classification
+
+- expired temporary URL: expected temporary lifecycle;
+- temporary provisioning failure: temporary Cloudflare boundary;
+- malformed or missing `candidate_sha`: candidate identity blocker;
+- checkout SHA mismatch: candidate identity failure;
+- missing stable secrets: deployment setup blocker;
+- stable authenticated deploy failure: deployment/configuration defect;
+- owned deployment not listed after upload: stable-mechanism failure;
+- unexpected/versioned deployment target: canonical-origin failure;
+- public provenance mismatch: wrong build/deployment-class failure;
+- public health/assets failure: routing/runtime/deployment defect;
+- copied invite malformed/leaking credentials: product/security defect;
+- second client cannot join: multiplayer product defect;
+- reconnect/sync failure: runtime defect;
+- stable origin later unreachable without intentional deletion/config change: operational availability defect;
+- real friend cannot use an automation-green build: friend gate remains FAIL and must be investigated before any readiness claim.
+
+## External references
+
+Cloudflare Workers command reference: `https://developers.cloudflare.com/workers/wrangler/commands/workers/`
+
+Cloudflare temporary/claim deployment model: `https://developers.cloudflare.com/workers/platform/claim-deployments/`
+
+Cloudflare `workers.dev` routing model: `https://developers.cloudflare.com/workers/configuration/routing/workers-dev/`
+
+These provider docs explain provider semantics. Repository workflows and executable public tests remain the project-specific evidence of how Tysiac actually uses them.
