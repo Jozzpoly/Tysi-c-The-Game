@@ -25,7 +25,7 @@ jobs:
   preview:
     if: ${{ inputs.accept_cloudflare_terms && inputs.confirm_public_preview }}
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 35
 
     steps:
       - uses: actions/checkout@v4
@@ -44,12 +44,17 @@ jobs:
         id: temporary
         run: node scripts/temporary-deploy.mjs
 
-      - name: Verify public desktop/mobile MatchRoom behavior
+      - name: Verify bounded public desktop/mobile MatchRoom behavior
         env:
           TYSIAC_PUBLIC_URL: ${{ steps.temporary.outputs.deployment_url }}
         run: node scripts/public-deploy-smoke.mjs
 
-      - name: Record verified temporary preview
+      - name: Verify copied invite behavior on this temporary runtime
+        env:
+          TYSIAC_PUBLIC_URL: ${{ steps.temporary.outputs.deployment_url }}
+        run: node scripts/public-share-link-smoke.mjs
+
+      - name: Record exact temporary evidence boundary
         env:
           PUBLIC_URL: ${{ steps.temporary.outputs.deployment_url }}
         shell: bash
@@ -60,15 +65,15 @@ jobs:
             exit 1
           fi
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "**PASS:** public health, duo desktop↔mobile command sync, hidden-hand separation, and refresh/reconnect." >> "$GITHUB_STEP_SUMMARY"
+          echo "**PASS — bounded runtime only:** public health, duo desktop↔mobile sync, hidden-hand separation, reconnect, and copied-invite behavior worked during this run." >> "$GITHUB_STEP_SUMMARY"
           echo "Verified TEMPORARY URL: $PUBLIC_URL" >> "$GITHUB_STEP_SUMMARY"
-          echo "⚠️ This URL is intentionally unclaimed and should expire automatically." >> "$GITHUB_STEP_SUMMARY"
-          echo "⚠️ DO NOT send this URL to a friend as a durable/shareable multiplayer link." >> "$GITHUB_STEP_SUMMARY"
-          echo "Use the Stable Multiplayer Deploy workflow for friend/Owner links that must remain available." >> "$GITHUB_STEP_SUMMARY"
+          echo "**FAIL as persistence evidence:** this URL is intentionally unclaimed and should expire automatically." >> "$GITHUB_STEP_SUMMARY"
+          echo "**DO NOT SHARE AS THE FRIEND CANDIDATE:** a green temporary run cannot satisfy the stable-link gate." >> "$GITHUB_STEP_SUMMARY"
+          echo "Use Stable Multiplayer Deploy for the account-owned candidate origin." >> "$GITHUB_STEP_SUMMARY"
 
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: temporary-public-smoke-${{ github.run_id }}
-          path: artifacts/browser/public-deploy-*.png
+          name: temporary-public-evidence-${{ github.run_id }}
+          path: artifacts/browser/public-*.png
           if-no-files-found: ignore
