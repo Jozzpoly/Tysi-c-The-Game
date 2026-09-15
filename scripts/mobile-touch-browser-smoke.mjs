@@ -111,6 +111,29 @@ async function touchAt(session, x, y) {
   await cdp(session, 'Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
 }
 
+async function dragTouch(session, from, to, steps = 8) {
+  await cdp(session, 'Input.dispatchTouchEvent', {
+    type: 'touchStart',
+    touchPoints: [{ x: from.x, y: from.y, radiusX: 7, radiusY: 7, force: 1 }],
+  });
+  await sleep(32);
+  for (let step = 1; step <= steps; step += 1) {
+    const ratio = step / steps;
+    await cdp(session, 'Input.dispatchTouchEvent', {
+      type: 'touchMove',
+      touchPoints: [{
+        x: from.x + (to.x - from.x) * ratio,
+        y: from.y + (to.y - from.y) * ratio,
+        radiusX: 7,
+        radiusY: 7,
+        force: 1,
+      }],
+    });
+    await sleep(20);
+  }
+  await cdp(session, 'Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+}
+
 async function uiState(session) {
   return execute(session, `
     const revisionText = [...document.querySelectorAll('.footer span')]
@@ -262,6 +285,38 @@ async function cardGeometry(session) {
   `);
 }
 
+async function exchangeDragGeometry(session, targetIndex) {
+  return execute(session, `
+    const sourceSlot = [...document.querySelectorAll('.hand .hand-slot')]
+      .find((slot) => !slot.classList.contains('is-exchange-staged'));
+    const sourceCard = sourceSlot?.querySelector(':scope > .card');
+    const targets = [...document.querySelectorAll('[data-exchange-target-seat]')];
+    const target = targets[${targetIndex}];
+    if (!sourceSlot || !sourceCard || !target) return null;
+    const sourceRect = sourceCard.getBoundingClientRect();
+    const targetRect = target.getBoundingClientRect();
+    const targetX = targetRect.left + targetRect.width / 2;
+    const targetY = targetRect.top + targetRect.height / 2;
+    return {
+      card: sourceSlot.getAttribute('data-card'),
+      seat: target.getAttribute('data-exchange-target-seat'),
+      from: { x: sourceRect.left + sourceRect.width / 2, y: sourceRect.top + sourceRect.height / 2 },
+      to: { x: targetX, y: targetY },
+      targetWidth: targetRect.width,
+      targetHeight: targetRect.height,
+      targetWithinViewport: targetX >= 0 && targetX <= innerWidth && targetY >= 0 && targetY <= innerHeight,
+    };
+  `);
+}
+
+async function dragNextExchangeCard(session, targetIndex) {
+  const geometry = await exchangeDragGeometry(session, targetIndex);
+  if (!geometry) throw new Error(`physical exchange geometry unavailable for target ${targetIndex}`);
+  if (!geometry.targetWithinViewport) throw new Error(`exchange target outside mobile viewport: ${JSON.stringify(geometry)}`);
+  await dragTouch(session, geometry.from, geometry.to);
+  return geometry;
+}
+
 function minimumCenterSpacing(cards) {
   let minimum = Infinity;
   for (let i = 0; i < cards.length; i += 1) {
@@ -271,10 +326,6 @@ function minimumCenterSpacing(cards) {
     }
   }
   return Number.isFinite(minimum) ? minimum : null;
-}
-
-async function selectedCount(session) {
-  return execute(session, `return document.querySelectorAll('.hand .card.selected').length;`);
 }
 
 async function run() {
@@ -295,16 +346,24 @@ async function run() {
       if (card.touchAction !== 'manipulation') throw new Error(`exchange card touch-action ${JSON.stringify(card)}`);
     }
 
-    await touchAt(session, exchangeCards[0].x, exchangeCards[0].y);
-    await waitFor('first exchange card selected', async () => (await selectedCount(session)) === 1);
-    await touchAt(session, exchangeCards.at(-1).x, exchangeCards.at(-1).y);
-    await waitFor('second exchange card selected', async () => (await selectedCount(session)) === 2);
+    const beforeExchange = (await uiState(session)).revision;
+    const firstDrop = await dragNextExchangeCard(session, 0);
+    const firstAssignment = await waitFor('first physical exchange assignment', () => execute(session, `
+      const slot = document.querySelector('.hand-slot.is-exchange-staged');
+      return slot ? {
+        card: slot.getAttribute('data-card'),
+        recipient: slot.getAttribute('data-exchange-recipient'),
+      } : false;
+    `), 1_500);
+    if (firstAssignment.card !== firstDrop.card || firstAssignment.recipient !== firstDrop.seat) {
+      throw new Error(`first physical exchange assignment mismatch ${JSON.stringify({ firstDrop, firstAssignment })}`);
+    }
+
+    const secondDrop = await dragNextExchangeCard(session, 1);
     const selectionAfterCards = await execute(session, `return window.getSelection()?.toString() ?? '';`);
     if (selectionAfterCards) throw new Error(`touch selected text during exchange: ${JSON.stringify(selectionAfterCards)}`);
 
-    const beforeExchange = (await uiState(session)).revision;
-    await touchButton(session, 'Potwierdź wymianę');
-    await waitForRevisionAdvance(session, beforeExchange, 'exchange confirm accepted');
+    await waitForRevisionAdvance(session, beforeExchange, 'physical exchange accepted');
     await waitFor('contract decision', async () => (await uiState(session)).heading === 'Ile ostatecznie grasz?');
     assertTouchControls('contract', await enabledControlGeometry(session));
 
@@ -330,6 +389,8 @@ async function run() {
       minCardHeight: Math.min(...exchangeCards.map((card) => card.height)),
       minSameRowCenterSpacing: minimumCenterSpacing(exchangeCards),
       exchangeCentersHitCorrectCard: exchangeCards.every((card) => card.centerHitsSelf),
+      firstDrop,
+      secondDrop,
       contractValue: contractTouch.target.value,
     };
   } finally {
