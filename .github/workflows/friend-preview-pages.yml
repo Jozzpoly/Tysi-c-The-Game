@@ -1,5 +1,8 @@
-name: Friend Preview Pages
+name: Legacy Static Preview (SOLO ONLY)
 
+# This workflow publishes only the static client. It does NOT deploy the
+# Cloudflare Worker/Durable Object backend and therefore is NOT a multiplayer
+# friend-link path. Keep it only as historical/static-preview infrastructure.
 on:
   push:
     branches:
@@ -11,7 +14,7 @@ permissions:
   id-token: write
 
 concurrency:
-  group: tysiac-friend-preview-pages
+  group: tysiac-legacy-static-preview-pages
   cancel-in-progress: true
 
 jobs:
@@ -24,7 +27,7 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci --no-audit --no-fund
-      - name: Build static client
+      - name: Build static client only (no multiplayer backend)
         run: |
           npm run typegen
           npx tsc -p tsconfig.app.json
@@ -46,6 +49,6 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
-      - name: Deploy friend preview
+      - name: Deploy legacy static preview (SOLO ONLY)
         id: deployment
         uses: actions/deploy-pages@v4
