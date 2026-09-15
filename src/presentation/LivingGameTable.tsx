@@ -32,10 +32,10 @@ export function LivingGameTable({ events = [], ...props }: GameTableProps) {
   const [completedExchangeTransferKey, setCompletedExchangeTransferKey] = useState<string | null>(null);
   const [pendingExchangeMaterial, setPendingExchangeMaterial] = useState<PendingExchangeMaterial | null>(null);
 
-  const handStartedEvent = useMemo(() => {
+  const dealEvent = useMemo(() => {
     for (let index = events.length - 1; index >= 0; index -= 1) {
       const event = events[index];
-      if (event.type === 'hand-started') return event;
+      if (event.type === 'hand-started' || event.type === 'four-nines-redeal') return event;
     }
     return null;
   }, [events]);
@@ -61,13 +61,13 @@ export function LivingGameTable({ events = [], ...props }: GameTableProps) {
     return null;
   }, [events, view.seat]);
 
-  const dealTransferKey = handStartedEvent
-    ? `${view.handNumber}:${view.revision}:${handStartedEvent.dealer}`
+  const dealTransferKey = dealEvent
+    ? `${dealEvent.type}:${view.handNumber}:${view.revision}:${dealEvent.dealer}`
     : null;
   const dealTransferActive = Boolean(
     dealTransferKey
-    && handStartedEvent
-    && handStartedEvent.handNumber === view.handNumber
+    && dealEvent
+    && dealEvent.handNumber === view.handNumber
     && view.phase === 'auction'
     && !prefersReducedMotion
     && completedDealTransferKey !== dealTransferKey,
@@ -287,11 +287,12 @@ export function LivingGameTable({ events = [], ...props }: GameTableProps) {
     'scene-feedback',
   ) : null;
 
-  const dealMaterialState = centerAnchor && handStartedEvent
+  const dealMaterialState = centerAnchor && dealEvent
     ? createPortal(
       <span
         className={`material-deal-state ${dealTransferActive ? 'is-active' : dealMaterialSettled ? 'is-settled' : ''}`}
         data-deal-material-state={dealTransferActive ? 'active' : dealMaterialSettled ? 'settled' : 'idle'}
+        data-deal-material-event={dealEvent.type}
         aria-hidden="true"
       />,
       centerAnchor,
@@ -326,10 +327,10 @@ export function LivingGameTable({ events = [], ...props }: GameTableProps) {
   return (
     <>
       <GameTable {...props} projection={tableProjection} events={events} onCommand={handleCommand} />
-      {dealTransferActive && handStartedEvent && (
+      {dealTransferActive && dealEvent && (
         <MaterialDeal
           ownCards={view.ownHand}
-          dealer={handStartedEvent.dealer}
+          dealer={dealEvent.dealer}
           humanSeat={view.seat}
           onComplete={completeDealTransfer}
         />

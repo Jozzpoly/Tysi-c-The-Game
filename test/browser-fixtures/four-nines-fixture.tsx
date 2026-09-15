@@ -11,12 +11,14 @@ import {
   projectSeat,
   sortHand,
   type Command,
+  type GameEvent,
   type MatchState,
   type Seat,
 } from '../../src/core/index.js';
 import { describeFeedback } from '../../src/presentation/feedback.js';
-import { GameTable } from '../../src/presentation/GameTable.js';
+import { LivingGameTable } from '../../src/presentation/LivingGameTable.js';
 import '../../src/styles.css';
+import '../../src/run05-deal.css';
 
 function buildFixtureState(): MatchState {
   const state = createMatch(PLAYOK_3P_800_CANDIDATE, 20260912, 0);
@@ -61,6 +63,7 @@ function fixtureSeat(): Seat {
 function Fixture() {
   const [seat] = useState<Seat>(fixtureSeat);
   const [state, setState] = useState<MatchState>(buildFixtureState);
+  const [events, setEvents] = useState<GameEvent[]>([]);
   const [message, setMessage] = useState('Kontrolowany scenariusz testowy.');
   const names = useMemo(() => {
     const value = ['Gracz 1', 'Gracz 2', 'Gracz 3'] as [string, string, string];
@@ -76,12 +79,22 @@ function Fixture() {
       return;
     }
     assertCoreInvariants(result.state);
+    const presentedEvents = eventsForSeat(result.events, seat);
     setState(result.state);
-    const feedback = describeFeedback(eventsForSeat(result.events, seat), (target) => names[target]);
+    setEvents(presentedEvents);
+    const feedback = describeFeedback(presentedEvents, (target) => names[target]);
     setMessage(feedback || 'Ruch przyjęty.');
   }
 
-  return <GameTable projection={projection} seatNames={names} message={message} onCommand={command} />;
+  return (
+    <LivingGameTable
+      projection={projection}
+      seatNames={names}
+      events={events}
+      message={message}
+      onCommand={command}
+    />
+  );
 }
 
 const root = document.getElementById('root');
