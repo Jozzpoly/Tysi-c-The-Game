@@ -8,7 +8,7 @@ on:
         required: true
         type: string
       expected_sha:
-        description: "Exact 40-character SHA that must still be serving on that origin"
+        description: "Exact 40-character product SHA that must still be serving on that origin"
         required: true
         type: string
       confirm_no_redeploy:
@@ -35,10 +35,20 @@ jobs:
     timeout-minutes: 30
 
     steps:
-      - name: Checkout recheck request source
+      - name: Checkout current validation harness
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
-      - name: Resolve canonical origin and exact candidate SHA
+      - name: Require main validation authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "$GITHUB_REF" != "refs/heads/main" ]]; then
+            echo "::error::Stable-origin recheck validation authority must come from main; got $GITHUB_REF"
+            exit 1
+          fi
+          echo "Validation harness SHA: $GITHUB_SHA"
+
+      - name: Resolve canonical origin and exact product SHA
         id: target
         env:
           MANUAL_ORIGIN: ${{ inputs.origin }}
@@ -74,24 +84,17 @@ jobs:
           echo "origin=$ORIGIN" >> "$GITHUB_OUTPUT"
           echo "sha=$EXPECTED_SHA" >> "$GITHUB_OUTPUT"
           echo "source=$TRIGGER_SOURCE" >> "$GITHUB_OUTPUT"
-          echo "Resolved no-redeploy recheck: $ORIGIN @ $EXPECTED_SHA ($TRIGGER_SOURCE)"
+          echo "Resolved no-redeploy recheck: $ORIGIN @ product $EXPECTED_SHA ($TRIGGER_SOURCE)"
 
-      - name: Checkout the exact candidate harness
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        with:
-          ref: ${{ steps.target.outputs.sha }}
-
-      - name: Verify checkout identity
+      - name: Verify product candidate commit exists without replacing current harness
         env:
           EXPECTED_SHA: ${{ steps.target.outputs.sha }}
         shell: bash
         run: |
           set -euo pipefail
-          ACTUAL_SHA="$(git rev-parse HEAD)"
-          if [[ "$ACTUAL_SHA" != "$EXPECTED_SHA" ]]; then
-            echo "::error::Checked out $ACTUAL_SHA but expected_sha is $EXPECTED_SHA"
-            exit 1
-          fi
+          git fetch --no-tags --depth=1 origin "$EXPECTED_SHA"
+          git cat-file -e "${EXPECTED_SHA}^{commit}"
+          echo "Product candidate exists: $EXPECTED_SHA"
 
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
@@ -100,7 +103,7 @@ jobs:
 
       - run: npm ci --no-audit --no-fund
 
-      - name: Prove the same stable build is still serving
+      - name: Prove the same stable product build is still serving
         env:
           TYSIAC_PUBLIC_URL: ${{ steps.target.outputs.origin }}
           TYSIAC_EXPECTED_SHA: ${{ steps.target.outputs.sha }}
@@ -122,16 +125,18 @@ jobs:
           ORIGIN: ${{ steps.target.outputs.origin }}
           EXPECTED_SHA: ${{ steps.target.outputs.sha }}
           TRIGGER_SOURCE: ${{ steps.target.outputs.source }}
+          VALIDATION_HARNESS_SHA: ${{ github.sha }}
         shell: bash
         run: |
           set -euo pipefail
           CHECKED_AT="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
           echo "### Stable origin recheck — no redeploy" >> "$GITHUB_STEP_SUMMARY"
           echo "Canonical origin: $ORIGIN" >> "$GITHUB_STEP_SUMMARY"
-          echo "Expected/served SHA: $EXPECTED_SHA" >> "$GITHUB_STEP_SUMMARY"
+          echo "Expected/served product SHA: $EXPECTED_SHA" >> "$GITHUB_STEP_SUMMARY"
+          echo "Validation harness SHA: $VALIDATION_HARNESS_SHA" >> "$GITHUB_STEP_SUMMARY"
           echo "Trigger source: $TRIGGER_SOURCE" >> "$GITHUB_STEP_SUMMARY"
           echo "Checked at: $CHECKED_AT" >> "$GITHUB_STEP_SUMMARY"
-          echo "**PASS:** the same canonical account-owned stable origin still served the exact candidate SHA, and public multiplayer + exact copied-invite behavior still worked without redeploying." >> "$GITHUB_STEP_SUMMARY"
+          echo "**PASS:** the same canonical account-owned stable origin still served the exact product SHA, and current-main public multiplayer + exact copied-invite evidence still worked without redeploying." >> "$GITHUB_STEP_SUMMARY"
           echo "This is elapsed-time evidence. It still does not replace the required real-human Owner+friend test." >> "$GITHUB_STEP_SUMMARY"
 
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
