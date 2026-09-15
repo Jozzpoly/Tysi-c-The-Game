@@ -85,7 +85,8 @@ async function emulateMobile(session) {
     deviceScaleFactor: 1, mobile: true, positionX: 0, positionY: 0,
     dontSetVisibleSize: false,
   });
-  await cdp(session, 'Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 5 });
+  // W3C pointerType: touch actions below own input semantics. Keep viewport
+  // emulation separate instead of stacking a second CDP touch-emulation layer.
 }
 
 async function navigate(session, url) {
