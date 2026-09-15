@@ -70,6 +70,8 @@ requireMatch('temporary deploy helper', temporaryDeploy, /should expire automati
 
 requireMatch('stable recheck workflow', recheck, /^name: Stable Origin Recheck \(NO REDEPLOY\)$/mu);
 requireMatch('stable recheck workflow', recheck, /ref:\s*\$\{\{ inputs\.expected_sha \}\}/u);
+requireMatch('stable recheck workflow', recheck, /origin must be the canonical tysiac-the-game\.<account>\.workers\.dev root/u);
+requireMatch('stable recheck workflow', recheck, /git rev-parse HEAD/u);
 requireMatch('stable recheck workflow', recheck, /TYSIAC_EXPECTED_DEPLOY_CLASS:\s*stable/u);
 requireMatch('stable recheck workflow', recheck, /public-provenance-smoke\.mjs/u);
 requireMatch('stable recheck workflow', recheck, /public-deploy-smoke\.mjs/u);
