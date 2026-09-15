@@ -88,9 +88,7 @@ async function dragPointer(session, from, to, mobile, steps = 8) {
       await touch(session, 'touchMove', [{
         x: from.x + (to.x - from.x) * ratio,
         y: from.y + (to.y - from.y) * ratio,
-        radiusX: 7,
-        radiusY: 7,
-        force: 1,
+        radiusX: 7, radiusY: 7, force: 1,
       }]);
       await sleep(20);
     }
@@ -160,10 +158,15 @@ async function inspectExchangeDraft(session) {
       const recipient = slot.getAttribute('data-exchange-recipient') ?? '';
       const target = document.querySelector('[data-exchange-target-seat="' + recipient + '"]');
       const targetRect = target?.getBoundingClientRect();
-      const anchor = document.querySelector('[data-exchange-stage-seat="' + recipient + '"]');
-      const anchorRect = anchor?.getBoundingClientRect();
+      const stageTarget = target?.querySelector('.card-backs');
+      const stageTargetRect = stageTarget?.getBoundingClientRect();
       const centerX = rect ? rect.left + rect.width / 2 : null;
       const centerY = rect ? rect.top + rect.height / 2 : null;
+      const stageCenterX = stageTargetRect ? stageTargetRect.left + stageTargetRect.width / 2 : null;
+      const stageCenterY = stageTargetRect ? stageTargetRect.top + stageTargetRect.height / 2 : null;
+      const stageCenterDistance = centerX !== null && centerY !== null && stageCenterX !== null && stageCenterY !== null
+        ? Math.hypot(centerX - stageCenterX, centerY - stageCenterY)
+        : null;
       const slotStyle = getComputedStyle(slot);
       const cardStyle = card ? getComputedStyle(card) : null;
       return {
@@ -180,7 +183,9 @@ async function inspectExchangeDraft(session) {
         slotRect: rectData(slotRect),
         cardRect: rectData(rect),
         targetRect: rectData(targetRect),
-        anchorRect: rectData(anchorRect),
+        stageTargetRect: rectData(stageTargetRect),
+        stageCenterDistance,
+        atRecipientHand: stageCenterDistance !== null && stageCenterDistance <= 8,
         insideRecipient: Boolean(rect && targetRect
           && centerX >= targetRect.left && centerX <= targetRect.right
           && centerY >= targetRect.top && centerY <= targetRect.bottom),
@@ -413,8 +418,8 @@ async function runDeclarerViewport(label, width, height, mobile) {
       return state.staged.length === 1 ? state : false;
     }, 1_000);
     if (firstDraft.hasLegacyConfirm) throw new Error(`${label}: physical assignment exposed legacy confirmation ${JSON.stringify(firstDraft)}`);
-    if (firstDraft.staged[0].recipient !== firstDrop.seat || firstDraft.staged[0].card !== firstDrop.card || !firstDraft.staged[0].insideRecipient) {
-      throw new Error(`${label}: first recipient was not derived from spatial drop target ${JSON.stringify({ firstDrop, firstDraft })}`);
+    if (firstDraft.staged[0].recipient !== firstDrop.seat || firstDraft.staged[0].card !== firstDrop.card || !firstDraft.staged[0].insideRecipient || !firstDraft.staged[0].atRecipientHand) {
+      throw new Error(`${label}: first recipient was not derived from spatial drop target and staged at its physical hand ${JSON.stringify({ firstDrop, firstDraft })}`);
     }
     if (firstDraft.materialActive) throw new Error(`${label}: exchange committed before both physical recipients were assigned ${JSON.stringify(firstDraft)}`);
     await screenshot(session, `${label}-physical-exchange-first-card`);
@@ -428,8 +433,8 @@ async function runDeclarerViewport(label, width, height, mobile) {
     if (recipientMap.get(firstDrop.seat) !== firstDrop.card || recipientMap.get(secondDrop.seat) !== secondDrop.card) {
       throw new Error(`${label}: two-card exchange mapping does not match spatial recipients ${JSON.stringify({ firstDrop, secondDrop, secondDraft })}`);
     }
-    if (!secondDraft.staged.every((entry) => entry.insideRecipient)) {
-      throw new Error(`${label}: staged cards are not physically resident in recipient territories ${JSON.stringify(secondDraft)}`);
+    if (!secondDraft.staged.every((entry) => entry.insideRecipient && entry.atRecipientHand)) {
+      throw new Error(`${label}: staged cards are not physically resident at recipient hands ${JSON.stringify(secondDraft)}`);
     }
     await screenshot(session, `${label}-physical-exchange-two-cards`);
 
