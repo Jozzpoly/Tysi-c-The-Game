@@ -44,6 +44,13 @@ jobs:
         id: temporary
         run: node scripts/temporary-deploy.mjs
 
+      - name: Verify exact temporary build provenance
+        env:
+          TYSIAC_PUBLIC_URL: ${{ steps.temporary.outputs.deployment_url }}
+          TYSIAC_EXPECTED_SHA: ${{ github.sha }}
+          TYSIAC_EXPECTED_DEPLOY_CLASS: temporary
+        run: node scripts/public-provenance-smoke.mjs
+
       - name: Verify bounded public desktop/mobile MatchRoom behavior
         env:
           TYSIAC_PUBLIC_URL: ${{ steps.temporary.outputs.deployment_url }}
@@ -65,6 +72,7 @@ jobs:
             exit 1
           fi
           echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "**PASS — provenance:** public runtime reports exact SHA $GITHUB_SHA and deploy class temporary." >> "$GITHUB_STEP_SUMMARY"
           echo "**PASS — bounded runtime only:** public health, duo desktop↔mobile sync, hidden-hand separation, reconnect, and copied-invite behavior worked during this run." >> "$GITHUB_STEP_SUMMARY"
           echo "Verified TEMPORARY URL: $PUBLIC_URL" >> "$GITHUB_STEP_SUMMARY"
           echo "**FAIL as persistence evidence:** this URL is intentionally unclaimed and should expire automatically." >> "$GITHUB_STEP_SUMMARY"
