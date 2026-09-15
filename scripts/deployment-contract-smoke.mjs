@@ -32,10 +32,15 @@ const [stable, temporary, recheck, coreWorkflow, temporaryDeploy, wrangler, work
 ]);
 
 requireMatch('stable workflow', stable, /^name: Stable Multiplayer Deploy$/mu);
+requireMatch('stable workflow', stable, /candidate_sha:/u);
+requireMatch('stable workflow', stable, /candidate_sha must be a full 40-character lowercase git SHA/u);
+requireMatch('stable workflow', stable, /ref:\s*\$\{\{ inputs\.candidate_sha \}\}/u);
+requireMatch('stable workflow', stable, /git rev-parse HEAD/u);
 requireMatch('stable workflow', stable, /CLOUDFLARE_ACCOUNT_ID/u);
 requireMatch('stable workflow', stable, /CLOUDFLARE_API_TOKEN/u);
 requireMatch('stable workflow', stable, /command:\s*deploy/u);
-requireMatch('stable workflow', stable, /TYSIAC_BUILD_SHA:\$\{\{ github\.sha \}\}/u);
+requireMatch('stable workflow', stable, /TYSIAC_BUILD_SHA:\$\{\{ inputs\.candidate_sha \}\}/u);
+requireMatch('stable workflow', stable, /TYSIAC_EXPECTED_SHA:\s*\$\{\{ inputs\.candidate_sha \}\}/u);
 requireMatch('stable workflow', stable, /TYSIAC_DEPLOY_CLASS:stable/u);
 requireMatch('stable workflow', stable, /wrangler deployments list/u);
 requireMatch('stable workflow', stable, /public-provenance-smoke\.mjs/u);
@@ -43,6 +48,7 @@ requireMatch('stable workflow', stable, /public-deploy-smoke\.mjs/u);
 requireMatch('stable workflow', stable, /public-share-link-smoke\.mjs/u);
 requireMatch('stable workflow', stable, /NOT YET PROVEN BY THIS RUN/u);
 requireMatch('stable workflow', stable, /account-owned/u);
+forbidMatch('stable workflow', stable, /TYSIAC_BUILD_SHA:\$\{\{ github\.sha \}\}/u);
 forbidMatch('stable workflow', stable, /deploy\s+--temporary/u);
 forbidMatch('stable workflow', stable, /temporary-deploy\.mjs/u);
 
@@ -86,6 +92,7 @@ requireMatch('deployment authority', deploymentDoc, /Stable Multiplayer Deploy/u
 requireMatch('deployment authority', deploymentDoc, /Exact copied friend invite/u);
 requireMatch('deployment authority', deploymentDoc, /Long-horizon availability/u);
 requireMatch('deployment authority', deploymentDoc, /Real-human friend gate/u);
+requireMatch('deployment authority', deploymentDoc, /exact.*candidate.*SHA/isu);
 requireMatch('incident authority', incident, /FAIL \/ NOT COMPLETE \/ P0 BLOCKER/u);
 requireMatch('incident authority', incident, /Automation is necessary but is not sufficient/iu);
 requireMatch('incident authority', incident, /contradictory lifecycle evidence was known/iu);
