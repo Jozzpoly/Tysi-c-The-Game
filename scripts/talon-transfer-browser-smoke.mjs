@@ -304,8 +304,14 @@ async function inspectTalonSettled(session) {
 async function inspectExchangeTransfer(session) {
   return execute(session, `
     const transfers = [...document.querySelectorAll('.exchange-transfer-card')];
-    const materialSlots = [...document.querySelectorAll('.hand-slot.is-exchange-materializing')];
-    const receiving = [...document.querySelectorAll('[data-seat-anchor].is-exchange-receiving')];
+    const materialMarkers = [...document.querySelectorAll('[data-exchange-materializing-card]')];
+    const materialSlots = materialMarkers
+      .map((marker) => marker.closest('.hand-slot'))
+      .filter(Boolean);
+    const receivingMarkers = [...document.querySelectorAll('[data-exchange-receiving-seat]')];
+    const receiving = receivingMarkers
+      .map((marker) => marker.closest('[data-seat-anchor]'))
+      .filter(Boolean);
     return {
       state: document.querySelector('.material-exchange-state')?.getAttribute('data-exchange-material-state') ?? 'missing',
       transfers: transfers.length,
@@ -318,7 +324,7 @@ async function inspectExchangeTransfer(session) {
         const card = node.querySelector(':scope > .card');
         return card && getComputedStyle(card).visibility === 'hidden';
       }).length,
-      receivingAnchors: receiving.length,
+      receivingAnchors: receivingMarkers.length,
       hiddenRecipientBacks: receiving.filter((node) => {
         const back = node.querySelector('.card-backs i:last-child');
         return back && getComputedStyle(back).visibility === 'hidden';
@@ -338,8 +344,8 @@ async function inspectExchangeSettled(session) {
     return {
       state: document.querySelector('.material-exchange-state')?.getAttribute('data-exchange-material-state') ?? 'missing',
       transfers: document.querySelectorAll('.exchange-transfer-card').length,
-      materialSlots: document.querySelectorAll('.hand-slot.is-exchange-materializing').length,
-      receivingAnchors: document.querySelectorAll('[data-seat-anchor].is-exchange-receiving').length,
+      materialSlots: document.querySelectorAll('[data-exchange-materializing-card]').length,
+      receivingAnchors: document.querySelectorAll('[data-exchange-receiving-seat]').length,
       handCards: document.querySelectorAll('.hand .card').length,
       decisionHeading: document.querySelector('.decision-card h2')?.textContent?.trim() ?? '',
       numericButtons,
