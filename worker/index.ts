@@ -171,7 +171,13 @@ export default {
     if (roomRoute) return handleRoom(request, env, roomRoute);
 
     if (url.pathname === '/api/match') {
-      return json({ ok: true, service: 'match-room', auth: 'seat-capability-v1' });
+      return json({
+        ok: true,
+        service: 'match-room',
+        auth: 'seat-capability-v1',
+        buildSha: env.TYSIAC_BUILD_SHA,
+        deployClass: env.TYSIAC_DEPLOY_CLASS,
+      });
     }
     const matchRoute = matchRouteFromPath(url.pathname);
     if (matchRoute) return handleMatch(request, env, matchRoute);
