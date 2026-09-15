@@ -348,6 +348,22 @@ async function cardGeometry(session) {
   `);
 }
 
+async function playZoneGeometry(session) {
+  return execute(session, `
+    const node = document.querySelector('.trick');
+    if (!node) return null;
+    const rect = node.getBoundingClientRect();
+    const x = rect.left + rect.width / 2;
+    const y = rect.top + rect.height / 2;
+    return {
+      x, y,
+      width: rect.width,
+      height: rect.height,
+      withinViewport: x >= 0 && x <= innerWidth && y >= 0 && y <= innerHeight,
+    };
+  `);
+}
+
 async function exchangeDragGeometry(session, targetIndex) {
   return execute(session, `
     const sourceSlot = [...document.querySelectorAll('.hand .hand-slot')]
@@ -456,11 +472,13 @@ async function run() {
     await waitFor('playable hand', () => execute(session, `return document.querySelectorAll('.hand .card:not(:disabled)').length > 0;`));
 
     const playableCards = await cardGeometry(session);
-    if (!playableCards.length) throw new Error('no playable card after contract');
-    if (!playableCards[0].centerHitsSelf) throw new Error(`playable card center occluded ${JSON.stringify(playableCards[0])}`);
+    const playableCard = playableCards.find((card) => card.centerHitsSelf);
+    if (!playableCard) throw new Error(`no physically hittable playable card after contract: ${JSON.stringify(playableCards)}`);
+    const playZone = await playZoneGeometry(session);
+    if (!playZone?.withinViewport) throw new Error(`play zone unavailable in mobile viewport: ${JSON.stringify(playZone)}`);
     const beforePlay = (await uiState(session)).revision;
-    await clickFirstElement(session, '.hand .card:not(:disabled)');
-    await waitForRevisionAdvance(session, beforePlay, 'playable card semantic activation accepted');
+    await dragTouch(session, { x: playableCard.x, y: playableCard.y }, { x: playZone.x, y: playZone.y });
+    await waitForRevisionAdvance(session, beforePlay, 'playable card touch throw accepted');
 
     const finalSelection = await execute(session, `return window.getSelection()?.toString() ?? '';`);
     if (finalSelection) throw new Error(`gameplay interaction left selected text: ${JSON.stringify(finalSelection)}`);
@@ -478,7 +496,9 @@ async function run() {
       contractValue: contractTouch.target.value,
       contractTouchLifecycle,
       contractActivation,
-      playActivation: 'webdriver-element-click-after-touch-geometry',
+      playCard: playableCard.label,
+      playZone,
+      playActivation: 'w3c-touch-drag-to-trick',
     };
   } finally {
     await closeSession(session);
