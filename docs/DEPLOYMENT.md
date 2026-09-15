@@ -40,18 +40,26 @@ Workflow: `.github/workflows/deploy-foundation.yml`
 
 Visible name: `Stable Multiplayer Deploy`
 
-Mechanism:
+The workflow has two equivalent ways to resolve the same immutable candidate identity:
 
-- the workflow definition lives on the default branch so it can be manually dispatched reliably;
-- the operator supplies one **exact candidate SHA** (`candidate_sha`), not merely a branch name;
-- the workflow validates that SHA, checks out exactly that commit and verifies `git rev-parse HEAD` matches it before testing or publishing;
-- authenticated Cloudflare account;
-- repository secrets `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN`;
-- normal `wrangler deploy`, never `--temporary`;
-- public provenance is stamped with the supplied candidate SHA and deployment class `stable`;
-- Worker name `tysiac-the-game` from `wrangler.jsonc`;
-- `workers_dev: true` unless a deliberate custom-domain migration replaces it;
-- SQLite-backed `MATCH_ROOM` Durable Object remains the authoritative room backend.
+1. manual `workflow_dispatch` with an exact 40-character `candidate_sha`;
+2. declarative repository request: update `.github/deploy/stable-candidate.txt` on `main` so the file contains exactly one full 40-character candidate SHA.
+
+The declarative path exists so an authorized repository agent can request the same evidence-producing deployment without requiring the Owner to operate the GitHub Actions UI. The request itself is committed history and therefore auditable.
+
+In both modes the workflow:
+
+- resolves one exact candidate SHA, never just a branch name;
+- validates that SHA;
+- checks out exactly that commit;
+- verifies `git rev-parse HEAD` matches it before testing or publishing;
+- requires an authenticated Cloudflare account;
+- requires repository secrets `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN`;
+- uses normal `wrangler deploy`, never `--temporary`;
+- stamps public provenance with the resolved candidate SHA and deployment class `stable`;
+- deploys Worker name `tysiac-the-game` from `wrangler.jsonc`;
+- keeps `workers_dev: true` unless a deliberate custom-domain migration replaces it;
+- preserves SQLite-backed `MATCH_ROOM` Durable Object authority.
 
 For the current P0 recovery, the accepted friend origin is specifically the canonical root:
 
@@ -59,7 +67,7 @@ For the current P0 recovery, the accepted friend origin is specifically the cano
 
 The stable workflow rejects versioned preview URLs, foreign hosts, extra paths, query strings and fragments as the candidate origin. A future custom-domain migration must be a deliberate change to this contract rather than an accidental side effect of deployment output.
 
-This distinction matters: the SHA of the workflow definition and the SHA of the game candidate can be different. Readiness evidence attaches to `candidate_sha`, not to whichever branch/ref happened to be selected in the GitHub UI.
+The SHA of the workflow definition and the SHA of the game candidate can be different. Readiness evidence attaches to the resolved candidate SHA, not to whichever branch/ref happened to carry the workflow definition.
 
 ## Stable-deploy evidence ladder
 
@@ -69,7 +77,7 @@ A single word such as `verified` is not sufficient. Evidence must be reported by
 
 PASS only when all are true:
 
-1. `candidate_sha` is a full immutable 40-character Git SHA;
+1. the resolved candidate is a full immutable 40-character Git SHA;
 2. checkout HEAD equals that exact candidate SHA;
 3. Cloudflare account credentials are present in GitHub Secrets;
 4. the workflow uses normal authenticated `wrangler deploy`;
@@ -116,7 +124,7 @@ Constructing a `?room=...` URL inside the test harness is not sufficient evidenc
 
 PASS only when `/api/match` reports:
 
-- `buildSha` equal to the exact candidate SHA supplied to the stable deployment;
+- `buildSha` equal to the exact resolved candidate SHA;
 - `deployClass: stable`.
 
 This prevents a correct-looking hostname from being mistaken for evidence that the intended build is actually serving.
@@ -162,11 +170,13 @@ The account must have a `workers.dev` account subdomain configured unless the pr
 
 ## Workflow rules
 
-Normal pushes and pull requests do not publish a stable deployment.
+Normal code pushes and pull requests do not publish a stable deployment.
 
-Stable deployment is manual because publishing a real account-owned public runtime is an operational action. The operator must paste the exact candidate SHA to be deployed; selecting or remembering a branch is not the evidence boundary.
+Stable deployment can be requested manually with `candidate_sha`, or declaratively by changing only `.github/deploy/stable-candidate.txt` on `main`. The declarative file must contain exactly the immutable SHA intended for publication. A branch name, short SHA, comment, extra metadata or blank file is invalid and must fail before deployment.
 
-Temporary preview is also manual because it requires explicit Cloudflare Terms/Privacy acceptance for each temporary deployment.
+Changing `.github/deploy/stable-candidate.txt` is an operational publication request, not ordinary documentation churn. Repository history provides the audit trail of who requested which candidate.
+
+Temporary preview remains manual because it requires explicit Cloudflare Terms/Privacy acceptance for each temporary deployment.
 
 The workflows are intentionally named so that GitHub Actions itself communicates the evidence boundary.
 
@@ -199,7 +209,7 @@ Forbidden promotion:
 
 - expired temporary URL: expected temporary lifecycle;
 - temporary provisioning failure: temporary Cloudflare boundary;
-- malformed or missing `candidate_sha`: candidate identity blocker;
+- malformed/missing declarative candidate file or manual candidate SHA: candidate identity blocker;
 - checkout SHA mismatch: candidate identity failure;
 - missing stable secrets: deployment setup blocker;
 - stable authenticated deploy failure: deployment/configuration defect;
