@@ -202,13 +202,18 @@ async function runViewport(label, width, height, mobile) {
     const playable = await waitFor(`${label}: legal throw`, () => readPlayable(session), 25_000);
     if (!playable.card) throw new Error(`${label}: throwable card has no CardId`);
 
-    // P2 falsification: moving a legal card very far away from the hand is not a
-    // game action unless the carried card centre actually finishes inside .trick.
+    // Negative falsification: magnetic assistance is bounded. Keep this probe
+    // beyond the full release field so it proves the table does not steal free
+    // hand motion merely because a legal card travelled a long distance.
     const beforeOutsideRevision = await revision(session);
     const outside = {
       x: Math.max(playable.zone.left + 8, Math.min(playable.zone.right - 8, playable.x)),
-      y: Math.max(18, playable.zone.top - Math.max(24, playable.height * .42)),
+      y: Math.max(18, playable.zone.top - Math.max(72, playable.height * .72)),
     };
+    const outsideByPx = playable.zone.top - outside.y;
+    if (outsideByPx <= 56) {
+      throw new Error(`${label}: negative probe is not safely outside magnetic release field (${outsideByPx}px)`);
+    }
     await touch(session, 'touchStart', [{ x: playable.x, y: playable.y, radiusX: 7, radiusY: 7, force: 1 }]);
     await sleep(30);
     await moveTouch(session, { x: playable.x, y: playable.y }, outside, 10);
@@ -227,10 +232,11 @@ async function runViewport(label, width, height, mobile) {
         zoneTop: trick.top,
         zoneBottom: trick.bottom,
         commitReady: ghost.classList.contains('commit-ready'),
+        magnetStrength: Number(ghost.dataset.magnetStrength ?? 0),
       };
     `), 2_000);
-    if (outsideState.phase !== 'held' || outsideState.commitReady) {
-      throw new Error(`${label}: distance still arms play outside spatial zone ${JSON.stringify(outsideState)}`);
+    if (outsideState.phase !== 'held' || outsideState.commitReady || outsideState.magnetStrength !== 0) {
+      throw new Error(`${label}: bounded assistance armed outside magnetic field ${JSON.stringify({ outsideByPx, outsideState })}`);
     }
 
     await touch(session, 'touchEnd', []);
@@ -319,6 +325,8 @@ async function runViewport(label, width, height, mobile) {
       outsideZoneRelease: {
         revision: `${beforeOutsideRevision}->${afterOutsideRevision}`,
         phase: outsideState.phase,
+        outsideByPx,
+        magnetStrength: outsideState.magnetStrength,
         returnedToHand: sourceAfterOutside,
       },
       spatialAcceptance: {
