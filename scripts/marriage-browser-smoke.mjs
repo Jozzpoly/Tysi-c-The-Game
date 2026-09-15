@@ -75,6 +75,73 @@ async function cdp(session, cmd, params = {}) {
   });
 }
 
+async function touch(session, type, points) {
+  await cdp(session, 'Input.dispatchTouchEvent', { type, touchPoints: points });
+}
+
+async function dragPointer(session, from, to, mobile, steps = 8) {
+  if (mobile) {
+    await touch(session, 'touchStart', [{ x: from.x, y: from.y, radiusX: 7, radiusY: 7, force: 1 }]);
+    await sleep(32);
+    for (let step = 1; step <= steps; step += 1) {
+      const ratio = step / steps;
+      await touch(session, 'touchMove', [{
+        x: from.x + (to.x - from.x) * ratio,
+        y: from.y + (to.y - from.y) * ratio,
+        radiusX: 7,
+        radiusY: 7,
+        force: 1,
+      }]);
+      await sleep(20);
+    }
+    await touch(session, 'touchEnd', []);
+    return;
+  }
+
+  await cdp(session, 'Input.dispatchMouseEvent', { type: 'mouseMoved', x: from.x, y: from.y });
+  await cdp(session, 'Input.dispatchMouseEvent', {
+    type: 'mousePressed', x: from.x, y: from.y, button: 'left', buttons: 1, clickCount: 1,
+  });
+  await sleep(28);
+  for (let step = 1; step <= steps; step += 1) {
+    const ratio = step / steps;
+    await cdp(session, 'Input.dispatchMouseEvent', {
+      type: 'mouseMoved',
+      x: from.x + (to.x - from.x) * ratio,
+      y: from.y + (to.y - from.y) * ratio,
+      button: 'left',
+      buttons: 1,
+    });
+    await sleep(18);
+  }
+  await cdp(session, 'Input.dispatchMouseEvent', {
+    type: 'mouseReleased', x: to.x, y: to.y, button: 'left', buttons: 0, clickCount: 1,
+  });
+}
+
+async function exchangeDragGeometry(session, targetIndex) {
+  return execute(session, `
+    const sourceSlot = [...document.querySelectorAll('.hand .hand-slot')]
+      .find((slot) => !slot.classList.contains('is-exchange-staged'));
+    const sourceCard = sourceSlot?.querySelector(':scope > .card');
+    const targets = [...document.querySelectorAll('[data-exchange-target-seat]')];
+    const target = targets[${targetIndex}];
+    if (!sourceSlot || !sourceCard || !target) return null;
+    const sourceRect = sourceCard.getBoundingClientRect();
+    const targetRect = target.getBoundingClientRect();
+    return {
+      from: { x: sourceRect.left + sourceRect.width / 2, y: sourceRect.top + sourceRect.height / 2 },
+      to: { x: targetRect.left + targetRect.width / 2, y: targetRect.top + targetRect.height / 2 },
+    };
+  `);
+}
+
+async function dragNextExchangeCard(session, targetIndex, mobile) {
+  const geometry = await exchangeDragGeometry(session, targetIndex);
+  if (!geometry) throw new Error(`physical exchange geometry unavailable for target ${targetIndex}`);
+  await dragPointer(session, geometry.from, geometry.to, mobile);
+}
+
 async function screenshot(session, name) {
   const base64 = await webdriver(`/session/${session}/screenshot`);
   await writeFile(`${OUTPUT}/${name}.png`, Buffer.from(base64, 'base64'));
@@ -110,16 +177,6 @@ async function clickNumericDecision(session, highest) {
   return value;
 }
 
-async function clickFirstUnselectedHandCard(session) {
-  const clicked = await execute(session, `
-    const card = [...document.querySelectorAll('.hand .card:not(:disabled)')].find((node) => !node.classList.contains('selected'));
-    if (!card) return false;
-    card.click();
-    return true;
-  `);
-  if (!clicked) throw new Error('no unselected enabled hand card');
-}
-
 async function decisionHeading(session) {
   return execute(session, `return document.querySelector('.decision-card h2')?.textContent?.trim() ?? '';`);
 }
@@ -136,14 +193,14 @@ async function driveToExchange(session, label) {
   throw new Error(`${label}: exchange not reached in bounded auction loop`);
 }
 
-async function driveToMarriageLead(session, label) {
+async function driveToMarriageLead(session, label, mobile) {
   await driveToExchange(session, label);
-  await clickFirstUnselectedHandCard(session);
-  await waitFor(`${label}: first exchange selection`, () => execute(session, `return document.querySelectorAll('.hand .card.selected').length === 1;`));
-  await clickFirstUnselectedHandCard(session);
-  await waitFor(`${label}: second exchange selection`, () => execute(session, `return document.querySelectorAll('.hand .card.selected').length === 2;`));
-  await clickButtonByText(session, 'Potwierdź wymianę');
-  await waitFor(`${label}: contract`, async () => (await decisionHeading(session)) === 'Ile ostatecznie grasz?');
+  await dragNextExchangeCard(session, 0, mobile);
+  await waitFor(`${label}: first physical exchange assignment`, () => execute(session, `
+    return document.querySelectorAll('.hand-slot.is-exchange-staged').length === 1;
+  `), 1_000);
+  await dragNextExchangeCard(session, 1, mobile);
+  await waitFor(`${label}: contract`, async () => (await decisionHeading(session)) === 'Ile ostatecznie grasz?', 3_000);
   await clickNumericDecision(session, false);
   return waitFor(`${label}: marriage lead`, () => execute(session, `
     const buttons = [...document.querySelectorAll('.decision-card button:not(:disabled)')];
@@ -261,7 +318,7 @@ async function openScenario(width, height, mobile, seed = 2) {
 async function runLocalViewport(label, width, height, mobile) {
   const session = await openScenario(width, height, mobile, 2);
   try {
-    const marriageLabel = await driveToMarriageLead(session, label);
+    const marriageLabel = await driveToMarriageLead(session, label, mobile);
     const before = await inspectBefore(session);
     if (before.handCards !== 8 || before.labels.length < 2 || before.trump !== '—' || before.materialLayer !== 0) {
       throw new Error(`${label}: deterministic marriage lead precondition failed ${JSON.stringify(before)}`);
