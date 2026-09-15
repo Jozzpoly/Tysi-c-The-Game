@@ -17,12 +17,30 @@ function forbidMatch(label, source, pattern) {
   if (pattern.test(source)) throw new Error(`${label}: forbidden pattern present: ${pattern}`);
 }
 
-const [stable, temporary, recheck, coreWorkflow, temporaryDeploy, wrangler, worker, deploymentDoc, incident, executionState, legacyStaticPreviewExists] = await Promise.all([
+const [
+  stable,
+  temporary,
+  recheck,
+  coreWorkflow,
+  temporaryDeploy,
+  publicShareLink,
+  localShareLink,
+  packageJson,
+  wrangler,
+  worker,
+  deploymentDoc,
+  incident,
+  executionState,
+  legacyStaticPreviewExists,
+] = await Promise.all([
   text('.github/workflows/deploy-foundation.yml'),
   text('.github/workflows/temporary-foundation.yml'),
   text('.github/workflows/stable-origin-recheck.yml'),
   text('.github/workflows/core.yml'),
   text('scripts/temporary-deploy.mjs'),
+  text('scripts/public-share-link-smoke.mjs'),
+  text('scripts/local-share-link-browser-smoke.mjs'),
+  text('package.json'),
   text('wrangler.jsonc'),
   text('worker/index.ts'),
   text('docs/DEPLOYMENT.md'),
@@ -59,6 +77,7 @@ requireMatch('stable workflow', stable, /account-owned/u);
 forbidMatch('stable workflow', stable, /TYSIAC_BUILD_SHA:\$\{\{ github\.sha \}\}/u);
 forbidMatch('stable workflow', stable, /deploy\s+--temporary/u);
 forbidMatch('stable workflow', stable, /temporary-deploy\.mjs/u);
+forbidMatch('stable workflow', stable, /TYSIAC_ALLOW_LOCAL_HTTP/u);
 
 requireMatch('temporary workflow', temporary, /^name: Temporary Preview \(EXPIRES — DO NOT SHARE\)$/mu);
 requireMatch('temporary workflow', temporary, /temporary-deploy\.mjs/u);
@@ -68,6 +87,7 @@ requireMatch('temporary workflow', temporary, /public-share-link-smoke\.mjs/u);
 requireMatch('temporary workflow', temporary, /DO NOT SHARE AS THE FRIEND CANDIDATE/u);
 forbidMatch('temporary workflow', temporary, /secrets\.CLOUDFLARE_API_TOKEN/u);
 forbidMatch('temporary workflow', temporary, /secrets\.CLOUDFLARE_ACCOUNT_ID/u);
+forbidMatch('temporary workflow', temporary, /TYSIAC_ALLOW_LOCAL_HTTP/u);
 
 requireMatch('temporary deploy helper', temporaryDeploy, /'--temporary'/u);
 requireMatch('temporary deploy helper', temporaryDeploy, /TYSIAC_BUILD_SHA/u);
@@ -95,6 +115,20 @@ requireMatch('stable recheck workflow', recheck, /without redeploying/u);
 forbidMatch('stable recheck workflow', recheck, /wrangler\s+deploy/u);
 forbidMatch('stable recheck workflow', recheck, /cloudflare\/wrangler-action/u);
 forbidMatch('stable recheck workflow', recheck, /temporary-deploy\.mjs/u);
+forbidMatch('stable recheck workflow', recheck, /TYSIAC_ALLOW_LOCAL_HTTP/u);
+
+requireMatch('public share-link harness', publicShareLink, /TYSIAC_ALLOW_LOCAL_HTTP/u);
+requireMatch('public share-link harness', publicShareLink, /BASE\.hostname === '127\.0\.0\.1'/u);
+requireMatch('public share-link harness', publicShareLink, /HTTP is allowed only for explicit 127\.0\.0\.1 Foundation rehearsal/u);
+requireMatch('public share-link harness', publicShareLink, /url\.origin !== base\.origin/u);
+requireMatch('public share-link harness', publicShareLink, /friend invite must contain only room query parameter/u);
+requireMatch('public share-link harness', publicShareLink, /friend invite leaked a seat credential/u);
+
+requireMatch('local share-link wrapper', localShareLink, /http:\/\/127\.0\.0\.1:4175/u);
+requireMatch('local share-link wrapper', localShareLink, /TYSIAC_PUBLIC_URL:\s*BASE_URL/u);
+requireMatch('local share-link wrapper', localShareLink, /TYSIAC_ALLOW_LOCAL_HTTP:\s*'1'/u);
+requireMatch('local share-link wrapper', localShareLink, /public-share-link-smoke\.mjs/u);
+requireMatch('Foundation browser suite', packageJson, /test:browser[\s\S]*local-share-link-browser-smoke\.mjs/u);
 
 requireMatch('Foundation concurrency', coreWorkflow, /cancel-in-progress:\s*true/u);
 requireMatch('Foundation concurrency', coreWorkflow, /github\.event\.pull_request\.number\s*\|\|\s*github\.ref/u);
