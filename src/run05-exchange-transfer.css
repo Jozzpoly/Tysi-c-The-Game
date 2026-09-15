@@ -58,6 +58,21 @@
   box-shadow: 0 5px 12px #0006, inset 0 0 0 2px #3a0b125c;
 }
 
+/* Authority advances to `contract` before the two exchange objects finish their
+ * physical travel. Keep the visible phase vocabulary attached to what the table
+ * is still doing, then let the canonical phase label appear after landing. */
+.app-shell:has(.material-exchange-state.is-active) .topbar h1 {
+  font-size: 0;
+}
+
+.app-shell:has(.material-exchange-state.is-active) .topbar h1::after {
+  content: 'Wymiana po musiku';
+  font-size: clamp(1rem, 2vw, 1.25rem);
+  font-weight: 650;
+  color: #e4eee7;
+  white-space: nowrap;
+}
+
 @keyframes run05-exchange-material-flight {
   0% {
     transform: translate3d(0, 0, 0) scale(1, 1) rotate(0deg);
