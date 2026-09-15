@@ -40,14 +40,29 @@ Workflow: `.github/workflows/deploy-foundation.yml`
 
 Visible name: `Stable Multiplayer Deploy`
 
-The workflow has two equivalent ways to resolve the same immutable candidate identity:
+The workflow has two ways to resolve immutable candidate identity:
 
 1. manual `workflow_dispatch` with an exact 40-character `candidate_sha`;
-2. declarative repository request: update `.github/deploy/stable-candidate.txt` on `main` so the file contains exactly one full 40-character candidate SHA.
+2. declarative repository request: `.github/deploy/stable-candidate.txt` on `main`, containing exactly one full 40-character candidate SHA.
 
 The declarative path exists so an authorized repository agent can request the same evidence-producing deployment without requiring the Owner to operate the GitHub Actions UI. The request itself is committed history and therefore auditable.
 
-In both modes the workflow:
+#### Retrying the same candidate
+
+A failed operational attempt must not require changing candidate identity merely to trigger GitHub Actions again.
+
+`.github/deploy/stable-deploy-request.txt` is therefore a **retry marker only**. Creating or changing that marker may trigger `Stable Multiplayer Deploy`, but the workflow must still resolve `CANDIDATE_SHA` exclusively from `.github/deploy/stable-candidate.txt`.
+
+The retry marker must not contain, override, derive or otherwise influence candidate identity. It may contain an operational nonce/reason/timestamp for audit purposes, but those bytes are semantically irrelevant to the deployed game build.
+
+Consequently:
+
+- changing `stable-candidate.txt` means selecting/replacing the immutable candidate;
+- changing `stable-deploy-request.txt` means retrying the **same candidate** currently selected in `stable-candidate.txt`;
+- a retry is not a new candidate and does not invalidate earlier evidence that is scoped to that same SHA;
+- `scripts/stable-retry-contract-smoke.mjs` machine-checks this isolation in Foundation.
+
+In both manual and declarative modes the workflow:
 
 - resolves one exact candidate SHA, never just a branch name;
 - validates that SHA;
@@ -179,9 +194,11 @@ The account must have a `workers.dev` account subdomain configured unless the pr
 
 Normal code pushes and pull requests do not publish a stable deployment.
 
-Stable deployment can be requested manually with `candidate_sha`, or declaratively by changing only `.github/deploy/stable-candidate.txt` on `main`. The declarative file must contain exactly the immutable SHA intended for publication. A branch name, short SHA, comment, extra metadata or blank file is invalid and must fail before deployment.
+Stable deployment can be requested manually with `candidate_sha`, or declaratively by selecting the candidate in `.github/deploy/stable-candidate.txt` on `main`. The candidate file must contain exactly the immutable SHA intended for publication. A branch name, short SHA, comment, extra metadata or blank file is invalid and must fail before deployment.
 
-Changing `.github/deploy/stable-candidate.txt` is an operational publication request, not ordinary documentation churn. Repository history provides the audit trail of who requested which candidate.
+Changing `.github/deploy/stable-candidate.txt` is an operational candidate-selection/publication request, not ordinary documentation churn. Repository history provides the audit trail of who selected which candidate.
+
+If the same selected candidate needs another operational attempt — for example after account credentials are configured or a provider-side transient failure is resolved — change `.github/deploy/stable-deploy-request.txt`, not the candidate file. The retry marker does not select a build; it only causes the workflow to retry the SHA already present in `stable-candidate.txt`.
 
 A later persistence check can similarly be requested through `.github/deploy/stable-recheck.json`, but that workflow must never publish or redeploy anything. Its purpose is specifically to prove that the already-existing canonical origin still serves the already-deployed exact SHA after elapsed time.
 
@@ -196,6 +213,7 @@ Allowed examples:
 - `Foundation CI: PASS`
 - `temporary public runtime during run X: PASS`
 - `exact candidate SHA checkout: PASS`
+- `same-candidate retry request: submitted`
 - `account-owned non-temporary deploy mechanism: PASS`
 - `canonical workers.dev origin: PASS`
 - `public provenance for SHA X: PASS`
@@ -210,6 +228,7 @@ Forbidden promotion:
 - temporary runtime PASS -> `stable link`;
 - normal deploy PASS -> `friend-ready` without public runtime evidence;
 - workflow-definition SHA -> candidate/game SHA;
+- retry-marker content -> candidate identity;
 - branch selection -> exact deployed candidate identity;
 - versioned preview URL -> canonical friend origin;
 - fresh redeploy -> evidence that the old origin survived elapsed time;
@@ -221,6 +240,7 @@ Forbidden promotion:
 - expired temporary URL: expected temporary lifecycle;
 - temporary provisioning failure: temporary Cloudflare boundary;
 - malformed/missing declarative candidate file or manual candidate SHA: candidate identity blocker;
+- retry marker influences candidate identity: deployment-contract failure;
 - checkout SHA mismatch: candidate identity failure;
 - missing stable secrets: deployment setup blocker;
 - stable authenticated deploy failure: deployment/configuration defect;
