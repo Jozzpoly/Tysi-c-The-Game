@@ -11,7 +11,7 @@ The project must preserve three distinct truth tracks:
 
 - **game truth** — correct rules, legality, scoring and bot behaviour;
 - **experience truth** — card/table physicality, visual hierarchy, motion, feedback, UI/UX and overall feel;
-- **external/operations truth** — what exact build is live, whether the share link really works, whether the origin persists, and whether a real second human can use it.
+- **Operations / external truth** — what exact build is live, whether the share link really works, whether the origin persists, and whether a real second human can use it.
 
 The Owner is the primary authority for experience truth, not the exact-rules oracle and not a substitute for operational evidence. Broad visual polishing should be driven by Owner testing once the current external P0 is resolved, not by blind screenshot iteration.
 
@@ -38,7 +38,7 @@ Historical Run01–Run04 material remains useful donor/history only where it doe
 
 ## P0 — friend-link recovery
 
-**Status: FAIL / BLOCKED**
+**Friend-link incident OPEN / P0 BLOCKER**
 
 The previous external-readiness claim remains invalidated. A temporary Cloudflare URL passing bounded smoke was not evidence of a durable friend origin.
 
