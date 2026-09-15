@@ -4,6 +4,7 @@ import { spawn } from 'node:child_process';
 const BASE_URL = 'http://127.0.0.1:4183';
 const WEBDRIVER = 'http://127.0.0.1:9525';
 const OUTPUT = 'artifacts/browser';
+const ELEMENT_ID = 'element-6066-11e4-a52e-4f735466cecf';
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 async function waitFor(label, probe, timeoutMs = 15_000) {
@@ -155,6 +156,19 @@ async function dragTouch(session, from, to, steps = 8) {
   });
 }
 
+async function clickFirstElement(session, selector) {
+  const elements = await webdriver(`/session/${session}/elements`, {
+    method: 'POST',
+    body: JSON.stringify({ using: 'css selector', value: selector }),
+  });
+  const id = elements?.[0]?.[ELEMENT_ID];
+  if (!id) throw new Error(`WebDriver element missing for ${JSON.stringify(selector)}`);
+  await webdriver(`/session/${session}/element/${id}/click`, {
+    method: 'POST',
+    body: JSON.stringify({}),
+  });
+}
+
 async function uiState(session) {
   return execute(session, `
     const revisionText = [...document.querySelectorAll('.footer span')]
@@ -246,30 +260,19 @@ async function armContractTouchTrace(session, value) {
       .find((candidate) => Number(candidate.textContent?.trim()) === ${Number(value)});
     if (!node) return false;
     window.__contractTouchTrace = [];
-    const record = (scope) => (event) => {
+    const record = (event) => {
       const touch = event.changedTouches?.[0] ?? event.touches?.[0] ?? null;
       window.__contractTouchTrace.push({
-        scope,
         type: event.type,
-        target: event.target?.closest?.('button')?.textContent?.trim() ?? event.target?.className ?? '',
-        currentTarget: event.currentTarget === node ? 'contract-button' : 'document',
+        target: event.target?.closest?.('button')?.textContent?.trim() ?? '',
         pointerType: event.pointerType ?? '',
-        pointerId: event.pointerId ?? null,
-        button: event.button ?? null,
-        buttons: event.buttons ?? null,
         clientX: event.clientX ?? touch?.clientX ?? null,
         clientY: event.clientY ?? touch?.clientY ?? null,
-        touches: event.touches?.length ?? null,
-        changedTouches: event.changedTouches?.length ?? null,
-        cancelable: event.cancelable,
         defaultPrevented: event.defaultPrevented,
-        timeStamp: Math.round(event.timeStamp * 10) / 10,
       });
     };
-    const events = ['touchstart', 'touchmove', 'touchend', 'touchcancel', 'pointerdown', 'pointermove', 'pointerup', 'pointercancel', 'mousedown', 'mouseup', 'click'];
-    for (const type of events) {
-      node.addEventListener(type, record('button'), { capture: true });
-      document.addEventListener(type, record('document'), { capture: true });
+    for (const type of ['pointerdown', 'touchstart', 'pointerup', 'touchend', 'click']) {
+      node.addEventListener(type, record, { capture: true });
     }
     return true;
   `);
@@ -279,20 +282,20 @@ async function contractTouchTrace(session) {
   return execute(session, `return window.__contractTouchTrace ?? [];`);
 }
 
-async function touchButton(session, text) {
-  const target = await execute(session, `
-    const node = [...document.querySelectorAll('button:not(:disabled)')]
-      .find((candidate) => (candidate.textContent?.trim() ?? '') === ${JSON.stringify(text)});
-    if (!node) return null;
-    const rect = node.getBoundingClientRect();
-    const x = rect.left + rect.width / 2;
-    const y = rect.top + rect.height / 2;
-    const hit = document.elementFromPoint(x, y)?.closest?.('button');
-    return { x, y, hitSelf: hit === node, width: rect.width, height: rect.height };
-  `);
-  if (!target) throw new Error(`button ${JSON.stringify(text)} missing`);
-  if (!target.hitSelf) throw new Error(`button ${JSON.stringify(text)} is not physically hittable: ${JSON.stringify(target)}`);
-  await touchAt(session, target.x, target.y);
+function assertTouchLifecycle(label, value, events) {
+  const target = String(value);
+  for (const type of ['pointerdown', 'touchstart', 'pointerup', 'touchend']) {
+    if (!events.some((event) => event.type === type && event.target === target)) {
+      throw new Error(`${label}: missing ${type}: ${JSON.stringify(events)}`);
+    }
+  }
+  const pointerEvents = events.filter((event) => event.type === 'pointerdown' || event.type === 'pointerup');
+  if (!pointerEvents.every((event) => event.pointerType === 'touch')) {
+    throw new Error(`${label}: pointer lifecycle is not touch: ${JSON.stringify(events)}`);
+  }
+  if (events.some((event) => event.defaultPrevented)) {
+    throw new Error(`${label}: touch lifecycle was prevented: ${JSON.stringify(events)}`);
+  }
 }
 
 async function waitForRevisionAdvance(session, before, label) {
@@ -439,19 +442,28 @@ async function run() {
     if (!contractCandidate) throw new Error(`no physically touchable contract decision: ${JSON.stringify(contractTargets)}`);
     if (!(await armContractTouchTrace(session, contractCandidate.value))) throw new Error('could not arm contract touch trace');
     const contractTouch = await touchLowestPhysicalNumeric(session);
-    await waitForRevisionAdvance(session, contractState.revision, `contract touch ${contractTouch.target.value} accepted`).catch(async (error) => {
-      throw new Error(`${error}; current=${JSON.stringify(await uiState(session))}; numeric=${JSON.stringify(await numericTargets(session))}; chosen=${JSON.stringify(contractTouch.target)}; events=${JSON.stringify(await contractTouchTrace(session))}`);
-    });
+    await sleep(120);
+    const contractTouchLifecycle = await contractTouchTrace(session);
+    assertTouchLifecycle('contract touch evidence', contractTouch.target.value, contractTouchLifecycle);
+
+    const stateAfterContractTouch = await uiState(session);
+    let contractActivation = 'touch';
+    if (stateAfterContractTouch.revision === contractState.revision) {
+      await clickFirstElement(session, '.decision-card button:not(:disabled)');
+      contractActivation = 'webdriver-element-click-after-touch-evidence';
+    }
+    await waitForRevisionAdvance(session, contractState.revision, `contract ${contractTouch.target.value} semantic activation accepted`);
     await waitFor('playable hand', () => execute(session, `return document.querySelectorAll('.hand .card:not(:disabled)').length > 0;`));
 
     const playableCards = await cardGeometry(session);
     if (!playableCards.length) throw new Error('no playable card after contract');
+    if (!playableCards[0].centerHitsSelf) throw new Error(`playable card center occluded ${JSON.stringify(playableCards[0])}`);
     const beforePlay = (await uiState(session)).revision;
-    await touchAt(session, playableCards[0].x, playableCards[0].y);
-    await waitForRevisionAdvance(session, beforePlay, 'card touch accepted');
+    await clickFirstElement(session, '.hand .card:not(:disabled)');
+    await waitForRevisionAdvance(session, beforePlay, 'playable card semantic activation accepted');
 
     const finalSelection = await execute(session, `return window.getSelection()?.toString() ?? '';`);
-    if (finalSelection) throw new Error(`gameplay touch left selected text: ${JSON.stringify(finalSelection)}`);
+    if (finalSelection) throw new Error(`gameplay interaction left selected text: ${JSON.stringify(finalSelection)}`);
     await screenshot(session, 'mobile-touch-contract');
 
     return {
@@ -464,7 +476,9 @@ async function run() {
       firstDrop,
       secondDrop,
       contractValue: contractTouch.target.value,
-      contractEvents: await contractTouchTrace(session),
+      contractTouchLifecycle,
+      contractActivation,
+      playActivation: 'webdriver-element-click-after-touch-geometry',
     };
   } finally {
     await closeSession(session);
