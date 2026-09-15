@@ -53,6 +53,12 @@ Mechanism:
 - `workers_dev: true` unless a deliberate custom-domain migration replaces it;
 - SQLite-backed `MATCH_ROOM` Durable Object remains the authoritative room backend.
 
+For the current P0 recovery, the accepted friend origin is specifically the canonical root:
+
+`https://tysiac-the-game.<account-subdomain>.workers.dev`
+
+The stable workflow rejects versioned preview URLs, foreign hosts, extra paths, query strings and fragments as the candidate origin. A future custom-domain migration must be a deliberate change to this contract rather than an accidental side effect of deployment output.
+
 This distinction matters: the SHA of the workflow definition and the SHA of the game candidate can be different. Readiness evidence attaches to `candidate_sha`, not to whichever branch/ref happened to be selected in the GitHub UI.
 
 ## Stable-deploy evidence ladder
@@ -68,10 +74,10 @@ PASS only when all are true:
 3. Cloudflare account credentials are present in GitHub Secrets;
 4. the workflow uses normal authenticated `wrangler deploy`;
 5. `wrangler deployments list` succeeds against the owned account after deployment;
-6. the returned public URL is HTTPS;
+6. the returned deployment target is the canonical `https://tysiac-the-game.<account-subdomain>.workers.dev` root;
 7. the stable workflow contains no `--temporary` path.
 
-This proves which exact commit was published and that it used the account-owned non-temporary mechanism. It does not by itself prove gameplay, copied-link correctness, long-horizon availability or human usability.
+This proves which exact commit was published and that it used the account-owned non-temporary mechanism at the intended canonical origin. It does not by itself prove gameplay, copied-link correctness, long-horizon availability or human usability.
 
 ### B. Immediate public runtime
 
@@ -98,8 +104,11 @@ PASS only when `scripts/public-share-link-smoke.mjs` uses the real `Kopiuj link 
 - remains on the stable deployment origin;
 - contains only the room identifier;
 - contains no reconnect/seat credential;
+- contains no inherited fragment or unrelated query state;
 - opens in a clean second browser;
 - allows that second browser to join the same room and receive a distinct private seat credential.
+
+The smoke deliberately starts the host from a URL containing an unrelated fragment so the no-fragment property is actually falsifiable.
 
 Constructing a `?room=...` URL inside the test harness is not sufficient evidence for this property.
 
@@ -169,6 +178,7 @@ Allowed examples:
 - `temporary public runtime during run X: PASS`
 - `exact candidate SHA checkout: PASS`
 - `account-owned non-temporary deploy mechanism: PASS`
+- `canonical workers.dev origin: PASS`
 - `public provenance for SHA X: PASS`
 - `actual copied invite behavior: PASS`
 - `short-window repeatability: PASS`
@@ -181,6 +191,7 @@ Forbidden promotion:
 - normal deploy PASS -> `friend-ready` without public runtime evidence;
 - workflow-definition SHA -> candidate/game SHA;
 - branch selection -> exact deployed candidate identity;
+- versioned preview URL -> canonical friend origin;
 - automation PASS -> `real-human test passed`;
 - current reachability -> `will remain available` without the non-temporary mechanism and later recheck.
 
@@ -193,6 +204,7 @@ Forbidden promotion:
 - missing stable secrets: deployment setup blocker;
 - stable authenticated deploy failure: deployment/configuration defect;
 - owned deployment not listed after upload: stable-mechanism failure;
+- unexpected/versioned deployment target: canonical-origin failure;
 - public provenance mismatch: wrong build/deployment-class failure;
 - public health/assets failure: routing/runtime/deployment defect;
 - copied invite malformed/leaking credentials: product/security defect;
