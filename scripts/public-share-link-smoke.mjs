@@ -3,12 +3,21 @@ import { spawn } from 'node:child_process';
 
 const RAW_BASE_URL = process.env.TYSIAC_PUBLIC_URL ?? '';
 const BASE_URL = RAW_BASE_URL.replace(/\/+$/u, '');
+const ALLOW_LOCAL_HTTP = process.env.TYSIAC_ALLOW_LOCAL_HTTP === '1';
 const WEBDRIVER = 'http://127.0.0.1:9520';
 const OUTPUT = 'artifacts/browser';
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-if (!/^https:\/\//u.test(BASE_URL)) {
-  throw new Error('TYSIAC_PUBLIC_URL must be an https:// deployment URL');
+let BASE;
+try {
+  BASE = new URL(BASE_URL);
+} catch {
+  throw new Error('TYSIAC_PUBLIC_URL must be an absolute deployment URL');
+}
+
+const LOCAL_HTTP = ALLOW_LOCAL_HTTP && BASE.protocol === 'http:' && BASE.hostname === '127.0.0.1';
+if (BASE.protocol !== 'https:' && !LOCAL_HTTP) {
+  throw new Error('TYSIAC_PUBLIC_URL must be an https:// deployment URL; HTTP is allowed only for explicit 127.0.0.1 Foundation rehearsal');
 }
 
 async function waitFor(label, probe, timeoutMs = 60_000) {
@@ -142,8 +151,8 @@ async function installClipboardCapture(session) {
 function assertInviteContract(invite, room) {
   const base = new URL(`${BASE_URL}/`);
   const url = new URL(invite);
-  if (url.protocol !== 'https:') throw new Error(`friend invite is not HTTPS: ${invite}`);
   if (url.origin !== base.origin) throw new Error(`friend invite changed origin: ${url.origin} !== ${base.origin}`);
+  if (url.protocol !== 'https:' && !LOCAL_HTTP) throw new Error(`friend invite is not HTTPS: ${invite}`);
   if (url.pathname !== base.pathname) throw new Error(`friend invite changed pathname: ${url.pathname} !== ${base.pathname}`);
   if (url.hash) throw new Error(`friend invite contains unexpected hash: ${url.hash}`);
   const keys = [...url.searchParams.keys()];
@@ -204,20 +213,21 @@ try {
   if (joined.token === lobby.token) throw new Error('host and friend received the same private seat credential');
   if (joined.url.includes(joined.token)) throw new Error('friend credential leaked into URL after join');
 
-  await screenshot(host, 'public-share-link-host');
-  await screenshot(joiner, 'public-share-link-friend');
+  await screenshot(host, LOCAL_HTTP ? 'local-share-link-host' : 'public-share-link-host');
+  await screenshot(joiner, LOCAL_HTTP ? 'local-share-link-friend' : 'public-share-link-friend');
 
-  console.log('public share-link smoke: PASS');
+  console.log(`${LOCAL_HTTP ? 'local' : 'public'} share-link smoke: PASS`);
   console.log(JSON.stringify({
     baseUrl: BASE_URL,
     room: lobby.room,
     copiedInvite: copied.copiedLink,
     sameOrigin: new URL(copied.copiedLink).origin === new URL(BASE_URL).origin,
     friendJoined: true,
+    transport: LOCAL_HTTP ? 'loopback-http' : 'https',
   }, null, 2));
 } catch (error) {
-  try { if (host) await screenshot(host, 'public-share-link-failure-host'); } catch {}
-  try { if (joiner) await screenshot(joiner, 'public-share-link-failure-friend'); } catch {}
+  try { if (host) await screenshot(host, LOCAL_HTTP ? 'local-share-link-failure-host' : 'public-share-link-failure-host'); } catch {}
+  try { if (joiner) await screenshot(joiner, LOCAL_HTTP ? 'local-share-link-failure-friend' : 'public-share-link-failure-friend'); } catch {}
   throw error;
 } finally {
   await closeSession(joiner);
