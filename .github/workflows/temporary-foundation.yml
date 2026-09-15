@@ -1,4 +1,4 @@
-name: Temporary Foundation Preview
+name: Temporary Preview (EXPIRES — DO NOT SHARE)
 
 on:
   workflow_dispatch:
@@ -9,7 +9,7 @@ on:
         type: boolean
         default: false
       confirm_public_preview:
-        description: "Create an unclaimed public workers.dev preview that should expire automatically"
+        description: "Create an unclaimed EXPIRING workers.dev preview. Do NOT use this as the friend/share link."
         required: true
         type: boolean
         default: false
@@ -61,8 +61,10 @@ jobs:
           fi
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "**PASS:** public health, duo desktop↔mobile command sync, hidden-hand separation, and refresh/reconnect." >> "$GITHUB_STEP_SUMMARY"
-          echo "Verified temporary URL: $PUBLIC_URL" >> "$GITHUB_STEP_SUMMARY"
-          echo "The temporary account is intentionally not claimed by this workflow." >> "$GITHUB_STEP_SUMMARY"
+          echo "Verified TEMPORARY URL: $PUBLIC_URL" >> "$GITHUB_STEP_SUMMARY"
+          echo "⚠️ This URL is intentionally unclaimed and should expire automatically." >> "$GITHUB_STEP_SUMMARY"
+          echo "⚠️ DO NOT send this URL to a friend as a durable/shareable multiplayer link." >> "$GITHUB_STEP_SUMMARY"
+          echo "Use the Stable Multiplayer Deploy workflow for friend/Owner links that must remain available." >> "$GITHUB_STEP_SUMMARY"
 
       - uses: actions/upload-artifact@v4
         if: always()
