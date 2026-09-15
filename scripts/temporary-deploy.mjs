@@ -18,9 +18,22 @@ function temporaryEnvironment() {
   return env;
 }
 
+function deploymentSha() {
+  const sha = process.env.GITHUB_SHA ?? '';
+  return /^[0-9a-f]{40}$/u.test(sha) ? sha : 'dev-unpinned';
+}
+
 function deployTemporary() {
   return new Promise((resolve, reject) => {
-    const child = spawn('npx', ['wrangler', 'deploy', '--temporary'], {
+    const child = spawn('npx', [
+      'wrangler',
+      'deploy',
+      '--temporary',
+      '--var',
+      `TYSIAC_BUILD_SHA:${deploymentSha()}`,
+      '--var',
+      'TYSIAC_DEPLOY_CLASS:temporary',
+    ], {
       env: temporaryEnvironment(),
       stdio: ['ignore', 'pipe', 'pipe'],
     });
@@ -61,7 +74,7 @@ if (process.env.GITHUB_OUTPUT) {
 if (process.env.GITHUB_STEP_SUMMARY) {
   await appendFile(
     process.env.GITHUB_STEP_SUMMARY,
-    `### Temporary Cloudflare Foundation preview\n${deploymentUrl}\n\nThis preview is intentionally unclaimed and should expire automatically.\n`,
+    `### Temporary Cloudflare Foundation preview\n${deploymentUrl}\n\nBuild: ${deploymentSha()}\n\nThis preview is intentionally unclaimed and should expire automatically.\n`,
     'utf8',
   );
 }
