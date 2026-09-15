@@ -1,43 +1,94 @@
 # AGENTS.md — Tysiąc The Game
 
+## Read order before substantial work
+
+1. `docs/EXECUTION_STATE.md` — current live state and priorities.
+2. If an incident is OPEN, read the incident document before continuing normal roadmap work.
+3. `docs/DEPLOYMENT.md` — authority for public/stable/friend-link claims.
+4. `docs/RUN05_PHYSICAL_TABLE_V2.md` — active presentation direction.
+5. `docs/PROJECT.md` — durable product/architecture model.
+
+Running behavior and executable evidence outrank plans. A newer explicit Owner requirement outranks a stale plan. When documents conflict, stop treating the conflict as harmless context: identify the current authority and fix the stale document.
+
 ## Project intent
 
 Build a professional browser-first Tysiąc table that works naturally on desktop and mobile, supports private multiplayer and bots, and can represent several real rule families without becoming a generic card-game framework.
 
-Read `docs/EXECUTION_STATE.md` before substantial work. Running behavior and executable evidence outrank plans and historical handoffs.
+The current external-readiness goal includes a real, durable, account-owned multiplayer surface that can be sent to another human. A temporary public preview is not an acceptable substitute.
 
 ## Owner / agent model
 
-The Owner does **not** know Tysiąc rules well enough to validate rule identity, strategic bot quality or authentic Tysiąc gameplay. Never treat Owner approval, silence or enjoyment as evidence that those things are correct.
+The Owner does **not** know Tysiąc rules well enough to validate exact rule identity, strategic bot quality or authentic Tysiąc gameplay. Never treat Owner approval, silence or enjoyment as proof of those things.
 
-The Owner **is the primary product oracle for the experience layer**:
+The Owner **is the primary product oracle for experience truth**:
 
 - visual hierarchy, composition and taste;
-- input/touch feel and ergonomics;
+- mouse/touch feel and ergonomics;
 - feedback, causality and comprehensibility;
-- motion/pacing as perceived by a player;
+- perceived motion/pacing;
 - desktop/mobile presentation quality;
-- onboarding and whether the product communicates what just happened;
+- onboarding and first-contact quality;
 - whether the table feels coherent, polished and worth using.
 
-Owner confusion is real UX evidence, but it does not by itself prove a rule is wrong.
+The agent carries the technical/research burden. Do not require the Owner to program or to translate agent uncertainty into technical work.
 
-Agent responsibilities:
+## Critical-gate law
 
-- lead domain research and technical judgement;
-- distinguish documented fact, observed reference behavior, deliberate project choice and open uncertainty;
-- turn material rule uncertainty into a concrete scenario/probe/test;
-- obtain gameplay/rule evidence independently of Owner taste;
-- seek experienced Tysiąc-player/domain feedback when human gameplay judgement is required;
-- carry implementation/testing work without requiring the Owner to program;
-- translate loose Owner reactions into bounded experience hypotheses and testable changes;
-- protect the boundary between game truth and presentation truth.
+An explicit Owner blocker is a hard requirement, not a preference to average against other green evidence.
 
-Experienced-player/friend feedback is valuable for rule authenticity, strategy and real-human play, but must be weighed as evidence rather than treated as an infallible oracle.
+If the Owner requires property X before progression and available evidence establishes not-X or does not establish X:
 
-## Two evidence tracks
+**the gate is FAIL / BLOCKED. Stop progression on that gate.**
 
-Run the project as two parallel loops rather than one blocking validation chain.
+Unrelated PASS results cannot vote away contradictory evidence.
+
+Examples:
+
+- `temporary / should expire automatically` contradicts a `persistent friend link` requirement;
+- a successful public browser smoke does not prove future availability;
+- a generated room URL in a harness does not prove the actual copied invite;
+- a visually good Owner session does not prove a rule profile is authentic;
+- a green local build does not prove a public deployment.
+
+When new evidence contradicts a previous claim, withdraw the previous claim explicitly before continuing.
+
+## Verification-language contract
+
+Never use broad status words as decoration.
+
+Claims such as `verified`, `safe`, `stable`, `persistent`, `ready`, `production`, `friend-ready`, `complete` or `PASS` must name the property and the direct evidence supporting it.
+
+Prefer scoped claims:
+
+- `Foundation current head: PASS`;
+- `temporary bounded runtime: PASS`;
+- `account-owned non-temporary deployment mechanism: PASS`;
+- `exact copied invite: PASS`;
+- `same-origin later no-redeploy recheck: PASS`;
+- `real-human friend test: pending`.
+
+Do not infer one from another.
+
+For `safe`, state the property actually checked: e.g. no seat-token leakage in share URL, HTTPS origin, hidden-hand separation. Do not imply universal security certification.
+
+## Public deployment / friend-link rules
+
+`docs/DEPLOYMENT.md` is the dedicated authority.
+
+Hard rules:
+
+- `wrangler deploy --temporary` is diagnostic preview infrastructure only;
+- an unclaimed temporary URL must never be given to the Owner/friend as a durable candidate;
+- stable candidate deployment uses the account-owned authenticated normal deploy path;
+- the exact public runtime must identify its expected Git SHA and deployment class;
+- public multiplayer behavior and the exact UI-copied invite are separate evidence checks;
+- long-horizon evidence must recheck the same origin/SHA later **without redeploying**;
+- automation cannot close the friend milestone: the real Owner+friend create/copy/open/join/play test is mandatory;
+- if the stable deployment requires a one-time Owner credential/setup action, ask for that action explicitly rather than substituting a weaker deployment mode.
+
+Do not expose Cloudflare API credentials in chat, source, logs or issues.
+
+## Evidence tracks
 
 ### Game truth
 
@@ -46,15 +97,17 @@ Questions:
 - are rules, legality and scoring correct for the named profile?
 - does authority preserve hidden information and lifecycle invariants?
 - are bots strategically credible enough?
-- does the game feel authentic to people who actually know Tysiąc?
+- does the game feel authentic to knowledgeable Tysiąc players?
 
 Evidence:
 
 - source documentation;
-- reference implementation probes;
+- reference behavior/probes;
 - explicit reversible project pins;
 - executable scenarios, invariants and simulations;
 - experienced Tysiąc-player sessions.
+
+`PLAYOK_3P_800_CANDIDATE` means candidate behavior, not canonical Polish Tysiąc.
 
 ### Experience truth
 
@@ -62,94 +115,84 @@ Questions:
 
 - can the player see and understand what matters?
 - do interactions feel reliable and intentional?
-- are actions and consequences perceptible?
+- are actions/consequences perceptible?
 - does desktop/mobile composition work naturally?
 - does the product look and feel progressively more professional?
 
 Evidence:
 
 - Owner play/reaction;
-- real-device observation and recordings;
+- real-device observation/recordings;
 - browser interaction/layout tests;
-- screenshots and visual review;
+- screenshots/visual review;
 - accessibility/touch measurements where useful.
 
-Automation can defend measurable mechanics of UX, but it cannot certify taste, clarity or feel.
+Automation can defend measurable UX mechanics but cannot certify taste or fun.
 
-Neither track should unnecessarily block the other. Presentation may mature while rule evidence remains open, provided it does not duplicate authority or bake uncertain rule semantics into irreversible UI architecture.
+### Operations / external truth
 
-## Current engineering principles
+Questions:
 
-- Browser-first; desktop and mobile are equal product targets, with responsive compositions rather than forced identical layouts.
-- TypeScript across pure core, client and Cloudflare adapters is current-best.
-- Deterministic domain core independent of React/network/Cloudflare.
-- Online multiplayer is server-authoritative.
-- Full online hidden state stays inside authority; each human/bot seat gets only its allowed observation.
-- Human and bot controllers submit the same domain commands.
-- One canonical legality evaluator generates legal actions and rejection reasons.
-- Named rules profiles are versioned tested bundles.
-- Active matches pin an immutable effective rules snapshot/fingerprint.
-- Introduce a variant field only because real evidence or an explicit unresolved scenario requires it.
-- Keep presentation downstream of `SeatProjection + scoped GameEvents`; professional visuals, animation, audio and haptics must not require a second game engine.
+- what exact SHA/deployment class is public?
+- is the deployment temporary or account-owned/non-temporary?
+- does the actual copied invite contain only safe shareable room identity?
+- can a clean second client join and remain isolated?
+- does the same origin/SHA remain available later without redeploy?
+- can a real second human actually use it?
 
-Avoid inheritance-heavy rule architecture, generic DSLs, arbitrary scripting, event sourcing and client prediction unless demonstrated need overturns this baseline.
+These questions require direct operational evidence. Local game/experience PASS does not prove them.
 
-## First reference profile
+## Defended architecture
 
-Initial target remains provisionally:
+Preserve unless concrete evidence justifies change:
 
-`PLAYOK_3P_800_CANDIDATE`
+- browser-first desktop/mobile as equal targets;
+- deterministic TypeScript domain core independent of React/network/Cloudflare;
+- one canonical legality/reducer implementation;
+- named/versioned rule profiles with immutable effective match snapshot;
+- `SeatProjection + scoped GameEvents` as human presentation boundary;
+- server-authoritative hidden state;
+- one SQLite-backed Durable Object `MatchRoom` per table;
+- room code as shareable identity and opaque seat token as private authority;
+- hibernating WebSockets + snapshot/revision reconnect;
+- same domain command model for humans/bots;
+- fast authority with client-side presentation pacing.
 
-This means "candidate compatible with the documented Kurnik/PlayOK-style 3P game", not "canonical Polish rules".
+Avoid duplicated server/client rules, client prediction, generic rules DSL, event sourcing or server sleeps unless evidence overturns the baseline.
 
-Where source/reference behavior is ambiguous, preserve the uncertainty explicitly instead of asking the Owner to choose what is supposedly correct.
+## Testing discipline
 
-## Evidence language
+Tests must prove the exact property they claim.
 
-For rule claims:
+Core tests: focused rule scenarios, invariants, deterministic matches, simulations where signal justifies cost.
 
-- `documented` — stated by a source;
-- `reference-observed` — reproduced in an existing implementation;
-- `pinned` — deliberately chosen where legitimate variants differ or direct evidence is incomplete;
-- `executable` — our tests prove implementation behavior.
+Presentation tests: viewport safety, hit-testing, interaction availability, transition observability, authoritative identity/handoff, reconnect behavior. Do not encode subjective taste into brittle pixel tests.
 
-For profiles prefer `candidate`, `scenario-tested`, `reference-tested`, `shipping`.
+Deployment tests:
 
-Do not use **certified** as a casual synonym for "tests passed".
+- machine-check temporary/stable workflow separation;
+- bind public runtime to exact SHA/class;
+- test real public Worker/assets;
+- test hidden-state/credential separation;
+- click the actual copy-link UI and use the exact emitted URL;
+- later recheck the same origin without redeploy.
 
-For experience claims distinguish measurable evidence (for example hit target geometry or overflow) from Owner judgement (for example hierarchy, visual quality or perceived pacing).
+A test that proves an adjacent behavior must not be reported as proof of the target behavior.
 
-## Testing
+## Technical-debt discipline
 
-The pure core should keep focused rule scenarios, transition invariants, deterministic full matches and broader simulation/property tests where signal justifies cost.
+Pay debt when it materially reduces risk, ambiguity, iteration cost or future breakage. Do not use `cleanup` as permission for a blind rewrite.
 
-Useful invariants include card conservation/uniqueness, legal-action closure, legal phase progression, score-accounting consistency, no hidden-state leakage and deterministic behavior from the same explicit inputs.
+Current known presentation debt includes the layered Run04/Run05 CSS cascade. Audit selector ownership and superseded layers first, then consolidate in bounded slices with existing geometry/browser evidence preserved.
 
-Presentation tests should defend regressions that can actually be measured: viewport safety, touch hit-testing, interaction availability, hidden-state separation, transition visibility and reconnect behavior. Do not turn subjective visual taste into brittle pixel tests.
-
-Cloudflare adapters are tested separately from pure rules.
-
-## Scope discipline
-
-Current mode: **3-player auction Tysiąc**.
-
-Do not prematurely build 2P/4P modes, accounts/matchmaking/rankings, a generic rules marketplace/DSL, advanced ML/search bots, social systems, event-sourcing infrastructure or heavy observability.
-
-A minimal heuristic bot remains part of the playable product. Its legality can be automated; its strategic credibility requires stronger evidence than Owner approval.
-
-## Current execution model
-
-Foundation Run 01 established the deterministic game/authority/browser foundation.
-
-Run 02 now advances two parallel tracks:
-
-1. **game truth** — close or bound high-risk profile uncertainties, strengthen rule/reference evidence, and eventually validate strategy/authenticity with knowledgeable players;
-2. **experience truth** — iterate interaction, feedback, responsive composition and visual language with the Owner as primary judge.
-
-Integrate them continuously through the same core/projection/command boundaries. Real-human duo/trio play becomes especially valuable once the session can test both authentic gameplay and mature enough presentation without infrastructure dominating the feedback.
+Remove dead or misleading executable paths when their continued presence creates authority ambiguity; Git history is sufficient archival storage for obsolete workflow implementations.
 
 ## Working style
 
-Prefer small reversible evidence-producing slices. Keep durable docs short and current. Do not make the Owner fill structured QA forms unless genuinely useful; natural reactions, screenshots and recordings are valid experience input.
+Prefer small reversible evidence-producing slices. Keep durable docs current and short enough to function as authority rather than archaeology.
 
-Stop broad research once the next uncertainty is better answered by a reference probe, executable experiment or knowledgeable-player test. Stop speculative polish when the next useful question is better answered by putting the current build in front of the Owner.
+Do not make the Owner fill structured QA forms unless genuinely useful. Natural reactions, screenshots and recordings are valid experience evidence.
+
+During a P0 incident, repair the failing trust boundary and its enabling technical/process debt before resuming speculative roadmap polish.
+
+Current P0 friend-link incident remains OPEN until the complete stable-deployment + no-redeploy + real-human gate succeeds.
