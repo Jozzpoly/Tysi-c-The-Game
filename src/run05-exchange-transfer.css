@@ -58,6 +58,121 @@
   box-shadow: 0 5px 12px #0006, inset 0 0 0 2px #3a0b125c;
 }
 
+/* Owner-test correction: exchange intent is spatial, not selection-order based.
+ * Each opponent is a physical drop territory. The actual hand-slot is translated
+ * into that territory while the exchange is still only locally staged, so the
+ * later authoritative transfer can continue from the exact place the player used. */
+.exchange-mode .opponent.exchange-drop-target {
+  position: relative;
+  isolation: isolate;
+  min-height: 88px;
+  border-radius: 15px;
+  outline: 1px dashed #ead6902e;
+  outline-offset: 5px;
+  transition:
+    background .12s ease,
+    outline-color .12s ease,
+    box-shadow .12s ease,
+    transform .12s ease;
+}
+
+.exchange-mode .opponent.exchange-drop-target::after {
+  content: 'Oddaj tutaj';
+  position: absolute;
+  left: 50%;
+  bottom: -17px;
+  transform: translateX(-50%);
+  z-index: 1;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: #07150eb8;
+  color: #d7c98e;
+  font-size: .64rem;
+  font-weight: 700;
+  letter-spacing: .025em;
+  white-space: nowrap;
+  opacity: .58;
+  pointer-events: none;
+}
+
+.exchange-mode .opponent.exchange-drop-target.is-exchange-hot {
+  outline-color: #f2d991c7;
+  background: #f2d99110;
+  box-shadow: 0 0 0 5px #f2d9910d, 0 12px 30px #0003;
+  transform: translateY(-2px);
+}
+
+.exchange-mode .opponent.exchange-drop-target.is-exchange-hot::after {
+  content: 'Puść kartę';
+  color: #fff0b5;
+  opacity: 1;
+}
+
+.exchange-mode .opponent.exchange-drop-target.has-exchange-card {
+  outline-style: solid;
+  outline-color: #dcca886e;
+  background: #dcca8809;
+}
+
+.exchange-mode .opponent.exchange-drop-target.has-exchange-card::after {
+  content: 'Karta przypisana';
+  opacity: .72;
+}
+
+.exchange-card-stage-anchor {
+  position: absolute;
+  z-index: 0;
+  left: 50%;
+  top: 44px;
+  width: 58px;
+  aspect-ratio: .68;
+  transform: translateX(-50%);
+  border: 1px dashed #ead6904d;
+  border-radius: 8px;
+  background: #07150e20;
+  box-shadow: inset 0 0 18px #00025;
+  pointer-events: none;
+}
+
+.exchange-mode .opponent.has-exchange-card .exchange-card-stage-anchor {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
+
+/* This is still the same hand-slot/card object. It leaves the hand visually and
+ * lives over the recipient territory until the second recipient is assigned. */
+.exchange-mode .tactile-hand > .hand-slot.is-exchange-staged {
+  z-index: 1180;
+  transform:
+    translate3d(var(--exchange-stage-x, 0px), var(--exchange-stage-y, 0px), 0)
+    scale(.78);
+  transition: transform 165ms cubic-bezier(.18,.82,.25,1);
+  cursor: grab;
+}
+
+.exchange-mode .tactile-hand > .hand-slot.is-exchange-staged > .card,
+.exchange-mode .tactile-hand > .hand-slot.is-exchange-staged:hover > .card,
+.exchange-mode .tactile-hand > .hand-slot.is-exchange-staged:focus-within > .card {
+  border-color: #f3db8e;
+  box-shadow:
+    0 18px 30px #0007,
+    0 0 0 2px #f3d7778c,
+    inset 0 0 0 1px #fff;
+  opacity: 1;
+}
+
+.exchange-mode[data-exchange-submitting='true'] .opponent.exchange-drop-target {
+  pointer-events: none;
+  opacity: .86;
+}
+
+.physical-exchange-decision .physical-exchange-help {
+  margin-top: 2px;
+  margin-bottom: 8px;
+  color: #d5dfd7;
+}
+
 /* Authority advances to `contract` before the two exchange objects finish their
  * physical travel. Keep the visible phase vocabulary attached to what the table
  * is still doing, then let the canonical phase label appear after landing. */
@@ -93,8 +208,37 @@
   }
 }
 
+@media (pointer: coarse), (max-width: 620px) {
+  .exchange-mode .opponent.exchange-drop-target {
+    min-height: 80px;
+    outline-offset: 3px;
+  }
+
+  .exchange-card-stage-anchor {
+    top: 39px;
+    width: 46px;
+  }
+
+  .exchange-mode .tactile-hand > .hand-slot.is-exchange-staged {
+    transform:
+      translate3d(var(--exchange-stage-x, 0px), var(--exchange-stage-y, 0px), 0)
+      scale(.84);
+  }
+
+  .exchange-mode .opponent.exchange-drop-target::after {
+    bottom: -14px;
+    font-size: .58rem;
+    padding: 2px 6px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .exchange-transfer-card {
     animation: none !important;
+  }
+
+  .exchange-mode .opponent.exchange-drop-target,
+  .exchange-mode .tactile-hand > .hand-slot.is-exchange-staged {
+    transition: none !important;
   }
 }
