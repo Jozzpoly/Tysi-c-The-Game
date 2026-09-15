@@ -2,7 +2,7 @@
 
 **Codename:** `Tysiąc The Game`
 
-Browser-first Tysiąc for desktop and mobile: private friend tables, bots, explicit rule profiles, and a presentation layer being rebuilt around a more physical digital-card language.
+Browser-first Tysiąc for desktop and mobile: private friend tables, bots, explicit rule profiles, and a presentation layer rebuilt around a more physical digital-card language.
 
 ## Current live state
 
@@ -26,9 +26,10 @@ Do not infer current readiness from an old green workflow or an old public URL.
 2. [`docs/INCIDENT_2026-09-15_FRIEND_LINK.md`](docs/INCIDENT_2026-09-15_FRIEND_LINK.md) — open P0 incident and acceptance gate.
 3. [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) — deployment classes and exact evidence contract.
 4. [`AGENTS.md`](AGENTS.md) — Owner/agent and verification rules.
-5. [`docs/PROJECT.md`](docs/PROJECT.md) — durable product/architecture model.
+5. [`docs/RUN05_PHYSICAL_TABLE_V2.md`](docs/RUN05_PHYSICAL_TABLE_V2.md) — current presentation direction now integrated into `main`.
+6. [`docs/PROJECT.md`](docs/PROJECT.md) — durable product/architecture model.
 
-Historical run/handoff documents are context, not current authority.
+Historical run/handoff documents and closed donor PRs are context, not current authority.
 
 ## Product thesis
 
@@ -75,13 +76,21 @@ Visual hierarchy, interaction/touch feel, feedback, pacing, responsive compositi
 
 Deployment class, exact public candidate SHA, exact copied invite, elapsed-time availability and real second-human usability require direct operational evidence. A green game/browser test does not automatically prove any of these.
 
+The exact `Kopiuj link dla znajomego` path is now also rehearsed locally in every Foundation: the UI-generated URL is captured, checked for room-only/capability-free semantics and opened in a clean second browser. That is pre-deploy product evidence, **not** public/stable-origin evidence.
+
 ## Public deployment distinction
 
 - **Temporary Preview (EXPIRES — DO NOT SHARE)** — bounded diagnostics; uses `wrangler deploy --temporary`; not a durable friend link.
-- **Stable Multiplayer Deploy** — account-owned normal deployment; takes one exact `candidate_sha`, checks out exactly that commit, stamps public provenance, then runs public runtime and real copied-invite evidence.
+- **Stable Multiplayer Deploy** — account-owned normal deployment; takes one exact candidate SHA, checks out exactly that commit, stamps public provenance, then runs public runtime and real copied-invite evidence.
 - **Stable Origin Recheck (NO REDEPLOY)** — later rechecks the same origin and same candidate SHA without publishing a replacement.
 
 See [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
+
+Current frozen external candidate remains:
+
+`52450baa04f22646474bf4676f70b2df5ba6812f`
+
+Later `main` cleanup does not silently replace that candidate.
 
 ## Rules stance
 
@@ -91,9 +100,11 @@ The first concrete reference target remains provisionally `PLAYOK_3P_800_CANDIDA
 
 ## Active presentation work
 
-Run 05 / PR #23 is the current experimental physical-table line. It has materially evolved tactile hand behavior, spatial play, material card transfers, trick collection and desktop/mobile composition.
+The clean Run 05 physical-table continuation has been validated and integrated into `main`. The old PR #23 is closed as superseded integration history, not an active product line.
 
-Mechanical browser evidence does not equal Owner visual approval. Broad blind polish is paused while the P0 friend/deployment trust boundary is recovered.
+Current `main` contains the evolved tactile hand, spatial play, material card transfers, trick collection and desktop/mobile composition. Several bounded dead/patch-on-patch CSS layers have already been removed with full browser regression evidence.
+
+Mechanical browser evidence does not equal Owner visual approval. Broad blind polish remains paused while the P0 friend/deployment trust boundary is recovered. Further CSS consolidation is no longer simple dead-code deletion: the remaining Run04/Run05 overlap contains live ownership and must be redesigned in bounded evidence-backed slices.
 
 ## Source-of-truth rule
 
