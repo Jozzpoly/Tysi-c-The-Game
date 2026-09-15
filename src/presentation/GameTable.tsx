@@ -227,6 +227,10 @@ export function GameTable({ projection, seatNames, events = [], message = '', on
       const anchor = document.querySelector<HTMLElement>(`[data-exchange-stage-seat="${seat}"]`);
       if (!slot || !cardNode || !anchor) continue;
 
+      // The tactile hand starts its generic return-to-hand animation before this
+      // parent sees pointer-up. Once the drop is accepted by a recipient, cancel
+      // that return first so staging measures the card's true hand geometry.
+      slot.getAnimations().forEach((animation) => animation.cancel());
       const source = cardNode.getBoundingClientRect();
       const target = anchor.getBoundingClientRect();
       const sourceX = source.left + source.width / 2;
