@@ -136,17 +136,15 @@
   pointer-events: none;
 }
 
-/* This is still the same hand-slot/card object. Keep the exchange translation on
- * the independent transform longhands instead of reusing `transform`, because the
- * tactile hand owns/animates `transform` for fan, reorder and release motion. */
+/* The drag itself is the physical motion. Once released over a recipient, the
+ * underlying card must immediately occupy that exact territory instead of doing
+ * a second synthetic flight from the hand. */
 .exchange-mode .tactile-hand > .hand-slot.is-exchange-staged {
   z-index: 1180;
   transform: none !important;
   translate: var(--exchange-stage-x, 0px) var(--exchange-stage-y, 0px) !important;
   scale: .78 !important;
-  transition:
-    translate 165ms cubic-bezier(.18,.82,.25,1),
-    scale 165ms cubic-bezier(.18,.82,.25,1);
+  transition: none !important;
   cursor: grab;
 }
 
