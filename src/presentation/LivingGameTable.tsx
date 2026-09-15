@@ -2,6 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'reac
 import { createPortal } from 'react-dom';
 import type { Command, Seat } from '../core/index.js';
 import { GameTable, type GameTableProps } from './GameTable.js';
+import { MaterialDeal } from './MaterialDeal.js';
 import {
   MaterialExchangeTransfer,
   materialRectOf,
@@ -26,10 +27,18 @@ export function LivingGameTable({ events = [], ...props }: GameTableProps) {
   const [consequenceReady, setConsequenceReady] = useState(false);
   const [anchors, setAnchors] = useState<(HTMLElement | null)[]>([null, null, null]);
   const [centerAnchor, setCenterAnchor] = useState<HTMLElement | null>(null);
+  const [completedDealTransferKey, setCompletedDealTransferKey] = useState<string | null>(null);
   const [completedTalonTransferKey, setCompletedTalonTransferKey] = useState<string | null>(null);
   const [completedExchangeTransferKey, setCompletedExchangeTransferKey] = useState<string | null>(null);
   const [pendingExchangeMaterial, setPendingExchangeMaterial] = useState<PendingExchangeMaterial | null>(null);
 
+  const handStartedEvent = useMemo(() => {
+    for (let index = events.length - 1; index >= 0; index -= 1) {
+      const event = events[index];
+      if (event.type === 'hand-started') return event;
+    }
+    return null;
+  }, [events]);
   const talonEvent = useMemo(() => {
     for (let index = events.length - 1; index >= 0; index -= 1) {
       const event = events[index];
@@ -51,6 +60,22 @@ export function LivingGameTable({ events = [], ...props }: GameTableProps) {
     }
     return null;
   }, [events, view.seat]);
+
+  const dealTransferKey = handStartedEvent
+    ? `${view.handNumber}:${view.revision}:${handStartedEvent.dealer}`
+    : null;
+  const dealTransferActive = Boolean(
+    dealTransferKey
+    && handStartedEvent
+    && handStartedEvent.handNumber === view.handNumber
+    && view.phase === 'auction'
+    && !prefersReducedMotion
+    && completedDealTransferKey !== dealTransferKey,
+  );
+  const dealMaterialSettled = Boolean(
+    dealTransferKey
+    && completedDealTransferKey === dealTransferKey,
+  );
 
   const talonTransferKey = talonEvent && view.declarer !== null
     ? `${view.handNumber}:${view.revision}:${view.declarer}:${talonEvent.cards.join('|')}`
@@ -84,11 +109,14 @@ export function LivingGameTable({ events = [], ...props }: GameTableProps) {
     exchangeTransferKey
     && completedExchangeTransferKey === exchangeTransferKey,
   );
-  const materialTransferActive = talonTransferActive || exchangeTransferActive;
+  const materialTransferActive = dealTransferActive || talonTransferActive || exchangeTransferActive;
   const tableProjection = materialTransferActive
     ? { ...props.projection, legalCommands: [] }
     : props.projection;
 
+  const completeDealTransfer = useCallback(() => {
+    if (dealTransferKey) setCompletedDealTransferKey(dealTransferKey);
+  }, [dealTransferKey]);
   const completeTalonTransfer = useCallback(() => {
     if (talonTransferKey) setCompletedTalonTransferKey(talonTransferKey);
   }, [talonTransferKey]);
@@ -259,6 +287,18 @@ export function LivingGameTable({ events = [], ...props }: GameTableProps) {
     'scene-feedback',
   ) : null;
 
+  const dealMaterialState = centerAnchor && handStartedEvent
+    ? createPortal(
+      <span
+        className={`material-deal-state ${dealTransferActive ? 'is-active' : dealMaterialSettled ? 'is-settled' : ''}`}
+        data-deal-material-state={dealTransferActive ? 'active' : dealMaterialSettled ? 'settled' : 'idle'}
+        aria-hidden="true"
+      />,
+      centerAnchor,
+      'material-deal-state',
+    )
+    : null;
+
   const talonMaterialState = centerAnchor && view.revealedTalon && view.phase !== 'trick' && view.phase !== 'complete'
     ? createPortal(
       <span
@@ -286,6 +326,14 @@ export function LivingGameTable({ events = [], ...props }: GameTableProps) {
   return (
     <>
       <GameTable {...props} projection={tableProjection} events={events} onCommand={handleCommand} />
+      {dealTransferActive && handStartedEvent && (
+        <MaterialDeal
+          ownCards={view.ownHand}
+          dealer={handStartedEvent.dealer}
+          humanSeat={view.seat}
+          onComplete={completeDealTransfer}
+        />
+      )}
       {talonTransferActive && talonEvent && view.declarer !== null && (
         <MaterialTalonTransfer
           cards={talonEvent.cards}
@@ -303,6 +351,7 @@ export function LivingGameTable({ events = [], ...props }: GameTableProps) {
           onComplete={completeExchangeTransfer}
         />
       )}
+      {dealMaterialState}
       {talonMaterialState}
       {exchangeMaterialState}
       {sceneFeedback}

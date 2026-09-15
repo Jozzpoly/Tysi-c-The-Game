@@ -18,6 +18,7 @@ import './run05-physical-table.css';
 import './run05-spatial-play.css';
 import './run05-material-transfer.css';
 import './run05-exchange-transfer.css';
+import './run05-deal.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

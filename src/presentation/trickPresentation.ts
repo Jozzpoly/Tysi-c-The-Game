@@ -13,6 +13,7 @@ export interface TrickPresentationPlan {
 export const NORMAL_PRESENTATION_MS = 480;
 export const MARRIAGE_PRESENTATION_MS = 680;
 export const TRICK_COMPLETION_PRESENTATION_MS = 900;
+export const DEAL_PRESENTATION_MS = 620;
 
 export const TRICK_COMPLETION_TIMELINE = {
   resolveMs: 220,
@@ -35,6 +36,7 @@ function lastEventOfType<T extends GameEvent['type']>(
 export function presentationFrameDuration(events: readonly GameEvent[]): number {
   if (events.some((event) => event.type === 'trick-completed')) return TRICK_COMPLETION_PRESENTATION_MS;
   if (events.some((event) => event.type === 'marriage-declared')) return MARRIAGE_PRESENTATION_MS;
+  if (events.some((event) => event.type === 'hand-started')) return DEAL_PRESENTATION_MS;
   return NORMAL_PRESENTATION_MS;
 }
 
