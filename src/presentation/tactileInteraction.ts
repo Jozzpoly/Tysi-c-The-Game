@@ -92,9 +92,9 @@ export function beginTactilePointer(input: BeginTactilePointerInput): TactilePoi
 export function advanceTactilePointer(state: TactilePointerState, input: AdvanceTactilePointerInput): TactilePointerState {
   const distance = Math.hypot(input.x - state.startX, input.y - state.startY);
   const moved = state.moved || distance >= TACTILE_DRAG_SLOP;
-  // Run 05 P2: table intent is spatial. The presentation adapter measures the
-  // real shared trick area and tells this pure gesture model whether the carried
-  // card centre is inside it. Distance from the hand is no longer game intent.
+  // Table intent remains spatial. The presentation adapter supplies the accepted
+  // play field derived from the real trick surface; it may include a bounded
+  // assistance margin, but raw pointer coordinates and velocity stay untouched.
   const throwIntent = moved && input.inPlayZone;
   const commitReady = throwIntent && input.canCommit;
 
