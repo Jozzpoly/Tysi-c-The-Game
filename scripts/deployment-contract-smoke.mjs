@@ -33,14 +33,20 @@ const [stable, temporary, recheck, coreWorkflow, temporaryDeploy, wrangler, work
 
 requireMatch('stable workflow', stable, /^name: Stable Multiplayer Deploy$/mu);
 requireMatch('stable workflow', stable, /candidate_sha:/u);
-requireMatch('stable workflow', stable, /candidate_sha must be a full 40-character lowercase git SHA/u);
-requireMatch('stable workflow', stable, /ref:\s*\$\{\{ inputs\.candidate_sha \}\}/u);
+requireMatch('stable workflow', stable, /push:\s*\n\s*branches:\s*\[main\][\s\S]*\.github\/deploy\/stable-candidate\.txt/u);
+requireMatch('stable workflow', stable, /github\.event_name == 'push' \|\| inputs\.confirm/u);
+requireMatch('stable workflow', stable, /Resolve exact candidate SHA/u);
+requireMatch('stable workflow', stable, /stable-candidate\.txt/u);
+requireMatch('stable workflow', stable, /TRIGGER_SOURCE="declarative-file"/u);
+requireMatch('stable workflow', stable, /TRIGGER_SOURCE="workflow-dispatch"/u);
+requireMatch('stable workflow', stable, /full 40-character lowercase git SHA/u);
+requireMatch('stable workflow', stable, /ref:\s*\$\{\{ steps\.candidate\.outputs\.sha \}\}/u);
 requireMatch('stable workflow', stable, /git rev-parse HEAD/u);
 requireMatch('stable workflow', stable, /CLOUDFLARE_ACCOUNT_ID/u);
 requireMatch('stable workflow', stable, /CLOUDFLARE_API_TOKEN/u);
 requireMatch('stable workflow', stable, /command:\s*deploy/u);
-requireMatch('stable workflow', stable, /TYSIAC_BUILD_SHA:\$\{\{ inputs\.candidate_sha \}\}/u);
-requireMatch('stable workflow', stable, /TYSIAC_EXPECTED_SHA:\s*\$\{\{ inputs\.candidate_sha \}\}/u);
+requireMatch('stable workflow', stable, /TYSIAC_BUILD_SHA:\$\{\{ steps\.candidate\.outputs\.sha \}\}/u);
+requireMatch('stable workflow', stable, /TYSIAC_EXPECTED_SHA:\s*\$\{\{ steps\.candidate\.outputs\.sha \}\}/u);
 requireMatch('stable workflow', stable, /TYSIAC_DEPLOY_CLASS:stable/u);
 requireMatch('stable workflow', stable, /wrangler deployments list/u);
 requireMatch('stable workflow', stable, /Expected canonical account-owned workers\.dev root for tysiac-the-game/u);
@@ -98,6 +104,7 @@ requireMatch('deployment authority', deploymentDoc, /Long-horizon availability/u
 requireMatch('deployment authority', deploymentDoc, /Real-human friend gate/u);
 requireMatch('deployment authority', deploymentDoc, /exact.*candidate.*SHA/isu);
 requireMatch('deployment authority', deploymentDoc, /canonical.*workers\.dev/isu);
+requireMatch('deployment authority', deploymentDoc, /stable-candidate\.txt/u);
 requireMatch('incident authority', incident, /FAIL \/ NOT COMPLETE \/ P0 BLOCKER/u);
 requireMatch('incident authority', incident, /Automation is necessary but is not sufficient/iu);
 requireMatch('incident authority', incident, /contradictory lifecycle evidence was known/iu);
