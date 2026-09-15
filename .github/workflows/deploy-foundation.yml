@@ -35,6 +35,16 @@ jobs:
       - name: Checkout deployment request source
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
+      - name: Require main validation authority
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "$GITHUB_REF" != "refs/heads/main" ]]; then
+            echo "::error::Stable deployment validation authority must come from main; got $GITHUB_REF"
+            exit 1
+          fi
+          echo "Validation harness SHA: $GITHUB_SHA"
+
       - name: Resolve exact candidate SHA
         id: candidate
         env:
@@ -127,6 +137,7 @@ jobs:
           PUBLIC_URL: ${{ steps.deploy.outputs.deployment-url }}
           CANDIDATE_SHA: ${{ steps.candidate.outputs.sha }}
           TRIGGER_SOURCE: ${{ steps.candidate.outputs.source }}
+          VALIDATION_HARNESS_SHA: ${{ github.sha }}
         shell: bash
         run: |
           set -euo pipefail
@@ -141,13 +152,24 @@ jobs:
           fi
           echo "### Account-owned non-temporary multiplayer origin" >> "$GITHUB_STEP_SUMMARY"
           echo "$PUBLIC_URL" >> "$GITHUB_STEP_SUMMARY"
-          echo "Candidate SHA: $CANDIDATE_SHA" >> "$GITHUB_STEP_SUMMARY"
+          echo "Product candidate SHA: $CANDIDATE_SHA" >> "$GITHUB_STEP_SUMMARY"
+          echo "Validation harness SHA: $VALIDATION_HARNESS_SHA" >> "$GITHUB_STEP_SUMMARY"
           echo "Trigger source: $TRIGGER_SOURCE" >> "$GITHUB_STEP_SUMMARY"
-          echo "Workflow-definition SHA: $GITHUB_SHA" >> "$GITHUB_STEP_SUMMARY"
           echo "Mechanism evidence: exact candidate checkout + authenticated normal 'wrangler deploy' + owned-account deployment registration + canonical workers.dev target." >> "$GITHUB_STEP_SUMMARY"
           echo "This does NOT by itself certify long-horizon availability or real-human friend readiness." >> "$GITHUB_STEP_SUMMARY"
 
+      - name: Checkout current validation harness
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.sha }}
+          path: .validation-harness
+
+      - name: Install current validation harness dependencies
+        working-directory: .validation-harness
+        run: npm ci --no-audit --no-fund
+
       - name: Verify exact public build provenance
+        working-directory: .validation-harness
         env:
           TYSIAC_PUBLIC_URL: ${{ steps.deploy.outputs.deployment-url }}
           TYSIAC_EXPECTED_SHA: ${{ steps.candidate.outputs.sha }}
@@ -155,16 +177,19 @@ jobs:
         run: node scripts/public-provenance-smoke.mjs
 
       - name: Public multiplayer behavior — pass 1
+        working-directory: .validation-harness
         env:
           TYSIAC_PUBLIC_URL: ${{ steps.deploy.outputs.deployment-url }}
         run: node scripts/public-deploy-smoke.mjs
 
       - name: Verify the actual in-game copied friend invite
+        working-directory: .validation-harness
         env:
           TYSIAC_PUBLIC_URL: ${{ steps.deploy.outputs.deployment-url }}
         run: node scripts/public-share-link-smoke.mjs
 
       - name: Short-window repeatability — pass 2
+        working-directory: .validation-harness
         env:
           TYSIAC_PUBLIC_URL: ${{ steps.deploy.outputs.deployment-url }}
           TYSIAC_EXPECTED_SHA: ${{ steps.candidate.outputs.sha }}
@@ -182,11 +207,13 @@ jobs:
           PUBLIC_URL: ${{ steps.deploy.outputs.deployment-url }}
           CANDIDATE_SHA: ${{ steps.candidate.outputs.sha }}
           TRIGGER_SOURCE: ${{ steps.candidate.outputs.source }}
+          VALIDATION_HARNESS_SHA: ${{ github.sha }}
         shell: bash
         run: |
           set -euo pipefail
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "**PASS — candidate identity:** exact commit $CANDIDATE_SHA was resolved from $TRIGGER_SOURCE, checked out and deployed." >> "$GITHUB_STEP_SUMMARY"
+          echo "**PASS — product candidate identity:** exact commit $CANDIDATE_SHA was resolved from $TRIGGER_SOURCE, checked out and deployed." >> "$GITHUB_STEP_SUMMARY"
+          echo "**PASS — validation authority:** public evidence was produced by current main harness $VALIDATION_HARNESS_SHA, independently of the frozen product commit." >> "$GITHUB_STEP_SUMMARY"
           echo "**PASS — deployment mechanism:** authenticated account-owned normal deploy; not an unclaimed temporary account." >> "$GITHUB_STEP_SUMMARY"
           echo "**PASS — canonical origin:** deployment target is the root tysiac-the-game.<account>.workers.dev origin, not a versioned preview URL." >> "$GITHUB_STEP_SUMMARY"
           echo "**PASS — provenance:** public runtime reports exact candidate SHA $CANDIDATE_SHA and deploy class stable." >> "$GITHUB_STEP_SUMMARY"
@@ -199,5 +226,5 @@ jobs:
         if: always()
         with:
           name: stable-public-evidence-${{ github.run_id }}
-          path: artifacts/browser/public-*.png
+          path: .validation-harness/artifacts/browser/public-*.png
           if-no-files-found: ignore
