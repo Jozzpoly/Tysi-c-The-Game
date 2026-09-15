@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import type { Command, Seat } from '../core/index.js';
+import { cardId, rankOf, suitOf, type CardId, type Command, type Seat } from '../core/index.js';
 import { GameTable, type GameTableProps } from './GameTable.js';
 import { MaterialDeal } from './MaterialDeal.js';
 import {
@@ -8,6 +8,7 @@ import {
   materialRectOf,
   type CapturedExchangeCard,
 } from './MaterialExchangeTransfer.js';
+import { MaterialMarriage, type CapturedMarriageMaterial } from './MaterialMarriage.js';
 import { MaterialTalonTransfer } from './MaterialTalonTransfer.js';
 import { TRICK_COMPLETION_TIMELINE, planTrickPresentation } from './trickPresentation.js';
 
@@ -30,7 +31,9 @@ export function LivingGameTable({ events = [], ...props }: GameTableProps) {
   const [completedDealTransferKey, setCompletedDealTransferKey] = useState<string | null>(null);
   const [completedTalonTransferKey, setCompletedTalonTransferKey] = useState<string | null>(null);
   const [completedExchangeTransferKey, setCompletedExchangeTransferKey] = useState<string | null>(null);
+  const [completedMarriageTransferKey, setCompletedMarriageTransferKey] = useState<string | null>(null);
   const [pendingExchangeMaterial, setPendingExchangeMaterial] = useState<PendingExchangeMaterial | null>(null);
+  const [pendingMarriageMaterial, setPendingMarriageMaterial] = useState<CapturedMarriageMaterial | null>(null);
 
   const dealEvent = useMemo(() => {
     for (let index = events.length - 1; index >= 0; index -= 1) {
@@ -60,6 +63,20 @@ export function LivingGameTable({ events = [], ...props }: GameTableProps) {
     }
     return null;
   }, [events, view.seat]);
+  const marriageEvent = useMemo(() => {
+    for (let index = events.length - 1; index >= 0; index -= 1) {
+      const event = events[index];
+      if (event.type === 'marriage-declared') return event;
+    }
+    return null;
+  }, [events]);
+  const marriagePlayedEvent = useMemo(() => {
+    for (let index = events.length - 1; index >= 0; index -= 1) {
+      const event = events[index];
+      if (event.type === 'card-played') return event;
+    }
+    return null;
+  }, [events]);
 
   const dealTransferKey = dealEvent
     ? `${dealEvent.type}:${view.handNumber}:${view.revision}:${dealEvent.dealer}`
@@ -109,7 +126,32 @@ export function LivingGameTable({ events = [], ...props }: GameTableProps) {
     exchangeTransferKey
     && completedExchangeTransferKey === exchangeTransferKey,
   );
-  const materialTransferActive = dealTransferActive || talonTransferActive || exchangeTransferActive;
+
+  const authoritativeMarriageKey = marriageEvent && marriagePlayedEvent && marriageEvent.seat === marriagePlayedEvent.seat
+    ? `${view.handNumber}:${view.revision}:${marriageEvent.seat}:${marriagePlayedEvent.card}:${marriageEvent.suit}`
+    : null;
+  const marriageTransferKey = pendingMarriageMaterial
+    && authoritativeMarriageKey
+    && marriageEvent?.seat === view.seat
+    && marriagePlayedEvent?.seat === view.seat
+    && marriagePlayedEvent.card === pendingMarriageMaterial.playedCard
+    && view.revision > pendingMarriageMaterial.revision
+      ? authoritativeMarriageKey
+      : null;
+  const marriageTransferActive = Boolean(
+    marriageTransferKey
+    && marriageEvent
+    && marriagePlayedEvent
+    && pendingMarriageMaterial
+    && !prefersReducedMotion
+    && completedMarriageTransferKey !== marriageTransferKey,
+  );
+  const marriageMaterialSettled = Boolean(
+    authoritativeMarriageKey
+    && completedMarriageTransferKey === authoritativeMarriageKey,
+  );
+
+  const materialTransferActive = dealTransferActive || talonTransferActive || exchangeTransferActive || marriageTransferActive;
   const tableProjection = materialTransferActive
     ? { ...props.projection, legalCommands: [] }
     : props.projection;
@@ -124,11 +166,25 @@ export function LivingGameTable({ events = [], ...props }: GameTableProps) {
     if (exchangeTransferKey) setCompletedExchangeTransferKey(exchangeTransferKey);
     setPendingExchangeMaterial(null);
   }, [exchangeTransferKey]);
+  const completeMarriageTransfer = useCallback(() => {
+    if (marriageTransferKey) setCompletedMarriageTransferKey(marriageTransferKey);
+    setPendingMarriageMaterial(null);
+  }, [marriageTransferKey]);
 
   useEffect(() => {
     if (!prefersReducedMotion || !exchangeEvent || !pendingExchangeMaterial) return;
     setPendingExchangeMaterial(null);
   }, [exchangeEvent, pendingExchangeMaterial, prefersReducedMotion]);
+
+  useEffect(() => {
+    if (!pendingMarriageMaterial || view.revision <= pendingMarriageMaterial.revision) return;
+    if (marriageTransferKey && prefersReducedMotion) {
+      setCompletedMarriageTransferKey(marriageTransferKey);
+      setPendingMarriageMaterial(null);
+      return;
+    }
+    if (!marriageTransferKey) setPendingMarriageMaterial(null);
+  }, [marriageTransferKey, pendingMarriageMaterial, prefersReducedMotion, view.revision]);
 
   function handleCommand(command: Command) {
     if (command.type === 'exchange' && command.seat === view.seat) {
@@ -140,6 +196,29 @@ export function LivingGameTable({ events = [], ...props }: GameTableProps) {
         ? { revision: view.revision, cards: captured }
         : null);
     }
+
+    if (command.type === 'play' && command.seat === view.seat && command.declareMarriage) {
+      const rank = rankOf(command.card);
+      const partnerCard: CardId | null = rank === 'K'
+        ? cardId(suitOf(command.card), 'Q')
+        : rank === 'Q'
+          ? cardId(suitOf(command.card), 'K')
+          : null;
+      const playedNode = document.querySelector<HTMLElement>(`.hand-slot[data-card="${command.card}"] > .card`);
+      const partnerNode = partnerCard
+        ? document.querySelector<HTMLElement>(`.hand-slot[data-card="${partnerCard}"] > .card`)
+        : null;
+      setPendingMarriageMaterial(partnerCard && playedNode && partnerNode
+        ? {
+            revision: view.revision,
+            playedCard: command.card,
+            partnerCard,
+            playedFrom: materialRectOf(playedNode),
+            partnerFrom: materialRectOf(partnerNode),
+          }
+        : null);
+    }
+
     props.onCommand(command);
   }
 
@@ -324,6 +403,20 @@ export function LivingGameTable({ events = [], ...props }: GameTableProps) {
     )
     : null;
 
+  const marriageMaterialState = centerAnchor && authoritativeMarriageKey
+    ? createPortal(
+      <span
+        className={`material-marriage-state ${marriageTransferActive ? 'is-active' : marriageMaterialSettled ? 'is-settled' : ''}`}
+        data-marriage-material-state={marriageTransferActive ? 'active' : marriageMaterialSettled ? 'settled' : 'idle'}
+        data-marriage-material-card={marriagePlayedEvent?.card ?? ''}
+        data-marriage-material-suit={marriageEvent?.suit ?? ''}
+        aria-hidden="true"
+      />,
+      centerAnchor,
+      'material-marriage-state',
+    )
+    : null;
+
   return (
     <>
       <GameTable {...props} projection={tableProjection} events={events} onCommand={handleCommand} />
@@ -352,9 +445,18 @@ export function LivingGameTable({ events = [], ...props }: GameTableProps) {
           onComplete={completeExchangeTransfer}
         />
       )}
+      {marriageTransferActive && marriageEvent && marriagePlayedEvent && pendingMarriageMaterial && (
+        <MaterialMarriage
+          event={marriageEvent}
+          playedEvent={marriagePlayedEvent}
+          captured={pendingMarriageMaterial}
+          onComplete={completeMarriageTransfer}
+        />
+      )}
       {dealMaterialState}
       {talonMaterialState}
       {exchangeMaterialState}
+      {marriageMaterialState}
       {sceneFeedback}
       {markers}
     </>
