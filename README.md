@@ -2,7 +2,33 @@
 
 **Codename:** `Tysiąc The Game`
 
-Browser-first Tysiąc for desktop and mobile: private friend tables, first-class bots and a small set of explicitly tested real rule profiles.
+Browser-first Tysiąc for desktop and mobile: private friend tables, bots, explicit rule profiles, and a presentation layer being rebuilt around a more physical digital-card language.
+
+## Current live state
+
+The project is currently under **P0 external-readiness recovery** after the 2026-09-15 friend-link incident.
+
+A temporary Cloudflare preview was incorrectly treated as if it satisfied the Owner's explicit requirement for a durable friend link even though the repository already identified that preview as unclaimed and expected to expire.
+
+Therefore:
+
+- old broad friend-link `ready/stable/verified` claims are invalidated;
+- external friend-test status is **FAIL / NOT COMPLETE**;
+- temporary previews are diagnostics only;
+- stable deployment must use an account-owned non-temporary origin and one exact immutable candidate SHA;
+- later no-redeploy evidence and a real Owner+friend session are required before PASS.
+
+Do not infer current readiness from an old green workflow or an old public URL.
+
+## Read current authority first
+
+1. [`docs/EXECUTION_STATE.md`](docs/EXECUTION_STATE.md) — compact live state.
+2. [`docs/INCIDENT_2026-09-15_FRIEND_LINK.md`](docs/INCIDENT_2026-09-15_FRIEND_LINK.md) — open P0 incident and acceptance gate.
+3. [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) — deployment classes and exact evidence contract.
+4. [`AGENTS.md`](AGENTS.md) — Owner/agent and verification rules.
+5. [`docs/PROJECT.md`](docs/PROJECT.md) — durable product/architecture model.
+
+Historical run/handoff documents are context, not current authority.
 
 ## Product thesis
 
@@ -11,83 +37,68 @@ Najpierw dobra gra i dobry stół. Elastyczność zasad ma chronić realne odmia
 Current target:
 
 - 3-player auction Tysiąc;
-- open link / private table without mandatory accounts;
+- open stable link / private table without mandatory accounts;
 - `solo`: Human + Bot + Bot;
 - `duo`: Human + Human + Bot;
 - `trio`: Human + Human + Human;
-- desktop and mobile treated as equal product targets;
-- reconnect/background/refresh treated as normal browser lifecycle.
+- desktop and mobile as equal product targets;
+- reconnect/background/refresh as normal browser lifecycle;
+- one public multiplayer surface that a real friend can use without developer intervention.
 
-## Current technical direction
+## Technical direction
 
-Validated during Foundation Run 01 and subsequent Run 02 slices:
+Defended architecture, subject to current-head CI:
 
 - deterministic TypeScript domain core;
 - React + Vite client;
-- one projection-driven `GameTable` for local and online play;
-- Cloudflare Worker + one SQLite-backed Durable Object per table;
+- canonical legality/reducer path;
+- `SeatProjection + scoped GameEvents` presentation boundary;
+- Cloudflare Worker + one SQLite-backed Durable Object `MatchRoom` per table;
 - hibernating WebSockets;
 - server-authoritative hidden state with per-seat projections;
 - anonymous room codes + private reconnect capabilities;
-- scenario/invariant/simulation tests plus real Chrome desktop/mobile gates.
+- browser evidence on desktop and mobile.
 
-Cloudflare remains **current-best**, not an eternal requirement.
+Cloudflare remains current-best infrastructure, not an eternal architectural requirement.
 
-## Rules stance
-
-There is no single defensible "Polish Tysiąc" ruleset.
-
-The first concrete reference target is provisionally source-scoped as `PLAYOK_3P_800_CANDIDATE` (Kurnik/PlayOK family), with unresolved edge cases kept explicit and reference probes added when necessary.
-
-Named profiles are tested bundles of supported behavior. We do not promise that every arbitrary combination of internal rule fields is valid.
-
-## Current execution — two evidence tracks
-
-**Foundation Run 01 is complete.** It established the rules/game kernel, responsive presentation boundary, bot baseline, private room lifecycle, reconnect identity, real MatchRoom authority and public Cloudflare/browser feasibility.
-
-**Run 02** now advances two loops in parallel instead of asking one kind of evidence to prove everything:
+## Evidence model
 
 ### Game truth
 
-Rules, legality/scoring, bot strategy and authentic Tysiąc gameplay are validated through source/reference evidence, executable tests/simulations and knowledgeable Tysiąc-player feedback.
-
-The Owner does **not** know the game well enough to certify this track.
+Rules, legality/scoring, bot strategy and authentic Tysiąc gameplay require source/reference evidence, executable scenarios and knowledgeable-player evidence. The Owner is not the rules oracle.
 
 ### Experience truth
 
-Visual hierarchy, interaction/touch feel, feedback, perceived pacing, responsive composition, onboarding and professional presentation are iterated with the Owner as the primary product oracle.
+Visual hierarchy, interaction/touch feel, feedback, pacing, responsive composition and presentation quality are iterated with the Owner as primary product judge. Automation protects measurable mechanics but cannot certify taste or fun.
 
-Owner confusion is valuable UX evidence, but does not automatically mean the underlying rule is wrong.
+### Operations / external truth
 
-The two tracks can progress concurrently. Presentation does not need to wait for all rule research to finish, provided it remains downstream of the canonical game state/projection boundary and does not hard-code uncertain rule semantics.
+Deployment class, exact public candidate SHA, exact copied invite, elapsed-time availability and real second-human usability require direct operational evidence. A green game/browser test does not automatically prove any of these.
 
-## Current Run 02 example
+## Public deployment distinction
 
-The first direct Owner-derived experience slice hardened mobile touch interaction after real play exposed unreliable-feeling taps and accidental text selection.
+- **Temporary Preview (EXPIRES — DO NOT SHARE)** — bounded diagnostics; uses `wrangler deploy --temporary`; not a durable friend link.
+- **Stable Multiplayer Deploy** — account-owned normal deployment; takes one exact `candidate_sha`, checks out exactly that commit, stamps public provenance, then runs public runtime and real copied-invite evidence.
+- **Stable Origin Recheck (NO REDEPLOY)** — later rechecks the same origin and same candidate SHA without publishing a replacement.
 
-The defended contract now includes finger-sized controls, touch-safe cards and a directly hittable 5×2 layout for the temporary 10-card exchange hand. See [`docs/EXECUTION_STATE.md`](docs/EXECUTION_STATE.md) for current evidence.
+See [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
 
-## Live truth
+## Rules stance
 
-- [`docs/EXECUTION_STATE.md`](docs/EXECUTION_STATE.md)
-- [`docs/RUN_02.md`](docs/RUN_02.md)
-- [`docs/PROJECT.md`](docs/PROJECT.md)
-- [`AGENTS.md`](AGENTS.md)
+There is no single defensible universal "Polish Tysiąc" ruleset.
 
-Other useful context:
+The first concrete reference target remains provisionally `PLAYOK_3P_800_CANDIDATE`. Named profiles are tested bundles of supported behavior, not a promise that every arbitrary combination of internal rule fields is valid.
 
-- [`docs/rules/PLAYOK_3P_800_CANDIDATE.md`](docs/rules/PLAYOK_3P_800_CANDIDATE.md)
-- [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)
+## Active presentation work
 
-## Source of truth
+Run 05 / PR #23 is the current experimental physical-table line. It has materially evolved tactile hand behavior, spatial play, material card transfers, trick collection and desktop/mobile composition.
 
-Use the evidence source appropriate to the claim:
+Mechanical browser evidence does not equal Owner visual approval. Broad blind polish is paused while the P0 friend/deployment trust boundary is recovered.
 
-1. running code + executable tests/invariants for implementation behavior;
-2. documented/reference evidence for rule identity;
-3. knowledgeable-player evidence for authentic gameplay/strategy;
-4. Owner observation for product experience, visual quality and feel;
-5. current repository execution/product docs for project state;
-6. historical chat/handoff material only as context.
+## Source-of-truth rule
 
-Do not let green automation substitute for subjective experience judgement, and do not let Owner taste substitute for Tysiąc domain evidence.
+For critical claims, name the property and the evidence.
+
+A status such as `PASS`, `stable`, `safe`, `persistent`, `verified` or `ready` is invalid if it silently upgrades evidence from a different property.
+
+When a critical Owner requirement conflicts with available evidence, the correct project state is **BLOCKED / FAIL** until the contradiction is resolved.
