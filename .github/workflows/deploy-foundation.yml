@@ -97,40 +97,127 @@ jobs:
 
       - run: npm ci --no-audit --no-fund
 
-      - name: Verify permanent deployment credentials are configured
+      - name: Normalize and verify permanent Cloudflare credentials
         env:
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID_RAW: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN_RAW: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         shell: bash
         run: |
           set -euo pipefail
-          if [[ -z "$CLOUDFLARE_ACCOUNT_ID" ]]; then
+          if [[ -z "$CLOUDFLARE_ACCOUNT_ID_RAW" ]]; then
             echo "::error::Missing repository secret CLOUDFLARE_ACCOUNT_ID. Stable/shareable multiplayer deploy requires an owned Cloudflare account."
             exit 1
           fi
-          if [[ -z "$CLOUDFLARE_API_TOKEN" ]]; then
+          if [[ -z "$CLOUDFLARE_API_TOKEN_RAW" ]]; then
             echo "::error::Missing repository secret CLOUDFLARE_API_TOKEN. Stable/shareable multiplayer deploy requires an owned Cloudflare account."
             exit 1
           fi
+
+          ACCOUNT_ID="$(printf '%s' "$CLOUDFLARE_ACCOUNT_ID_RAW" | tr -d '[:space:]')"
+          TOKEN="$(python3 - <<'PY'
+          import os
+          import re
+
+          value = os.environ['CLOUDFLARE_API_TOKEN_RAW'].strip()
+
+          def unwrap(text: str) -> str:
+              text = text.strip()
+              if len(text) >= 2 and text[0] == text[-1] and text[0] in {'\"', "'"}:
+                  return text[1:-1].strip()
+              return text
+
+          value = unwrap(value)
+          if value.startswith('CLOUDFLARE_API_TOKEN='):
+              value = unwrap(value.split('=', 1)[1])
+          value = re.sub(r'^Authorization\s*:\s*Bearer\s+', '', value, flags=re.IGNORECASE)
+          value = re.sub(r'^Bearer\s+', '', value, flags=re.IGNORECASE)
+          value = unwrap(value)
+          value = ''.join(value.split())
+          print(value, end='')
+          PY
+          )"
+
+          if [[ ! "$ACCOUNT_ID" =~ ^[0-9a-fA-F]{32}$ ]]; then
+            echo "::error::CLOUDFLARE_ACCOUNT_ID is not a 32-character Cloudflare account ID after whitespace normalization."
+            exit 1
+          fi
+          if [[ -z "$TOKEN" ]]; then
+            echo "::error::CLOUDFLARE_API_TOKEN is empty after safe normalization."
+            exit 1
+          fi
+          if [[ "$TOKEN" == "$ACCOUNT_ID" ]]; then
+            echo "::error::CLOUDFLARE_API_TOKEN equals CLOUDFLARE_ACCOUNT_ID; the token secret was not stored in the token secret."
+            exit 1
+          fi
+
+          echo "::add-mask::$TOKEN"
+          if [[ "$TOKEN" == cfat_* ]]; then
+            TOKEN_FORMAT="account-token"
+          elif [[ "$TOKEN" == cfut_* ]]; then
+            TOKEN_FORMAT="user-token"
+          else
+            TOKEN_FORMAT="legacy-or-unrecognized"
+          fi
+          if [[ "$TOKEN" == "$CLOUDFLARE_API_TOKEN_RAW" ]]; then
+            NORMALIZED="no"
+          else
+            NORMALIZED="yes"
+          fi
+          echo "Cloudflare credential shape: token_format=$TOKEN_FORMAT normalized=$NORMALIZED"
+
+          VERIFY_FILE="$RUNNER_TEMP/cloudflare-account-token-verify.json"
+          HTTP_CODE="$(curl --silent --show-error --output "$VERIFY_FILE" --write-out '%{http_code}' \
+            --header "Authorization: Bearer $TOKEN" \
+            "https://api.cloudflare.com/client/v4/accounts/$ACCOUNT_ID/tokens/verify" || true)"
+
+          node - "$VERIFY_FILE" "$HTTP_CODE" <<'NODE'
+          const fs = require('node:fs');
+          const [file, httpCode] = process.argv.slice(2);
+          let payload = null;
+          try {
+            payload = JSON.parse(fs.readFileSync(file, 'utf8'));
+          } catch {
+            console.error(`::error::Cloudflare account-token preflight returned an unreadable response (HTTP ${httpCode || 'network-error'}).`);
+            process.exit(1);
+          }
+          const codes = Array.isArray(payload.errors)
+            ? payload.errors.map((entry) => entry?.code).filter((value) => value != null).join(',')
+            : '';
+          const status = payload?.result?.status ?? 'unknown';
+          if (payload?.success !== true || status !== 'active') {
+            console.error(`::error::Cloudflare account-token preflight failed (HTTP ${httpCode || 'network-error'}; status=${status}; error_codes=${codes || 'none'}).`);
+            process.exit(1);
+          }
+          console.log('Cloudflare account-token preflight: PASS (active).');
+          NODE
+
+          printf 'CLOUDFLARE_ACCOUNT_ID=%s\n' "$ACCOUNT_ID" >> "$GITHUB_ENV"
+          printf 'CLOUDFLARE_API_TOKEN=%s\n' "$TOKEN" >> "$GITHUB_ENV"
 
       - name: Run complete Foundation and deployment-contract gates on exact candidate
         run: npm run check
 
       - name: Deploy exact candidate to account-owned non-temporary Worker
         id: deploy
-        uses: cloudflare/wrangler-action@ebbaa1584979971c8614a24965b4405ff95890e0 # v4
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          wranglerVersion: "4.131.1"
-          packageManager: npm
-          command: deploy --var TYSIAC_BUILD_SHA:${{ steps.candidate.outputs.sha }} --var TYSIAC_DEPLOY_CLASS:stable
+        env:
+          CANDIDATE_SHA: ${{ steps.candidate.outputs.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEPLOY_LOG="$RUNNER_TEMP/tysiac-stable-wrangler-deploy.log"
+          npx --no-install wrangler deploy \
+            --var "TYSIAC_BUILD_SHA:$CANDIDATE_SHA" \
+            --var "TYSIAC_DEPLOY_CLASS:stable" 2>&1 | tee "$DEPLOY_LOG"
+
+          PUBLIC_URL="$(grep -Eo 'https://tysiac-the-game\.[a-z0-9-]+\.workers\.dev/?' "$DEPLOY_LOG" | tail -n 1 || true)"
+          if [[ -z "$PUBLIC_URL" ]]; then
+            echo "::error::Cloudflare deployment completed without a canonical tysiac-the-game workers.dev URL in Wrangler output."
+            exit 1
+          fi
+          echo "deployment-url=$PUBLIC_URL" >> "$GITHUB_OUTPUT"
 
       - name: Verify deployment is registered in the owned Cloudflare account
-        env:
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-        run: npx wrangler deployments list
+        run: npx --no-install wrangler deployments list
 
       - name: Require the canonical account-owned workers.dev origin
         env:
