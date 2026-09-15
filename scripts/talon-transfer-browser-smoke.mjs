@@ -85,6 +85,16 @@ async function closeSession(session) {
   try { await webdriver(`/session/${session}`, { method: 'DELETE' }); } catch {}
 }
 
+async function clickButtonByText(session, text) {
+  const clicked = await execute(session, `
+    const button = [...document.querySelectorAll('button')].find((node) => node.textContent?.trim() === ${JSON.stringify(text)} && !node.disabled);
+    if (!button) return false;
+    button.click();
+    return true;
+  `);
+  if (!clicked) throw new Error(`enabled button not found: ${text}`);
+}
+
 async function clickHighestBid(session) {
   return execute(session, `
     const candidates = [...document.querySelectorAll('.decision-card button:not(:disabled)')]
@@ -96,6 +106,16 @@ async function clickHighestBid(session) {
     chosen.button.click();
     return chosen.value;
   `);
+}
+
+async function clickFirstUnselectedHandCard(session) {
+  const clicked = await execute(session, `
+    const card = [...document.querySelectorAll('.hand .card:not(:disabled)')].find((node) => !node.classList.contains('selected'));
+    if (!card) return false;
+    card.click();
+    return true;
+  `);
+  if (!clicked) throw new Error('no unselected enabled hand card');
 }
 
 async function driveToTransfer(session, label) {
@@ -115,7 +135,7 @@ async function driveToTransfer(session, label) {
   throw new Error(`${label}: transfer not reached in bounded auction loop`);
 }
 
-async function inspectTransfer(session) {
+async function inspectTalonTransfer(session) {
   return execute(session, `
     const transferCards = [...document.querySelectorAll('.talon-transfer-card')];
     const sourceCards = [...document.querySelectorAll('.talon .mini-cards > .card')];
@@ -146,7 +166,7 @@ async function inspectTransfer(session) {
   `);
 }
 
-async function inspectSettled(session) {
+async function inspectTalonSettled(session) {
   return execute(session, `
     const talon = document.querySelector('.talon');
     return {
@@ -163,36 +183,89 @@ async function inspectSettled(session) {
   `);
 }
 
-async function runViewport(label, width, height, mobile) {
-  const session = await createSession();
-  try {
-    await cdp(session, 'Emulation.setDeviceMetricsOverride', {
-      width, height, screenWidth: width, screenHeight: height,
-      deviceScaleFactor: 1, mobile, positionX: 0, positionY: 0, dontSetVisibleSize: false,
-    });
-    await cdp(session, 'Emulation.setTouchEmulationEnabled', { enabled: mobile, maxTouchPoints: mobile ? 5 : 1 });
-    await webdriver(`/session/${session}/url`, {
-      method: 'POST', body: JSON.stringify({ url: `${BASE_URL}?seed=2&seat=0` }),
-    });
+async function inspectExchangeTransfer(session) {
+  return execute(session, `
+    const transfers = [...document.querySelectorAll('.exchange-transfer-card')];
+    const materialSlots = [...document.querySelectorAll('.hand-slot.is-exchange-materializing')];
+    const receiving = [...document.querySelectorAll('[data-seat-anchor].is-exchange-receiving')];
+    return {
+      state: document.querySelector('.material-exchange-state')?.getAttribute('data-exchange-material-state') ?? 'missing',
+      transfers: transfers.length,
+      faces: transfers.filter((node) => node.classList.contains('is-face')).length,
+      backs: transfers.filter((node) => node.classList.contains('is-back')).length,
+      knownCards: transfers.map((node) => node.getAttribute('data-exchange-card')).filter(Boolean),
+      recipients: transfers.map((node) => node.getAttribute('data-exchange-recipient')).filter(Boolean),
+      materialSlots: materialSlots.map((node) => node.getAttribute('data-card')).filter(Boolean),
+      hiddenMaterialTargets: materialSlots.filter((node) => {
+        const card = node.querySelector(':scope > .card');
+        return card && getComputedStyle(card).visibility === 'hidden';
+      }).length,
+      receivingAnchors: receiving.length,
+      hiddenRecipientBacks: receiving.filter((node) => {
+        const back = node.querySelector('.card-backs i:last-child');
+        return back && getComputedStyle(back).visibility === 'hidden';
+      }).length,
+      handCards: document.querySelectorAll('.hand .card').length,
+      enabledHandCards: document.querySelectorAll('.hand .card:not(:disabled)').length,
+      decisionHeading: document.querySelector('.decision-card h2')?.textContent?.trim() ?? '',
+    };
+  `);
+}
 
+async function inspectExchangeSettled(session) {
+  return execute(session, `
+    const talon = document.querySelector('.talon');
+    const numericButtons = [...document.querySelectorAll('.decision-card button:not(:disabled)')]
+      .filter((node) => Number.isFinite(Number(node.textContent?.trim()))).length;
+    return {
+      state: document.querySelector('.material-exchange-state')?.getAttribute('data-exchange-material-state') ?? 'missing',
+      transfers: document.querySelectorAll('.exchange-transfer-card').length,
+      materialSlots: document.querySelectorAll('.hand-slot.is-exchange-materializing').length,
+      receivingAnchors: document.querySelectorAll('[data-seat-anchor].is-exchange-receiving').length,
+      handCards: document.querySelectorAll('.hand .card').length,
+      decisionHeading: document.querySelector('.decision-card h2')?.textContent?.trim() ?? '',
+      numericButtons,
+      talonDisplay: talon ? getComputedStyle(talon).display : 'missing',
+      scrollWidth: document.documentElement.scrollWidth,
+      width: document.documentElement.clientWidth,
+    };
+  `);
+}
+
+async function openScenario(width, height, mobile, seed) {
+  const session = await createSession();
+  await cdp(session, 'Emulation.setDeviceMetricsOverride', {
+    width, height, screenWidth: width, screenHeight: height,
+    deviceScaleFactor: 1, mobile, positionX: 0, positionY: 0, dontSetVisibleSize: false,
+  });
+  await cdp(session, 'Emulation.setTouchEmulationEnabled', { enabled: mobile, maxTouchPoints: mobile ? 5 : 1 });
+  await webdriver(`/session/${session}/url`, {
+    method: 'POST', body: JSON.stringify({ url: `${BASE_URL}?seed=${seed}&seat=0` }),
+  });
+  return session;
+}
+
+async function runDeclarerViewport(label, width, height, mobile) {
+  const session = await openScenario(width, height, mobile, 2);
+  try {
     await driveToTransfer(session, label);
-    await waitFor(`${label}: three material cards`, async () => (await inspectTransfer(session)).visibleTransferCards === 3, 500);
+    await waitFor(`${label}: three material cards`, async () => (await inspectTalonTransfer(session)).visibleTransferCards === 3, 500);
     await sleep(90);
-    const flight = await inspectTransfer(session);
-    if (flight.state !== 'active') throw new Error(`${label}: transfer state is not active ${JSON.stringify(flight)}`);
-    if (flight.transferCards.length !== 3 || flight.visibleTransferCards !== 3) throw new Error(`${label}: expected three visible transfer cards ${JSON.stringify(flight)}`);
-    if (flight.sourceCards !== 3 || flight.hiddenSourceCards !== 3) throw new Error(`${label}: source talon duplicates remain visible ${JSON.stringify(flight)}`);
-    if (flight.materialSlots.length !== 3 || flight.hiddenMaterialTargets !== 3) throw new Error(`${label}: canonical hand targets are not hidden during transfer ${JSON.stringify(flight)}`);
-    if (new Set(flight.transferCards).size !== 3 || flight.transferCards.some((card) => !flight.materialSlots.includes(card))) {
-      throw new Error(`${label}: transfer identities do not match exact hand targets ${JSON.stringify(flight)}`);
+    const talonFlight = await inspectTalonTransfer(session);
+    if (talonFlight.state !== 'active') throw new Error(`${label}: talon transfer state is not active ${JSON.stringify(talonFlight)}`);
+    if (talonFlight.transferCards.length !== 3 || talonFlight.visibleTransferCards !== 3) throw new Error(`${label}: expected three visible talon cards ${JSON.stringify(talonFlight)}`);
+    if (talonFlight.sourceCards !== 3 || talonFlight.hiddenSourceCards !== 3) throw new Error(`${label}: source talon duplicates remain visible ${JSON.stringify(talonFlight)}`);
+    if (talonFlight.materialSlots.length !== 3 || talonFlight.hiddenMaterialTargets !== 3) throw new Error(`${label}: canonical hand targets are not hidden during talon transfer ${JSON.stringify(talonFlight)}`);
+    if (new Set(talonFlight.transferCards).size !== 3 || talonFlight.transferCards.some((card) => !talonFlight.materialSlots.includes(card))) {
+      throw new Error(`${label}: talon identities do not match exact hand targets ${JSON.stringify(talonFlight)}`);
     }
-    if (flight.enabledHandCards !== 0 || flight.decisionHeading === 'Oddaj po jednej karcie') {
-      throw new Error(`${label}: exchange input became active before ownership materialized ${JSON.stringify(flight)}`);
+    if (talonFlight.enabledHandCards !== 0 || talonFlight.decisionHeading === 'Oddaj po jednej karcie') {
+      throw new Error(`${label}: exchange input became active before talon ownership materialized ${JSON.stringify(talonFlight)}`);
     }
     await screenshot(session, `${label}-talon-transfer-flight`);
 
-    const settled = await waitFor(`${label}: transfer settled`, async () => {
-      const state = await inspectSettled(session);
+    const talonSettled = await waitFor(`${label}: talon transfer settled`, async () => {
+      const state = await inspectTalonSettled(session);
       return state.state === 'settled'
         && state.transferCards === 0
         && state.materialSlots === 0
@@ -203,10 +276,106 @@ async function runViewport(label, width, height, mobile) {
         ? state
         : false;
     }, 3_000);
-    if (settled.scrollWidth > settled.width + 1) throw new Error(`${label}: transfer introduced horizontal overflow ${JSON.stringify(settled)}`);
+    if (talonSettled.scrollWidth > talonSettled.width + 1) throw new Error(`${label}: talon transfer introduced horizontal overflow ${JSON.stringify(talonSettled)}`);
     await screenshot(session, `${label}-talon-transfer-settled`);
 
-    return { label, flight, settled };
+    await clickFirstUnselectedHandCard(session);
+    await waitFor(`${label}: first exchange selection`, () => execute(session, `return document.querySelectorAll('.hand .card.selected').length === 1;`));
+    await clickFirstUnselectedHandCard(session);
+    await waitFor(`${label}: second exchange selection`, () => execute(session, `return document.querySelectorAll('.hand .card.selected').length === 2;`));
+    await clickButtonByText(session, 'Potwierdź wymianę');
+
+    await waitFor(`${label}: exchange material active`, () => execute(session, `return Boolean(document.querySelector('.material-exchange-state.is-active'));`), 1_000);
+    await waitFor(`${label}: two exchange cards`, async () => (await inspectExchangeTransfer(session)).transfers === 2, 500);
+    await sleep(90);
+    const exchangeFlight = await inspectExchangeTransfer(session);
+    if (exchangeFlight.state !== 'active' || exchangeFlight.transfers !== 2 || exchangeFlight.faces !== 2 || exchangeFlight.backs !== 0) {
+      throw new Error(`${label}: declarer must see exactly two known outgoing card faces ${JSON.stringify(exchangeFlight)}`);
+    }
+    if (exchangeFlight.knownCards.length !== 2 || new Set(exchangeFlight.knownCards).size !== 2) {
+      throw new Error(`${label}: declarer transfer lost exact outgoing identities ${JSON.stringify(exchangeFlight)}`);
+    }
+    const outgoingStillInHand = await execute(session, `
+      const cards = ${JSON.stringify(exchangeFlight.knownCards)};
+      return cards.filter((card) => document.querySelector('.hand-slot[data-card="' + card + '"]'));
+    `);
+    if (outgoingStillInHand.length > 0) throw new Error(`${label}: outgoing card still visible in canonical hand ${JSON.stringify({ exchangeFlight, outgoingStillInHand })}`);
+    if (exchangeFlight.receivingAnchors !== 2 || exchangeFlight.hiddenRecipientBacks !== 2) {
+      throw new Error(`${label}: opponent destination backs appeared before the transfer landed ${JSON.stringify(exchangeFlight)}`);
+    }
+    if (exchangeFlight.enabledHandCards !== 0 || exchangeFlight.decisionHeading === 'Ile ostatecznie grasz?') {
+      throw new Error(`${label}: contract input became active before exchange materialized ${JSON.stringify(exchangeFlight)}`);
+    }
+    await screenshot(session, `${label}-exchange-transfer-flight`);
+
+    const exchangeSettled = await waitFor(`${label}: exchange material settled`, async () => {
+      const state = await inspectExchangeSettled(session);
+      return state.state === 'settled'
+        && state.transfers === 0
+        && state.materialSlots === 0
+        && state.receivingAnchors === 0
+        && state.handCards === 8
+        && state.decisionHeading === 'Ile ostatecznie grasz?'
+        && state.numericButtons > 0
+        && state.talonDisplay === 'none'
+        ? state
+        : false;
+    }, 2_000);
+    if (exchangeSettled.scrollWidth > exchangeSettled.width + 1) throw new Error(`${label}: exchange transfer introduced horizontal overflow ${JSON.stringify(exchangeSettled)}`);
+    await screenshot(session, `${label}-exchange-transfer-settled`);
+
+    return { label, talonFlight, talonSettled, exchangeFlight, exchangeSettled };
+  } finally {
+    await closeSession(session);
+  }
+}
+
+async function runDefenderPrivacyViewport(label, width, height, mobile) {
+  const session = await openScenario(width, height, mobile, 1);
+  try {
+    await waitFor(`${label}: human auction`, () => execute(session, `return document.querySelector('.decision-card h2')?.textContent?.trim() === 'Twoja licytacja';`));
+    await clickButtonByText(session, 'Pas');
+
+    await waitFor(`${label}: opponent talon material active`, () => execute(session, `return Boolean(document.querySelector('.material-talon-state.is-active'));`), 10_000);
+    const opponentTalon = await waitFor(`${label}: opponent talon cards`, async () => {
+      const state = await inspectTalonTransfer(session);
+      return state.visibleTransferCards === 3 ? state : false;
+    }, 500);
+    if (opponentTalon.materialSlots.length !== 0 || opponentTalon.handCards !== 7 || opponentTalon.enabledHandCards !== 0) {
+      throw new Error(`${label}: opponent talon transfer contaminated human hand ${JSON.stringify(opponentTalon)}`);
+    }
+    await screenshot(session, `${label}-opponent-talon-transfer-flight`);
+
+    await waitFor(`${label}: opponent talon settled`, () => execute(session, `
+      const marker = document.querySelector('.material-talon-state');
+      const talon = document.querySelector('.talon');
+      return marker?.getAttribute('data-talon-material-state') === 'settled' && talon && getComputedStyle(talon).display === 'none';
+    `), 2_000);
+
+    await waitFor(`${label}: private exchange material active`, () => execute(session, `return Boolean(document.querySelector('.material-exchange-state.is-active'));`), 5_000);
+    await waitFor(`${label}: private exchange cards`, async () => (await inspectExchangeTransfer(session)).transfers === 2, 500);
+    await sleep(80);
+    const privateFlight = await inspectExchangeTransfer(session);
+    if (privateFlight.state !== 'active' || privateFlight.transfers !== 2 || privateFlight.faces !== 0 || privateFlight.backs !== 2) {
+      throw new Error(`${label}: defender saw exchange card faces ${JSON.stringify(privateFlight)}`);
+    }
+    if (privateFlight.knownCards.length !== 1 || privateFlight.materialSlots.length !== 1 || privateFlight.hiddenMaterialTargets !== 1) {
+      throw new Error(`${label}: defender should know and materialize only its own received identity ${JSON.stringify(privateFlight)}`);
+    }
+    if (privateFlight.knownCards[0] !== privateFlight.materialSlots[0]) {
+      throw new Error(`${label}: private received identity does not match exact hidden target ${JSON.stringify(privateFlight)}`);
+    }
+    if (privateFlight.receivingAnchors !== 2 || privateFlight.hiddenRecipientBacks !== 1) {
+      throw new Error(`${label}: defender destination materiality is inconsistent ${JSON.stringify(privateFlight)}`);
+    }
+    await screenshot(session, `${label}-private-exchange-transfer-flight`);
+
+    await waitFor(`${label}: private exchange settles`, async () => {
+      const state = await inspectExchangeTransfer(session);
+      return state.transfers === 0 && state.materialSlots.length === 0 && state.receivingAnchors === 0 && state.handCards === 8;
+    }, 2_000);
+
+    return { label, opponentTalon, privateFlight };
   } finally {
     await closeSession(session);
   }
@@ -217,14 +386,22 @@ const vite = startProcess('npm', ['run', 'dev', '--', '--host', '127.0.0.1', '--
 const driver = startProcess('chromedriver', ['--port=9537']);
 
 try {
-  await waitFor('Vite talon transfer server', async () => (await fetch(BASE_URL).catch(() => null))?.ok);
+  await waitFor('Vite material transfer server', async () => (await fetch(BASE_URL).catch(() => null))?.ok);
   await waitFor('ChromeDriver', async () => (await fetch(`${WEBDRIVER}/status`).catch(() => null))?.ok);
-  const desktop = await runViewport('desktop', 1440, 1000, false);
-  const mobile = await runViewport('mobile', 390, 844, true);
-  console.log('talon transfer browser smoke: PASS');
-  console.log(JSON.stringify({ desktop, mobile }, null, 2));
+  const evidence = {
+    desktop: {
+      declarer: await runDeclarerViewport('desktop', 1440, 1000, false),
+      defender: await runDefenderPrivacyViewport('desktop-defender', 1440, 1000, false),
+    },
+    mobile: {
+      declarer: await runDeclarerViewport('mobile', 390, 844, true),
+      defender: await runDefenderPrivacyViewport('mobile-defender', 390, 844, true),
+    },
+  };
+  console.log('material transfer browser smoke: PASS');
+  console.log(JSON.stringify(evidence, null, 2));
 } catch (error) {
-  console.error('talon transfer browser smoke: FAIL');
+  console.error('material transfer browser smoke: FAIL');
   console.error(error);
   console.error('\n--- vite output ---\n', vite.getOutput());
   console.error('\n--- chromedriver output ---\n', driver.getOutput());

@@ -1,11 +1,21 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import type { Seat } from '../core/index.js';
+import type { Command, Seat } from '../core/index.js';
 import { GameTable, type GameTableProps } from './GameTable.js';
+import {
+  MaterialExchangeTransfer,
+  materialRectOf,
+  type CapturedExchangeCard,
+} from './MaterialExchangeTransfer.js';
 import { MaterialTalonTransfer } from './MaterialTalonTransfer.js';
 import { TRICK_COMPLETION_TIMELINE, planTrickPresentation } from './trickPresentation.js';
 
 const ALL_SEATS: readonly Seat[] = [0, 1, 2];
+
+interface PendingExchangeMaterial {
+  revision: number;
+  cards: CapturedExchangeCard[];
+}
 
 export function LivingGameTable({ events = [], ...props }: GameTableProps) {
   const view = props.projection.observation;
@@ -17,6 +27,8 @@ export function LivingGameTable({ events = [], ...props }: GameTableProps) {
   const [anchors, setAnchors] = useState<(HTMLElement | null)[]>([null, null, null]);
   const [centerAnchor, setCenterAnchor] = useState<HTMLElement | null>(null);
   const [completedTalonTransferKey, setCompletedTalonTransferKey] = useState<string | null>(null);
+  const [completedExchangeTransferKey, setCompletedExchangeTransferKey] = useState<string | null>(null);
+  const [pendingExchangeMaterial, setPendingExchangeMaterial] = useState<PendingExchangeMaterial | null>(null);
 
   const talonEvent = useMemo(() => {
     for (let index = events.length - 1; index >= 0; index -= 1) {
@@ -25,6 +37,21 @@ export function LivingGameTable({ events = [], ...props }: GameTableProps) {
     }
     return null;
   }, [events]);
+  const exchangeEvent = useMemo(() => {
+    for (let index = events.length - 1; index >= 0; index -= 1) {
+      const event = events[index];
+      if (event.type === 'exchange-completed') return event;
+    }
+    return null;
+  }, [events]);
+  const receivedEvent = useMemo(() => {
+    for (let index = events.length - 1; index >= 0; index -= 1) {
+      const event = events[index];
+      if (event.type === 'card-received' && event.to === view.seat) return event;
+    }
+    return null;
+  }, [events, view.seat]);
+
   const talonTransferKey = talonEvent && view.declarer !== null
     ? `${view.handNumber}:${view.revision}:${view.declarer}:${talonEvent.cards.join('|')}`
     : null;
@@ -43,12 +70,50 @@ export function LivingGameTable({ events = [], ...props }: GameTableProps) {
     && view.phase !== 'complete'
     && !talonTransferActive,
   );
-  const tableProjection = talonTransferActive
+
+  const exchangeTransferKey = exchangeEvent
+    ? `${view.handNumber}:${view.revision}:${exchangeEvent.from}:${exchangeEvent.recipients.join('-')}`
+    : null;
+  const exchangeTransferActive = Boolean(
+    exchangeTransferKey
+    && exchangeEvent
+    && !prefersReducedMotion
+    && completedExchangeTransferKey !== exchangeTransferKey,
+  );
+  const exchangeMaterialSettled = Boolean(
+    exchangeTransferKey
+    && completedExchangeTransferKey === exchangeTransferKey,
+  );
+  const materialTransferActive = talonTransferActive || exchangeTransferActive;
+  const tableProjection = materialTransferActive
     ? { ...props.projection, legalCommands: [] }
     : props.projection;
+
   const completeTalonTransfer = useCallback(() => {
     if (talonTransferKey) setCompletedTalonTransferKey(talonTransferKey);
   }, [talonTransferKey]);
+  const completeExchangeTransfer = useCallback(() => {
+    if (exchangeTransferKey) setCompletedExchangeTransferKey(exchangeTransferKey);
+    setPendingExchangeMaterial(null);
+  }, [exchangeTransferKey]);
+
+  useEffect(() => {
+    if (!prefersReducedMotion || !exchangeEvent || !pendingExchangeMaterial) return;
+    setPendingExchangeMaterial(null);
+  }, [exchangeEvent, pendingExchangeMaterial, prefersReducedMotion]);
+
+  function handleCommand(command: Command) {
+    if (command.type === 'exchange' && command.seat === view.seat) {
+      const captured = command.give.flatMap(({ card, to }) => {
+        const node = document.querySelector<HTMLElement>(`.hand-slot[data-card="${card}"] > .card`);
+        return node ? [{ card, to, from: materialRectOf(node) }] : [];
+      });
+      setPendingExchangeMaterial(captured.length === command.give.length
+        ? { revision: view.revision, cards: captured }
+        : null);
+    }
+    props.onCommand(command);
+  }
 
   const displayedConsequenceReady = completedTrick === null
     ? true
@@ -206,9 +271,21 @@ export function LivingGameTable({ events = [], ...props }: GameTableProps) {
     )
     : null;
 
+  const exchangeMaterialState = centerAnchor && exchangeEvent
+    ? createPortal(
+      <span
+        className={`material-exchange-state ${exchangeTransferActive ? 'is-active' : exchangeMaterialSettled ? 'is-settled' : ''}`}
+        data-exchange-material-state={exchangeTransferActive ? 'active' : exchangeMaterialSettled ? 'settled' : 'idle'}
+        aria-hidden="true"
+      />,
+      centerAnchor,
+      'material-exchange-state',
+    )
+    : null;
+
   return (
     <>
-      <GameTable {...props} projection={tableProjection} events={events} />
+      <GameTable {...props} projection={tableProjection} events={events} onCommand={handleCommand} />
       {talonTransferActive && talonEvent && view.declarer !== null && (
         <MaterialTalonTransfer
           cards={talonEvent.cards}
@@ -217,7 +294,17 @@ export function LivingGameTable({ events = [], ...props }: GameTableProps) {
           onComplete={completeTalonTransfer}
         />
       )}
+      {exchangeTransferActive && exchangeEvent && (
+        <MaterialExchangeTransfer
+          event={exchangeEvent}
+          receivedEvent={receivedEvent}
+          humanSeat={view.seat}
+          capturedOutgoing={pendingExchangeMaterial?.cards ?? null}
+          onComplete={completeExchangeTransfer}
+        />
+      )}
       {talonMaterialState}
+      {exchangeMaterialState}
       {sceneFeedback}
       {markers}
     </>

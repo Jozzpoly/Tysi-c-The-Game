@@ -1,0 +1,85 @@
+/* Run 05 P3-B — exchange ownership leaves the declarer's hand and arrives at two territories. */
+
+.material-exchange-state {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+/* Canonical post-exchange state already contains the received object. Keep its
+ * real geometry, but do not draw it until the transfer representation arrives. */
+.hand-slot.is-exchange-materializing > .card {
+  visibility: hidden !important;
+}
+
+/* Opponent counts update authoritatively before presentation completes. Hide the
+ * newly arrived physical back so there is still only one visible card object. */
+.is-exchange-receiving .card-backs i:last-child {
+  visibility: hidden;
+}
+
+.exchange-transfer-layer {
+  position: fixed;
+  z-index: 122;
+  inset: 0;
+  overflow: visible;
+  pointer-events: none;
+  contain: layout style;
+}
+
+.exchange-transfer-card {
+  position: fixed !important;
+  z-index: 123;
+  margin: 0 !important;
+  transform-origin: 0 0;
+  will-change: transform, filter, opacity;
+  pointer-events: none !important;
+  animation-name: run05-exchange-material-flight;
+  animation-duration: var(--exchange-flight-duration);
+  animation-delay: var(--exchange-flight-delay);
+  animation-timing-function: cubic-bezier(.18,.78,.22,1);
+  animation-fill-mode: forwards;
+}
+
+.exchange-transfer-card.is-face {
+  opacity: 1 !important;
+}
+
+.exchange-transfer-back {
+  border: 1px solid #ead6908c;
+  border-radius: 7px;
+  background:
+    linear-gradient(135deg, transparent 0 40%, #e1c96a48 41% 44%, transparent 45% 100%),
+    linear-gradient(45deg, transparent 0 40%, #e1c96a40 41% 44%, transparent 45% 100%),
+    radial-gradient(circle at 50% 42%, #eadb9850 0 14%, transparent 15%),
+    repeating-linear-gradient(45deg, #7d2430 0 4px, #a63d47 4px 8px);
+  box-shadow: 0 5px 12px #0006, inset 0 0 0 2px #3a0b125c;
+}
+
+@keyframes run05-exchange-material-flight {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1, 1) rotate(0deg);
+    filter: brightness(1.07) drop-shadow(0 5px 9px #0005);
+    opacity: 1;
+  }
+  62% {
+    filter: brightness(1.12) drop-shadow(0 9px 13px #0007);
+    opacity: 1;
+  }
+  100% {
+    transform:
+      translate3d(var(--exchange-flight-x), var(--exchange-flight-y), 0)
+      scale(var(--exchange-flight-scale-x), var(--exchange-flight-scale-y))
+      rotate(var(--exchange-flight-rotate));
+    filter: brightness(1) drop-shadow(0 3px 7px #0004);
+    opacity: .98;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .exchange-transfer-card {
+    animation: none !important;
+  }
+}
