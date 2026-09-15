@@ -364,12 +364,20 @@ async function run() {
     if (selectionAfterCards) throw new Error(`touch selected text during exchange: ${JSON.stringify(selectionAfterCards)}`);
 
     await waitForRevisionAdvance(session, beforeExchange, 'physical exchange accepted');
-    await waitFor('contract decision', async () => (await uiState(session)).heading === 'Ile ostatecznie grasz?');
+    await waitFor('contract input ready after exchange', () => execute(session, `
+      const state = document.querySelector('.material-exchange-state')?.getAttribute('data-exchange-material-state') ?? 'missing';
+      const heading = document.querySelector('.decision-card h2')?.textContent?.trim() ?? '';
+      const transfers = document.querySelectorAll('.exchange-transfer-card').length;
+      const staged = document.querySelectorAll('.hand-slot.is-exchange-staged').length;
+      return heading === 'Ile ostatecznie grasz?' && state === 'settled' && transfers === 0 && staged === 0;
+    `), 3_000);
     assertTouchControls('contract', await enabledControlGeometry(session));
 
     const contractState = await uiState(session);
     const contractTouch = await touchLowestPhysicalNumeric(session);
-    await waitForRevisionAdvance(session, contractState.revision, `contract touch ${contractTouch.target.value} accepted`);
+    await waitForRevisionAdvance(session, contractState.revision, `contract touch ${contractTouch.target.value} accepted`).catch(async (error) => {
+      throw new Error(`${error}; current=${JSON.stringify(await uiState(session))}; numeric=${JSON.stringify(await numericTargets(session))}; chosen=${JSON.stringify(contractTouch.target)}`);
+    });
     await waitFor('playable hand', () => execute(session, `return document.querySelectorAll('.hand .card:not(:disabled)').length > 0;`));
 
     const playableCards = await cardGeometry(session);
