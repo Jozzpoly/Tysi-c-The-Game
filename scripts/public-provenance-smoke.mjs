@@ -2,6 +2,9 @@ const RAW_BASE_URL = process.env.TYSIAC_PUBLIC_URL ?? '';
 const BASE_URL = RAW_BASE_URL.replace(/\/+$/u, '');
 const EXPECTED_SHA = process.env.TYSIAC_EXPECTED_SHA ?? '';
 const EXPECTED_CLASS = process.env.TYSIAC_EXPECTED_DEPLOY_CLASS ?? '';
+const READINESS_TIMEOUT_MS = 90_000;
+const READINESS_INTERVAL_MS = 1_000;
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 if (!/^https:\/\//u.test(BASE_URL)) throw new Error('TYSIAC_PUBLIC_URL must be an https:// deployment URL');
 if (!/^[0-9a-f]{40}$/u.test(EXPECTED_SHA)) throw new Error('TYSIAC_EXPECTED_SHA must be a full 40-character git SHA');
@@ -9,12 +12,42 @@ if (EXPECTED_CLASS !== 'stable' && EXPECTED_CLASS !== 'temporary') {
   throw new Error('TYSIAC_EXPECTED_DEPLOY_CLASS must be stable or temporary');
 }
 
-const response = await fetch(`${BASE_URL}/api/match?__provenance=${Date.now()}`, {
-  cache: 'no-store',
-  headers: { 'cache-control': 'no-cache' },
-});
-if (!response.ok) throw new Error(`public provenance health failed: HTTP ${response.status}`);
+async function waitForPublicProvenance() {
+  const deadline = Date.now() + READINESS_TIMEOUT_MS;
+  let lastTransient = 'no response yet';
+  let attempt = 0;
 
+  while (Date.now() < deadline) {
+    const url = `${BASE_URL}/api/match?__provenance=${Date.now()}-${attempt++}`;
+    let response;
+
+    try {
+      response = await fetch(url, {
+        cache: 'no-store',
+        headers: { 'cache-control': 'no-cache' },
+        signal: AbortSignal.timeout(10_000),
+      });
+    } catch (error) {
+      lastTransient = `fetch error: ${String(error)}`;
+      await sleep(READINESS_INTERVAL_MS);
+      continue;
+    }
+
+    if (response.ok) return response;
+
+    if (response.status === 404 || response.status === 429 || response.status >= 500) {
+      lastTransient = `HTTP ${response.status}`;
+      await sleep(READINESS_INTERVAL_MS);
+      continue;
+    }
+
+    throw new Error(`public provenance health failed: HTTP ${response.status}`);
+  }
+
+  throw new Error(`public provenance readiness timed out after ${READINESS_TIMEOUT_MS} ms; last transient result: ${lastTransient}`);
+}
+
+const response = await waitForPublicProvenance();
 const body = await response.json();
 if (body?.service !== 'match-room') throw new Error(`unexpected public service: ${JSON.stringify(body)}`);
 if (body?.buildSha !== EXPECTED_SHA) {
