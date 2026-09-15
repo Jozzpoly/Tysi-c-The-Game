@@ -224,15 +224,15 @@ export function GameTable({ projection, seatNames, events = [], message = '', on
       if (!card) continue;
       const slot = document.querySelector<HTMLElement>(`.hand-slot[data-card="${card}"]`);
       const cardNode = slot?.querySelector<HTMLElement>(':scope > .card');
-      const anchor = document.querySelector<HTMLElement>(`[data-exchange-stage-seat="${seat}"]`);
-      if (!slot || !cardNode || !anchor) continue;
+      const stageTarget = document.querySelector<HTMLElement>(`[data-exchange-target-seat="${seat}"] .card-backs`);
+      if (!slot || !cardNode || !stageTarget) continue;
 
       // The tactile hand starts its generic return-to-hand animation before this
       // parent sees pointer-up. Once the drop is accepted by a recipient, cancel
       // that return first so staging measures the card's true hand geometry.
       slot.getAnimations().forEach((animation) => animation.cancel());
       const source = cardNode.getBoundingClientRect();
-      const target = anchor.getBoundingClientRect();
+      const target = stageTarget.getBoundingClientRect();
       const sourceX = source.left + source.width / 2;
       const sourceY = source.top + source.height / 2;
       const targetX = target.left + target.width / 2;
@@ -338,14 +338,6 @@ export function GameTable({ projection, seatNames, events = [], message = '', on
               <div className="card-backs" aria-hidden="true">
                 {Array.from({ length: Math.min(view.opponentCardCounts[seat], 8) }, (_, index) => <i key={index} />)}
               </div>
-              {exchangeMode && (
-                <span
-                  className="exchange-card-stage-anchor"
-                  data-exchange-stage-seat={seat}
-                  data-exchange-stage-card={exchangeDraft[seat] ?? ''}
-                  aria-hidden="true"
-                />
-              )}
               {showingCompletedTrick && completedWinner === seat && displayedTrickStage === 'consequence' && (
                 <span className="capture-pulse">+{completedTrick?.points ?? 0} pkt</span>
               )}
