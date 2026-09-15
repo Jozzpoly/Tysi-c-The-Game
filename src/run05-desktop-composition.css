@@ -1,0 +1,156 @@
+/*
+ * Run 05 P6-A — desktop is its own composition.
+ *
+ * Mobile proved the physical card language. Wide/tall desktop now uses the same
+ * authoritative zones in a different arrangement: opponents flank the shared
+ * play field, the trick occupies the centre with real spatial room, and the
+ * human hand owns the lower edge instead of reading as an enlarged mobile stack.
+ * No gameplay meaning lives in this file.
+ */
+
+@media (min-width: 960px) and (min-height: 720px) {
+  .app-shell {
+    width: min(1360px, 100%);
+    padding-inline: clamp(18px, 2.2vw, 32px);
+  }
+
+  .table {
+    min-height: min(80svh, 790px);
+    padding: 30px 248px 188px;
+    grid-template-rows: minmax(0, 1fr) auto;
+    gap: 0;
+  }
+
+  /* The two remote seats become real lateral territories. Keeping .opponents as
+   * one positioned layer preserves seat anchors/capture piles and lets every
+   * material transfer continue deriving geometry from the live DOM. */
+  .opponents {
+    position: absolute;
+    z-index: 7;
+    top: 118px;
+    left: 30px;
+    right: 30px;
+    width: auto;
+    height: 190px;
+    margin: 0;
+    padding: 0;
+    display: block;
+    transform: none;
+    pointer-events: none;
+  }
+
+  .opponent {
+    position: absolute;
+    top: 34px;
+    width: 224px;
+    min-height: 118px;
+    pointer-events: auto;
+  }
+
+  .opponent:first-child {
+    left: 0;
+    transform: rotate(-.5deg);
+  }
+
+  .opponent:last-child {
+    right: 0;
+    transform: rotate(.5deg);
+  }
+
+  .opponent:first-child > .captured-pile,
+  .opponent:last-child > .captured-pile {
+    bottom: -38px;
+  }
+
+  .center {
+    z-index: 3;
+    min-height: 470px;
+    margin-top: 0;
+    padding: 24px 0 28px;
+    align-content: center;
+    gap: 8px;
+  }
+
+  .center::before {
+    width: min(650px, 51vw);
+    aspect-ratio: 1.58;
+    top: 54%;
+  }
+
+  .status-strip {
+    top: 4px;
+  }
+
+  .trick {
+    width: min(580px, 48vw);
+    min-height: 238px;
+  }
+
+  .trick:not(:has(> .muted)) {
+    width: min(580px, 48vw);
+    min-height: 238px;
+  }
+
+  .trick .played {
+    width: 108px;
+  }
+
+  .trick .card {
+    width: 94px;
+    flex-basis: 94px;
+  }
+
+  .trick .played small {
+    max-width: 104px;
+  }
+
+  .decision {
+    z-index: 5;
+    min-height: 78px;
+    margin-top: -16px;
+    align-self: end;
+  }
+
+  .decision-card {
+    width: min(560px, 92%);
+  }
+
+  /* One lower player territory. It remains part of the live scene rather than a
+   * detached HUD, but no longer spans the entire desktop just because space exists. */
+  .hand-area {
+    left: 50%;
+    right: auto;
+    bottom: 4px;
+    width: min(1080px, calc(100% - 96px));
+    min-height: 180px;
+    padding: 18px 18px 4px;
+    transform: translateX(-50%);
+    border-radius: 42% 42% 22px 22px / 18% 18% 22px 22px;
+    background:
+      radial-gradient(ellipse at 50% 100%, #0d3928b8 0%, #061d14b8 48%, transparent 76%),
+      linear-gradient(180deg, transparent 0%, #04170f87 30%, #03110be8 100%);
+  }
+
+  .hand-heading {
+    width: min(980px, 96%);
+    margin-bottom: 2px;
+    padding-inline: 14px;
+  }
+
+  .tactile-hand {
+    --hand-card-width: 100px;
+    width: min(1000px, 100%);
+    min-height: 146px;
+    padding-top: 8px;
+  }
+
+  .tactile-hand:has(> .hand-slot:nth-child(10)) {
+    --hand-card-width: 86px;
+    width: min(1000px, 100%);
+  }
+
+  .hand-area > .captured-pile {
+    right: 18px;
+    top: 36px;
+  }
+}

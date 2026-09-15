@@ -20,6 +20,7 @@ import './run05-material-transfer.css';
 import './run05-exchange-transfer.css';
 import './run05-deal.css';
 import './run05-marriage.css';
+import './run05-desktop-composition.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
