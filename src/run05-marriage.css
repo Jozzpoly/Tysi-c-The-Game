@@ -1,5 +1,6 @@
-/* Run 05 P5-A — a local marriage is a relationship between the real K/Q pair,
- * the real trick destination and the real trump status, not a detached toast. */
+/* Run 05 P5 — marriage materializes as a relation between public K/Q truth,
+ * the real trick destination and the real trump status. Local play uses exact
+ * hand provenance; opponent play uses only the public seat territory. */
 
 .material-marriage-state {
   position: absolute;
@@ -34,6 +35,15 @@
   pointer-events: none;
 }
 
+.opponent.is-marriage-origin {
+  box-shadow: 0 0 0 1px #efd47770, 0 0 24px #efd47724;
+  filter: brightness(1.055);
+}
+
+.opponent.is-marriage-origin .card-backs {
+  filter: brightness(1.08);
+}
+
 .marriage-material-layer {
   position: fixed;
   z-index: 126;
@@ -62,6 +72,10 @@
 
 .marriage-material-card.is-partner {
   animation-name: run05-marriage-partner;
+}
+
+.marriage-material-layer.is-opponent .marriage-material-card.is-partner {
+  animation-name: run05-marriage-opponent-partner;
 }
 
 .marriage-trump-cue {
@@ -126,6 +140,35 @@
       scale(var(--marriage-target-scale-x), var(--marriage-target-scale-y))
       rotate(0deg);
     filter: brightness(1) drop-shadow(0 3px 7px #0004);
+  }
+}
+
+@keyframes run05-marriage-opponent-partner {
+  0% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1) rotate(0deg);
+    filter: brightness(1);
+  }
+  29% {
+    opacity: 1;
+    transform: translate3d(var(--marriage-pair-x), var(--marriage-pair-y), 0) scale(1.075) rotate(5deg);
+    filter: brightness(1.14) drop-shadow(0 10px 16px #0008);
+  }
+  51% {
+    opacity: 1;
+    transform: translate3d(var(--marriage-pair-x), var(--marriage-pair-y), 0) scale(1.075) rotate(3deg);
+    filter: brightness(1.12) drop-shadow(0 9px 15px #0007);
+  }
+  84% {
+    opacity: .9;
+  }
+  100% {
+    opacity: 0;
+    transform:
+      translate3d(var(--marriage-target-x), var(--marriage-target-y), 0)
+      scale(var(--marriage-target-scale-x), var(--marriage-target-scale-y))
+      rotate(0deg);
+    filter: brightness(.92) drop-shadow(0 2px 4px #0003);
   }
 }
 

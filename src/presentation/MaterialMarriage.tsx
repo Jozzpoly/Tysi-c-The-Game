@@ -1,6 +1,6 @@
 import { useLayoutEffect, useState, type CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
-import { rankOf, suitOf, type CardId, type GameEvent } from '../core/index.js';
+import { cardId, rankOf, suitOf, type CardId, type GameEvent } from '../core/index.js';
 import type { MaterialRect } from './MaterialExchangeTransfer.js';
 
 const SUIT_SYMBOL = { spades: '♠', clubs: '♣', diamonds: '♦', hearts: '♥' } as const;
@@ -18,7 +18,7 @@ export interface CapturedMarriageMaterial {
 interface MaterialMarriageProps {
   event: Extract<GameEvent, { type: 'marriage-declared' }>;
   playedEvent: Extract<GameEvent, { type: 'card-played' }>;
-  captured: CapturedMarriageMaterial;
+  captured?: CapturedMarriageMaterial | null;
   onComplete: () => void;
 }
 
@@ -36,6 +36,18 @@ type TrumpCueStyle = CSSProperties & {
   '--marriage-cue-x': string;
   '--marriage-cue-y': string;
 };
+
+interface MarriageGeometry {
+  mode: 'local' | 'opponent';
+  playedCard: CardId;
+  partnerCard: CardId;
+  playedFrom: MaterialRect;
+  partnerFrom: MaterialRect;
+  playedTarget: MaterialRect;
+  partnerTarget: MaterialRect;
+  pairCenter: { x: number; y: number };
+  trumpTarget: { x: number; y: number };
+}
 
 function rectOf(node: Element): MaterialRect {
   const rect = node.getBoundingClientRect();
@@ -55,69 +67,128 @@ function center(rect: MaterialRect) {
   return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
 }
 
-export function MaterialMarriage({ event, playedEvent, captured, onComplete }: MaterialMarriageProps) {
-  const [ready, setReady] = useState(false);
-  const [playedTarget, setPlayedTarget] = useState<MaterialRect | null>(null);
-  const [partnerTarget, setPartnerTarget] = useState<MaterialRect | null>(null);
-  const [pairCenter, setPairCenter] = useState<{ x: number; y: number } | null>(null);
-  const [trumpTarget, setTrumpTarget] = useState<{ x: number; y: number } | null>(null);
+function centeredRect(x: number, y: number, width: number, height: number): MaterialRect {
+  return { left: x - width / 2, top: y - height / 2, width, height };
+}
+
+function publicMarriagePartner(event: MaterialMarriageProps['event'], playedCard: CardId): CardId | null {
+  if (suitOf(playedCard) !== event.suit) return null;
+  const rank = rankOf(playedCard);
+  if (rank === 'K') return cardId(event.suit, 'Q');
+  if (rank === 'Q') return cardId(event.suit, 'K');
+  return null;
+}
+
+export function MaterialMarriage({ event, playedEvent, captured = null, onComplete }: MaterialMarriageProps) {
+  const [geometry, setGeometry] = useState<MarriageGeometry | null>(null);
 
   useLayoutEffect(() => {
     const playedRoot = document.querySelector<HTMLElement>(
       `.played[data-seat="${event.seat}"][data-card="${playedEvent.card}"]`,
     );
-    const playedCard = playedRoot?.querySelector<HTMLElement>(':scope > .card') ?? null;
-    const partnerSlot = document.querySelector<HTMLElement>(`.hand-slot[data-card="${captured.partnerCard}"]`);
-    const partnerCard = partnerSlot?.querySelector<HTMLElement>(':scope > .card') ?? null;
+    const playedTargetNode = playedRoot?.querySelector<HTMLElement>(':scope > .card') ?? null;
     const trumpStatus = document.querySelector<HTMLElement>('.status-strip > span:nth-child(3)');
+    const sourceAnchor = document.querySelector<HTMLElement>(`[data-seat-anchor="${event.seat}"]`);
 
-    if (!playedRoot || !playedCard || !partnerSlot || !partnerCard || !trumpStatus) {
+    const localPartnerSlot = captured
+      ? document.querySelector<HTMLElement>(`.hand-slot[data-card="${captured.partnerCard}"]`)
+      : null;
+    const localPartnerCard = localPartnerSlot?.querySelector<HTMLElement>(':scope > .card') ?? null;
+
+    const playedCard = captured?.playedCard ?? playedEvent.card;
+    const partnerCard = captured?.partnerCard ?? publicMarriagePartner(event, playedCard);
+    const local = Boolean(captured);
+
+    if (
+      !playedRoot
+      || !playedTargetNode
+      || !trumpStatus
+      || !partnerCard
+      || (local && (!localPartnerSlot || !localPartnerCard))
+      || (!local && !sourceAnchor)
+    ) {
       const timer = window.setTimeout(onComplete, 0);
       return () => window.clearTimeout(timer);
     }
 
-    const nextPlayedTarget = rectOf(playedCard);
-    const nextPartnerTarget = rectOf(partnerCard);
+    const playedTarget = rectOf(playedTargetNode);
     const trumpRect = trumpStatus.getBoundingClientRect();
-    const playedSourceCenter = center(captured.playedFrom);
-    const partnerSourceCenter = center(captured.partnerFrom);
-    const sourceMidX = (playedSourceCenter.x + partnerSourceCenter.x) / 2;
-    const sourceTop = Math.min(captured.playedFrom.top, captured.partnerFrom.top);
-    const sourceMidY = Math.max(86, sourceTop - Math.min(72, Math.max(46, window.innerHeight * .075)));
+    let playedFrom: MaterialRect;
+    let partnerFrom: MaterialRect;
+    let partnerTarget: MaterialRect;
+    let pairCenter: { x: number; y: number };
+
+    if (captured && localPartnerCard) {
+      playedFrom = captured.playedFrom;
+      partnerFrom = captured.partnerFrom;
+      partnerTarget = rectOf(localPartnerCard);
+      const playedSourceCenter = center(playedFrom);
+      const partnerSourceCenter = center(partnerFrom);
+      const sourceMidX = (playedSourceCenter.x + partnerSourceCenter.x) / 2;
+      const sourceTop = Math.min(playedFrom.top, partnerFrom.top);
+      const sourceMidY = Math.max(86, sourceTop - Math.min(72, Math.max(46, window.innerHeight * .075)));
+      pairCenter = { x: sourceMidX, y: sourceMidY };
+      localPartnerSlot?.classList.add('is-marriage-materializing');
+    } else if (sourceAnchor) {
+      const sourceVisual = sourceAnchor.querySelector<HTMLElement>('.card-backs') ?? sourceAnchor;
+      const sourceRect = rectOf(sourceVisual);
+      const sourceCenter = center(sourceRect);
+      const targetCenter = center(playedTarget);
+      const aspect = playedTarget.height / Math.max(1, playedTarget.width);
+      const faceWidth = Math.max(42, Math.min(playedTarget.width * .82, Math.max(48, sourceRect.width * .44)));
+      const faceHeight = faceWidth * aspect;
+      playedFrom = centeredRect(sourceCenter.x - 7, sourceCenter.y, faceWidth, faceHeight);
+      partnerFrom = centeredRect(sourceCenter.x + 7, sourceCenter.y, faceWidth, faceHeight);
+      partnerTarget = centeredRect(sourceCenter.x + 7, sourceCenter.y, faceWidth, faceHeight);
+      pairCenter = {
+        x: Math.max(52, Math.min(window.innerWidth - 52, sourceCenter.x + (targetCenter.x - sourceCenter.x) * .34)),
+        y: Math.max(78, Math.min(window.innerHeight - 150, sourceCenter.y + (targetCenter.y - sourceCenter.y) * .34)),
+      };
+      sourceAnchor.classList.add('is-marriage-origin');
+    } else {
+      const timer = window.setTimeout(onComplete, 0);
+      return () => window.clearTimeout(timer);
+    }
 
     playedRoot.classList.add('is-marriage-materializing');
-    partnerSlot.classList.add('is-marriage-materializing');
     trumpStatus.classList.add('is-marriage-receiving');
 
-    setPlayedTarget(nextPlayedTarget);
-    setPartnerTarget(nextPartnerTarget);
-    setPairCenter({ x: sourceMidX, y: sourceMidY });
-    setTrumpTarget({ x: trumpRect.left + trumpRect.width / 2, y: trumpRect.top + trumpRect.height / 2 });
-    setReady(true);
+    setGeometry({
+      mode: local ? 'local' : 'opponent',
+      playedCard,
+      partnerCard,
+      playedFrom,
+      partnerFrom,
+      playedTarget,
+      partnerTarget,
+      pairCenter,
+      trumpTarget: { x: trumpRect.left + trumpRect.width / 2, y: trumpRect.top + trumpRect.height / 2 },
+    });
 
     const timer = window.setTimeout(onComplete, MARRIAGE_MATERIAL_TOTAL_MS);
     return () => {
       window.clearTimeout(timer);
       playedRoot.classList.remove('is-marriage-materializing');
-      partnerSlot.classList.remove('is-marriage-materializing');
+      localPartnerSlot?.classList.remove('is-marriage-materializing');
+      sourceAnchor?.classList.remove('is-marriage-origin');
       trumpStatus.classList.remove('is-marriage-receiving');
     };
-  }, [captured, event.seat, onComplete, playedEvent.card]);
+  }, [captured, event, onComplete, playedEvent.card]);
 
-  if (!ready || !playedTarget || !partnerTarget || !pairCenter || !trumpTarget) return null;
+  if (!geometry) return null;
 
-  const playedFace = face(captured.playedCard);
-  const partnerFace = face(captured.partnerCard);
-  const cueStartX = pairCenter.x;
-  const cueStartY = pairCenter.y;
+  const playedFace = face(geometry.playedCard);
+  const partnerFace = face(geometry.partnerCard);
+  const cueStartX = geometry.pairCenter.x;
+  const cueStartY = geometry.pairCenter.y;
 
   const cardStyle = (from: MaterialRect, target: MaterialRect, side: -1 | 1) => ({
     left: from.left,
     top: from.top,
     width: from.width,
     height: from.height,
-    '--marriage-pair-x': `${pairCenter.x + side * 22 - (from.left + from.width / 2)}px`,
-    '--marriage-pair-y': `${pairCenter.y - (from.top + from.height / 2)}px`,
+    '--marriage-pair-x': `${geometry.pairCenter.x + side * 22 - (from.left + from.width / 2)}px`,
+    '--marriage-pair-y': `${geometry.pairCenter.y - (from.top + from.height / 2)}px`,
     '--marriage-target-x': `${target.left - from.left}px`,
     '--marriage-target-y': `${target.top - from.top}px`,
     '--marriage-target-scale-x': from.width > 0 ? target.width / from.width : 1,
@@ -128,33 +199,35 @@ export function MaterialMarriage({ event, playedEvent, captured, onComplete }: M
   const cueStyle = {
     left: cueStartX,
     top: cueStartY,
-    '--marriage-cue-x': `${trumpTarget.x - cueStartX}px`,
-    '--marriage-cue-y': `${trumpTarget.y - cueStartY}px`,
+    '--marriage-cue-x': `${geometry.trumpTarget.x - cueStartX}px`,
+    '--marriage-cue-y': `${geometry.trumpTarget.y - cueStartY}px`,
   } as TrumpCueStyle;
 
   return createPortal(
     <div
-      className="marriage-material-layer"
+      className={`marriage-material-layer is-${geometry.mode}`}
       aria-hidden="true"
       data-marriage-material-count="2"
+      data-marriage-mode={geometry.mode}
+      data-marriage-source-seat={event.seat}
       data-marriage-suit={event.suit}
-      data-marriage-played={captured.playedCard}
-      data-marriage-partner={captured.partnerCard}
+      data-marriage-played={geometry.playedCard}
+      data-marriage-partner={geometry.partnerCard}
     >
       <div
         className={`card marriage-material-card is-played ${playedFace.red ? 'red' : ''}`}
-        data-marriage-card={captured.playedCard}
+        data-marriage-card={geometry.playedCard}
         data-marriage-role="played"
-        style={cardStyle(captured.playedFrom, playedTarget, -1)}
+        style={cardStyle(geometry.playedFrom, geometry.playedTarget, -1)}
       >
         <span className="rank" data-suit={playedFace.symbol}>{playedFace.rank}</span>
         <span className="suit">{playedFace.symbol}</span>
       </div>
       <div
         className={`card marriage-material-card is-partner ${partnerFace.red ? 'red' : ''}`}
-        data-marriage-card={captured.partnerCard}
+        data-marriage-card={geometry.partnerCard}
         data-marriage-role="partner"
-        style={cardStyle(captured.partnerFrom, partnerTarget, 1)}
+        style={cardStyle(geometry.partnerFrom, geometry.partnerTarget, 1)}
       >
         <span className="rank" data-suit={partnerFace.symbol}>{partnerFace.rank}</span>
         <span className="suit">{partnerFace.symbol}</span>

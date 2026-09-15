@@ -185,9 +185,17 @@ async function inspectActive(session) {
     const partnerCard = partnerSlot?.querySelector(':scope > .card');
     const trumpStatus = document.querySelector('.status-strip > span:nth-child(3)');
     const trumpValue = trumpStatus?.querySelector('strong');
+    const sourceSeat = layer?.getAttribute('data-marriage-source-seat') ?? '';
+    const source = sourceSeat ? document.querySelector('[data-seat-anchor="' + sourceSeat + '"]') : null;
     return {
       state: document.querySelector('.material-marriage-state')?.getAttribute('data-marriage-material-state') ?? 'missing',
+      stateMode: document.querySelector('.material-marriage-state')?.getAttribute('data-marriage-material-mode') ?? '',
+      stateSeat: document.querySelector('.material-marriage-state')?.getAttribute('data-marriage-material-seat') ?? '',
       layer: Boolean(layer),
+      mode: layer?.getAttribute('data-marriage-mode') ?? '',
+      sourceSeat,
+      originActive: source?.classList.contains('is-marriage-origin') ?? false,
+      sourceBacks: source?.querySelectorAll('.card-backs i').length ?? 0,
       materialCount: cards.length,
       visibleMaterialCards: cards.filter(visible).length,
       roles: cards.map((node) => node.getAttribute('data-marriage-role')),
@@ -200,6 +208,7 @@ async function inspectActive(session) {
       cueVisible: visible(cue),
       playedTargetHidden: Boolean(playedCard) && getComputedStyle(playedCard).visibility === 'hidden',
       partnerTargetHidden: Boolean(partnerCard) && getComputedStyle(partnerCard).visibility === 'hidden',
+      localMaterializingSlots: document.querySelectorAll('.hand-slot.is-marriage-materializing').length,
       trumpTargetReceiving: trumpStatus?.classList.contains('is-marriage-receiving') ?? false,
       trumpValueHidden: Boolean(trumpValue) && getComputedStyle(trumpValue).visibility === 'hidden',
       enabledDecisionButtons: document.querySelectorAll('.decision-card button:not(:disabled)').length,
@@ -210,18 +219,22 @@ async function inspectActive(session) {
   `);
 }
 
-async function inspectSettled(session, playedIdentity, partnerIdentity) {
+async function inspectSettled(session, playedIdentity, partnerIdentity, sourceSeat = '') {
   return execute(session, `
     const playedIdentity = ${JSON.stringify(playedIdentity)};
     const partnerIdentity = ${JSON.stringify(partnerIdentity)};
+    const sourceSeat = ${JSON.stringify(sourceSeat)};
     const played = document.querySelector('.played[data-card="' + playedIdentity + '"] > .card');
     const partner = document.querySelector('.hand-slot[data-card="' + partnerIdentity + '"] > .card');
+    const source = sourceSeat ? document.querySelector('[data-seat-anchor="' + sourceSeat + '"]') : null;
     return {
       state: document.querySelector('.material-marriage-state')?.getAttribute('data-marriage-material-state') ?? 'missing',
+      mode: document.querySelector('.material-marriage-state')?.getAttribute('data-marriage-material-mode') ?? '',
       materialLayer: document.querySelectorAll('.marriage-material-layer').length,
       materialCards: document.querySelectorAll('.marriage-material-card').length,
       materializingTargets: document.querySelectorAll('.is-marriage-materializing').length,
       receivingTargets: document.querySelectorAll('.is-marriage-receiving').length,
+      originActive: source?.classList.contains('is-marriage-origin') ?? false,
       handCards: document.querySelectorAll('.hand .card').length,
       playedVisible: Boolean(played) && getComputedStyle(played).visibility !== 'hidden',
       partnerVisible: Boolean(partner) && getComputedStyle(partner).visibility !== 'hidden',
@@ -232,7 +245,7 @@ async function inspectSettled(session, playedIdentity, partnerIdentity) {
   `);
 }
 
-async function openScenario(width, height, mobile) {
+async function openScenario(width, height, mobile, seed = 2) {
   const session = await createSession();
   await cdp(session, 'Emulation.setDeviceMetricsOverride', {
     width, height, screenWidth: width, screenHeight: height,
@@ -240,13 +253,13 @@ async function openScenario(width, height, mobile) {
   });
   await cdp(session, 'Emulation.setTouchEmulationEnabled', { enabled: mobile, maxTouchPoints: mobile ? 5 : 1 });
   await webdriver(`/session/${session}/url`, {
-    method: 'POST', body: JSON.stringify({ url: `${BASE_URL}?seed=2&seat=0` }),
+    method: 'POST', body: JSON.stringify({ url: `${BASE_URL}?seed=${seed}&seat=0` }),
   });
   return session;
 }
 
-async function runViewport(label, width, height, mobile) {
-  const session = await openScenario(width, height, mobile);
+async function runLocalViewport(label, width, height, mobile) {
+  const session = await openScenario(width, height, mobile, 2);
   try {
     const marriageLabel = await driveToMarriageLead(session, label);
     const before = await inspectBefore(session);
@@ -257,12 +270,13 @@ async function runViewport(label, width, height, mobile) {
     await clickButtonByText(session, marriageLabel);
     await waitFor(`${label}: marriage material active`, () => execute(session, `
       return document.querySelector('.material-marriage-state')?.getAttribute('data-marriage-material-state') === 'active'
+        && document.querySelector('.material-marriage-state')?.getAttribute('data-marriage-material-mode') === 'local'
         && document.querySelectorAll('.marriage-material-card').length === 2;
     `), 1_500);
     await sleep(120);
 
     const pair = await inspectActive(session);
-    if (pair.state !== 'active' || !pair.layer || pair.materialCount !== 2 || pair.visibleMaterialCards !== 2 || !pair.cuePresent || pair.cueSuit !== pair.suit) {
+    if (pair.state !== 'active' || pair.mode !== 'local' || !pair.layer || pair.materialCount !== 2 || pair.visibleMaterialCards !== 2 || !pair.cuePresent || pair.cueSuit !== pair.suit) {
       throw new Error(`${label}: marriage pair did not materialize ${JSON.stringify(pair)}`);
     }
     if (new Set(pair.roles).size !== 2 || !pair.roles.includes('played') || !pair.roles.includes('partner')) {
@@ -307,6 +321,63 @@ async function runViewport(label, width, height, mobile) {
   }
 }
 
+async function runOpponentViewport(label, width, height, mobile) {
+  const session = await openScenario(width, height, mobile, 1);
+  try {
+    await waitFor(`${label}: defender auction`, async () => (await decisionHeading(session)) === 'Twoja licytacja');
+    await clickButtonByText(session, 'Pas');
+    await waitFor(`${label}: opponent marriage material active`, () => execute(session, `
+      const state = document.querySelector('.material-marriage-state');
+      const layer = document.querySelector('.marriage-material-layer');
+      return state?.getAttribute('data-marriage-material-state') === 'active'
+        && state?.getAttribute('data-marriage-material-mode') === 'opponent'
+        && layer?.getAttribute('data-marriage-mode') === 'opponent'
+        && document.querySelectorAll('.marriage-material-card').length === 2;
+    `), 20_000);
+    await sleep(120);
+
+    const pair = await inspectActive(session);
+    if (pair.state !== 'active' || pair.stateMode !== 'opponent' || pair.mode !== 'opponent' || !pair.layer || pair.materialCount !== 2 || pair.visibleMaterialCards !== 2) {
+      throw new Error(`${label}: opponent marriage did not materialize ${JSON.stringify(pair)}`);
+    }
+    if (pair.sourceSeat === '0' || pair.sourceSeat === '' || pair.stateSeat !== pair.sourceSeat || !pair.originActive || pair.sourceBacks < 1) {
+      throw new Error(`${label}: opponent marriage lost truthful seat provenance ${JSON.stringify(pair)}`);
+    }
+    if (pair.suit !== 'diamonds' || pair.playedIdentity !== 'diamonds:Q' || pair.partnerIdentity !== 'diamonds:K') {
+      throw new Error(`${label}: deterministic public marriage identity changed ${JSON.stringify(pair)}`);
+    }
+    if (!pair.cuePresent || pair.cueSuit !== pair.suit || !pair.playedTargetHidden || !pair.trumpTargetReceiving || !pair.trumpValueHidden) {
+      throw new Error(`${label}: opponent marriage lost card/trump continuity ${JSON.stringify(pair)}`);
+    }
+    if (pair.localMaterializingSlots !== 0 || pair.handCards !== 8) {
+      throw new Error(`${label}: opponent marriage touched private viewer hand geometry ${JSON.stringify(pair)}`);
+    }
+    if (pair.scrollWidth > pair.width + 1) throw new Error(`${label}: opponent marriage introduced horizontal overflow ${JSON.stringify(pair)}`);
+    await screenshot(session, `${label}-opponent-marriage-pair`);
+
+    const settled = await waitFor(`${label}: opponent marriage material settled`, async () => {
+      const state = await inspectSettled(session, pair.playedIdentity, pair.partnerIdentity, pair.sourceSeat);
+      return state.materialLayer === 0
+        && state.materialCards === 0
+        && state.materializingTargets === 0
+        && state.receivingTargets === 0
+        && !state.originActive
+        && state.handCards === 8
+        && state.playedVisible
+        && state.trump === '♦'
+        ? state
+        : false;
+    }, 1_500);
+    if (settled.scrollWidth > settled.width + 1) throw new Error(`${label}: settled opponent marriage introduced overflow ${JSON.stringify(settled)}`);
+    await waitFor(`${label}: human turn after opponent marriage`, async () => (await decisionHeading(session)) === 'Twój ruch', 3_000);
+    await screenshot(session, `${label}-opponent-marriage-settled`);
+
+    return { pair, settled };
+  } finally {
+    await closeSession(session);
+  }
+}
+
 await mkdir(OUTPUT, { recursive: true });
 const vite = startProcess('npm', ['run', 'dev', '--', '--host', '127.0.0.1', '--port', '4207']);
 const driver = startProcess('chromedriver', ['--port=9547']);
@@ -322,8 +393,14 @@ try {
   }, 20_000);
 
   const evidence = {
-    desktop: await runViewport('desktop-marriage', 1440, 1000, false),
-    mobile: await runViewport('mobile-marriage', 390, 844, true),
+    local: {
+      desktop: await runLocalViewport('desktop-marriage', 1440, 1000, false),
+      mobile: await runLocalViewport('mobile-marriage', 390, 844, true),
+    },
+    opponent: {
+      desktop: await runOpponentViewport('desktop-opponent-marriage', 1440, 1000, false),
+      mobile: await runOpponentViewport('mobile-opponent-marriage', 390, 844, true),
+    },
   };
   console.log('material marriage browser smoke: PASS');
   console.log(JSON.stringify(evidence, null, 2));
