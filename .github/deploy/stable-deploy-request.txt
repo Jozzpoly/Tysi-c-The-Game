@@ -1,3 +1,3 @@
-retry requested: 2026-09-15
+retry requested: 2026-09-15T16:35Z
 candidate: 52450baa04f22646474bf4676f70b2df5ba6812f
-reason: retry persistent account-owned stable multiplayer deployment after safe-retry contract landed
+reason: retry persistent account-owned stable multiplayer deployment after Cloudflare Actions credentials were configured by Owner
