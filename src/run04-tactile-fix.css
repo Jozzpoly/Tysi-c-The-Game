@@ -1,0 +1,10 @@
+/* Run 04 P3 integration corrections for the carried-card overlay. */
+.tactile-hand {
+  /* Perspective creates a fixed-position containing block; the drag ghost uses viewport coordinates. */
+  perspective: none;
+}
+
+.tactile-hand > .tactile-card-float {
+  /* Beat the baseline `.hand > .card { position: relative }`. */
+  position: fixed;
+}

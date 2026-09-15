@@ -52,6 +52,13 @@ async function webdriver(path, init = {}) {
   return body.value;
 }
 
+async function cdp(session, cmd, params = {}) {
+  return webdriver(`/session/${session}/goog/cdp/execute`, {
+    method: 'POST',
+    body: JSON.stringify({ cmd, params }),
+  });
+}
+
 async function createSession(width, height, mobile) {
   const value = await webdriver('/session', {
     method: 'POST',
@@ -66,23 +73,21 @@ async function createSession(width, height, mobile) {
       },
     }),
   });
-  const session = value.sessionId ?? value.sessionId;
-  await webdriver(`/session/${session}/goog/cdp/execute`, {
-    method: 'POST',
-    body: JSON.stringify({
-      cmd: 'Emulation.setDeviceMetricsOverride',
-      params: {
-        width,
-        height,
-        screenWidth: width,
-        screenHeight: height,
-        deviceScaleFactor: 1,
-        mobile,
-        positionX: 0,
-        positionY: 0,
-        dontSetVisibleSize: false,
-      },
-    }),
+  const session = value.sessionId ?? value['sessionId'];
+  await cdp(session, 'Emulation.setDeviceMetricsOverride', {
+    width,
+    height,
+    screenWidth: width,
+    screenHeight: height,
+    deviceScaleFactor: 1,
+    mobile,
+    positionX: 0,
+    positionY: 0,
+    dontSetVisibleSize: false,
+  });
+  await cdp(session, 'Emulation.setTouchEmulationEnabled', {
+    enabled: mobile,
+    maxTouchPoints: mobile ? 5 : 1,
   });
   return session;
 }
@@ -111,56 +116,13 @@ async function screenshot(session, name) {
   await writeFile(`${OUTPUT}/${name}.png`, Buffer.from(base64, 'base64'));
 }
 
-async function waitText(session, text, timeoutMs = 30_000) {
-  return waitFor(
-    `text ${JSON.stringify(text)}`,
-    () => execute(session, `return document.body?.innerText.includes(${JSON.stringify(text)}) ?? false;`),
-    timeoutMs,
-  );
-}
-
 async function browserDocument(session) {
   return execute(session, `return {
     url: location.href,
     title: document.title,
     readyState: document.readyState,
-    body: (document.body?.innerText ?? '').slice(0, 1200),
+    body: (document.body?.innerText ?? '').slice(0, 1600),
   };`);
-}
-
-async function waitPublicHome(session, timeoutMs = 90_000) {
-  const deadline = Date.now() + timeoutMs;
-  let last = null;
-  let attempt = 0;
-
-  while (Date.now() < deadline) {
-    const cacheBust = `${BASE_URL}/?__public_smoke=${Date.now()}-${attempt++}`;
-    try {
-      await navigate(session, cacheBust);
-      for (let probe = 0; probe < 6 && Date.now() < deadline; probe += 1) {
-        last = await browserDocument(session);
-        if (last.body.includes('Usiądź do stołu')) return last;
-        await sleep(500);
-      }
-    } catch (error) {
-      last = { error: String(error) };
-    }
-    await sleep(1_000);
-  }
-
-  try { await screenshot(session, 'public-deploy-failure-host'); } catch {}
-  throw new Error(`public home readiness timed out: ${JSON.stringify(last)}`);
-}
-
-async function clickLeading(session, text) {
-  const clicked = await execute(session, `
-    const button = [...document.querySelectorAll('button')]
-      .find((node) => node.textContent?.trim().startsWith(${JSON.stringify(text)}) && !node.disabled);
-    if (!button) return false;
-    button.click();
-    return true;
-  `);
-  if (!clicked) throw new Error(`Enabled button ${text} not found`);
 }
 
 async function state(session) {
@@ -189,6 +151,82 @@ async function state(session) {
   `);
 }
 
+async function waitPublicHome(session, timeoutMs = 90_000) {
+  const deadline = Date.now() + timeoutMs;
+  let last = null;
+  let attempt = 0;
+
+  while (Date.now() < deadline) {
+    const cacheBust = `${BASE_URL}/?__public_smoke=${Date.now()}-${attempt++}`;
+    try {
+      await navigate(session, cacheBust);
+      for (let probe = 0; probe < 6 && Date.now() < deadline; probe += 1) {
+        last = await browserDocument(session);
+        if (last.body.includes('Usiądź do stołu')) return last;
+        await sleep(500);
+      }
+    } catch (error) {
+      last = { error: String(error) };
+    }
+    await sleep(1_000);
+  }
+
+  try { await screenshot(session, 'public-deploy-failure-home'); } catch {}
+  throw new Error(`public home readiness timed out: ${JSON.stringify(last)}`);
+}
+
+async function clickLeading(session, text) {
+  const clicked = await execute(session, `
+    const button = [...document.querySelectorAll('button')]
+      .find((node) => node.textContent?.trim().startsWith(${JSON.stringify(text)}) && !node.disabled);
+    if (!button) return false;
+    button.click();
+    return true;
+  `);
+  if (!clicked) throw new Error(`Enabled button ${text} not found`);
+}
+
+async function prepareFreshJoiner(session, room) {
+  await waitPublicHome(session);
+  const storageKey = `tysiac:seat-token:${room}`;
+  const clean = await execute(session, `
+    localStorage.removeItem(${JSON.stringify(storageKey)});
+    return localStorage.getItem(${JSON.stringify(storageKey)}) === null;
+  `);
+  if (!clean) throw new Error('cannot establish clean public joiner storage');
+}
+
+async function waitJoinableRoom(session, room, timeoutMs = 90_000) {
+  const deadline = Date.now() + timeoutMs;
+  let last = null;
+  let attempt = 0;
+
+  while (Date.now() < deadline) {
+    try {
+      await navigate(session, `${BASE_URL}/?room=${encodeURIComponent(room)}&__public_joiner=${Date.now()}-${attempt++}`);
+      for (let probe = 0; probe < 12 && Date.now() < deadline; probe += 1) {
+        last = await state(session);
+        if (last.token !== null) {
+          throw new Error(`share-link visitor unexpectedly owns credential before joining: ${last.token.slice(0, 8)}…`);
+        }
+        if (last.body.includes('Dołącz do stołu')) return last;
+        if (last.body.includes('Ten pokój już wystartował.')) {
+          throw new Error(`public room started before joiner could join: ${JSON.stringify(last)}`);
+        }
+        await sleep(500);
+      }
+    } catch (error) {
+      last = { ...(last ?? {}), error: String(error) };
+      if (String(error).includes('unexpectedly owns credential') || String(error).includes('started before joiner')) throw error;
+    }
+    await sleep(1_000);
+  }
+
+  const document = await browserDocument(session).catch(() => null);
+  try { await screenshot(session, 'public-deploy-failure-joiner'); } catch {}
+  throw new Error(`public joiner readiness timed out: ${JSON.stringify({ last, document })}`);
+}
+
 function assertNoOverflow(label, value, expectedWidth) {
   if (value.width !== expectedWidth) throw new Error(`${label}: viewport ${value.width}, expected ${expectedWidth}`);
   if (value.scrollWidth > value.width + 1) throw new Error(`${label}: page overflow ${value.scrollWidth} > ${value.width}`);
@@ -201,14 +239,14 @@ async function waitGame(session, label) {
   return waitFor(`${label}: connected game`, async () => {
     const value = await state(session);
     return value.connection.includes('online') && value.handCards.length > 0 && value.revision !== null ? value : false;
-  });
+  }, 60_000);
 }
 
 async function clickAuctionDecision(session, label) {
   await waitFor(`${label}: auction decision`, async () => {
     const value = await state(session);
     return value.decision === 'Twoja licytacja' ? value : false;
-  });
+  }, 60_000);
 
   const clicked = await execute(session, `
     const pass = [...document.querySelectorAll('.decision-card button:not(:disabled)')]
@@ -251,6 +289,17 @@ async function publicAssetsReady() {
   return true;
 }
 
+async function logDiagnostic(label, session) {
+  if (!session) return;
+  try {
+    const document = await browserDocument(session);
+    const snapshot = await state(session).catch(() => null);
+    const safeSnapshot = snapshot ? { ...snapshot, token: snapshot.token ? `${snapshot.token.slice(0, 8)}…` : null } : null;
+    console.error(`public deploy ${label} diagnostic: ${JSON.stringify({ document, state: safeSnapshot })}`);
+    await screenshot(session, `public-deploy-failure-${label}`);
+  } catch {}
+}
+
 await mkdir(OUTPUT, { recursive: true });
 
 await waitFor('public worker health', async () => {
@@ -273,15 +322,17 @@ try {
 
   await waitPublicHome(host);
   await clickLeading(host, 'Zagraj we dwóch');
-  await waitText(host, 'Kopiuj link dla znajomego');
+  await waitFor('public host lobby', async () => {
+    const value = await state(host);
+    return value.body.includes('Kopiuj link dla znajomego') ? value : false;
+  }, 60_000);
   const hostLobby = await state(host);
   if (!/^[0-9A-HJKMNP-TV-Z]{12}$/u.test(hostLobby.room ?? '')) throw new Error(`invalid public room ${hostLobby.room}`);
   if (!hostLobby.token?.startsWith('ts1_')) throw new Error('host reconnect token missing');
   if (hostLobby.url.includes(hostLobby.token) || hostLobby.body.includes(hostLobby.token)) throw new Error('host token leaked publicly');
 
-  await navigate(joiner, `${BASE_URL}?room=${hostLobby.room}`);
-  await waitText(joiner, 'Dołącz do stołu');
-  const beforeJoin = await state(joiner);
+  await prepareFreshJoiner(joiner, hostLobby.room);
+  const beforeJoin = await waitJoinableRoom(joiner, hostLobby.room);
   if (beforeJoin.token !== null) throw new Error('share-link visitor owns a credential before joining');
   await clickLeading(joiner, 'Dołącz do stołu');
 
@@ -306,14 +357,14 @@ try {
     const joinerState = await state(joiner);
     if (joinerState.decision === 'Twoja licytacja') return { session: joiner, other: host, before: joinerState, label: 'joiner' };
     return false;
-  });
+  }, 60_000);
 
   const action = await clickAuctionDecision(actor.session, `public ${actor.label}`);
   const synchronized = await waitFor('public shared revision', async () => {
     const a = await state(actor.session);
     const b = await state(actor.other);
     return actor.before.revision !== null && a.revision > actor.before.revision && b.revision === a.revision ? { a, b } : false;
-  });
+  }, 60_000);
 
   const stableRoom = synchronized.a.room;
   const stableToken = synchronized.a.token;
@@ -337,13 +388,8 @@ try {
     restoredRevision: restored.revision,
   }, null, 2));
 } catch (error) {
-  if (host) {
-    try {
-      const diagnostic = await browserDocument(host);
-      console.error(`public deploy browser diagnostic: ${JSON.stringify(diagnostic)}`);
-      await screenshot(host, 'public-deploy-failure-host');
-    } catch {}
-  }
+  await logDiagnostic('host', host);
+  await logDiagnostic('joiner', joiner);
   throw error;
 } finally {
   await closeSession(joiner);

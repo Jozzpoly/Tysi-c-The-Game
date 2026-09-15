@@ -1,14 +1,21 @@
-import { useEffect, useState, type CSSProperties } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   rankOf,
   suitOf,
   type CardId,
   type Command,
+  type GameEvent,
   type Seat,
   type SeatProjection,
 } from '../core/index.js';
 import { RulesGuide } from './RulesGuide.js';
 import { ScoreSummary } from './ScoreSummary.js';
+import { TactileHand } from './TactileHand.js';
+import {
+  TRICK_COMPLETION_TIMELINE,
+  planTrickPresentation,
+  type TrickCompletionStage,
+} from './trickPresentation.js';
 
 const SUIT_SYMBOL = { spades: '♠', clubs: '♣', diamonds: '♦', hearts: '♥' } as const;
 const ALL_SEATS: readonly Seat[] = [0, 1, 2];
@@ -16,6 +23,7 @@ const ALL_SEATS: readonly Seat[] = [0, 1, 2];
 export interface GameTableProps {
   projection: SeatProjection;
   seatNames: readonly [string, string, string];
+  events?: readonly GameEvent[];
   message?: string;
   onCommand: (command: Command) => void | Promise<void>;
   onNewGame?: () => void;
@@ -41,20 +49,54 @@ function Card({ card, disabled, selected, onClick }: { card: CardId; disabled?: 
   );
 }
 
-export function GameTable({ projection, seatNames, message = '', onCommand, onNewGame }: GameTableProps) {
+export function GameTable({ projection, seatNames, events = [], message = '', onCommand, onNewGame }: GameTableProps) {
   const view = projection.observation;
   const humanSeat = view.seat;
-  const humanCommands = projection.legalCommands;
   const [selectedTransfer, setSelectedTransfer] = useState<CardId[]>([]);
   const [confirmBomb, setConfirmBomb] = useState(false);
+  const [trickCompletionStage, setTrickCompletionStage] = useState<TrickCompletionStage>('settled');
+  const [trickStageRevision, setTrickStageRevision] = useState<number | null>(null);
+  const trickPresentation = useMemo(() => planTrickPresentation(events), [events]);
+  const prefersReducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+  const displayedTrickStage: TrickCompletionStage = trickPresentation.kind === 'trick-completion' && trickStageRevision !== view.revision
+    ? prefersReducedMotion ? 'consequence' : 'arrival'
+    : trickCompletionStage;
+  const presentationBlocksInput = trickPresentation.kind === 'trick-completion' && displayedTrickStage !== 'settled';
+  const humanCommands = presentationBlocksInput ? [] : projection.legalCommands;
 
   useEffect(() => {
     setSelectedTransfer([]);
     setConfirmBomb(false);
   }, [view.revision]);
 
+  useEffect(() => {
+    if (trickPresentation.kind !== 'trick-completion') {
+      setTrickStageRevision(null);
+      setTrickCompletionStage('settled');
+      return;
+    }
+
+    const timers: number[] = [];
+    setTrickStageRevision(view.revision);
+    setTrickCompletionStage(prefersReducedMotion ? 'consequence' : 'arrival');
+
+    if (!prefersReducedMotion) {
+      timers.push(window.setTimeout(() => setTrickCompletionStage('resolve'), TRICK_COMPLETION_TIMELINE.resolveMs));
+      timers.push(window.setTimeout(() => setTrickCompletionStage('collect'), TRICK_COMPLETION_TIMELINE.collectMs));
+      timers.push(window.setTimeout(() => setTrickCompletionStage('consequence'), TRICK_COMPLETION_TIMELINE.consequenceMs));
+    }
+    timers.push(window.setTimeout(() => setTrickCompletionStage('settled'), TRICK_COMPLETION_TIMELINE.settleMs));
+
+    return () => timers.forEach((timer) => window.clearTimeout(timer));
+  }, [prefersReducedMotion, trickPresentation.kind, view.revision]);
+
   const seatName = (seat: Seat) => seatNames[seat];
   const seatAction = (seat: Seat, you: string, thirdPerson: string) => seat === humanSeat ? you : `${seatName(seat)} ${thirdPerson}`;
+  const seatRole = (seat: Seat) => {
+    const role = view.dealer === seat ? 'rozdaje' : view.declarer === seat ? 'gra' : '';
+    const bombs = view.bombsUsed[seat] > 0 ? `bomby: ${view.bombsUsed[seat]}` : '';
+    return [role, bombs].filter(Boolean).join(' · ');
+  };
   const opponentSeats = ALL_SEATS.filter((seat) => seat !== humanSeat);
   const playPosition = (seat: Seat) => seat === humanSeat ? 'self' : seat === opponentSeats[0] ? 'left' : 'right';
   const humanCards = view.ownHand;
@@ -76,6 +118,9 @@ export function GameTable({ projection, seatNames, message = '', onCommand, onNe
   );
   const contracts = humanCommands.filter((command): command is Extract<Command, { type: 'contract' }> => command.type === 'contract');
   const nextHand = humanCommands.find((command): command is Extract<Command, { type: 'next-hand' }> => command.type === 'next-hand');
+  const exchangeMode = view.phase === 'exchange' && exchanges.length > 0;
+  const handActionable = exchangeMode ? new Set<CardId>(humanCards) : playable;
+  const throwableCards = view.phase === 'trick' ? playable : new Set<CardId>();
 
   function toggleTransfer(card: CardId) {
     setSelectedTransfer((current) => {
@@ -99,6 +144,14 @@ export function GameTable({ projection, seatNames, message = '', onCommand, onNe
     if (command) void onCommand(command);
   }
 
+  function activateHandCard(card: CardId) {
+    if (exchangeMode) {
+      toggleTransfer(card);
+      return;
+    }
+    if (view.phase === 'trick' && playable.has(card)) playCard(card);
+  }
+
   const phaseLabel = {
     auction: 'Licytacja',
     exchange: 'Wymiana po musiku',
@@ -108,9 +161,16 @@ export function GameTable({ projection, seatNames, message = '', onCommand, onNe
     complete: 'Rozdanie zakończone',
   }[view.phase];
 
-  const visibleTrick = view.trick.length > 0 ? view.trick : view.lastCompletedTrick?.plays ?? [];
-  const showingCompletedTrick = view.trick.length === 0 && view.lastCompletedTrick !== null;
-  const handStyle = { '--hand-spread-count': Math.max(0, humanCards.length - 1) } as CSSProperties;
+  const completedTrick = trickPresentation.kind === 'trick-completion' ? trickPresentation.completedTrick : null;
+  const showingCompletedTrick = completedTrick !== null && displayedTrickStage !== 'settled';
+  const visibleTrick = view.trick.length > 0
+    ? view.trick
+    : showingCompletedTrick && completedTrick
+      ? completedTrick.plays
+      : [];
+  const freshPlay = trickPresentation.freshPlay;
+  const completedWinner = completedTrick?.winner ?? null;
+  const completedWinnerPosition = completedWinner === null ? '' : playPosition(completedWinner);
   const bombCompletion = view.completion?.kind === 'bomb' ? view.completion : null;
   const winnerSeat = view.winner ?? humanSeat;
 
@@ -127,29 +187,26 @@ export function GameTable({ projection, seatNames, message = '', onCommand, onNe
         </div>
       </header>
 
-      <section className="scoreboard" aria-label="Wynik meczu">
-        {view.scores.map((score, seat) => {
-          const role = view.dealer === seat ? 'rozdaje' : view.declarer === seat ? 'gra' : '';
-          const bombs = view.bombsUsed[seat] > 0 ? `bomby: ${view.bombsUsed[seat]}` : '';
-          return (
-            <div className={`score ${seat === humanSeat ? 'human' : ''}`} key={seat}>
-              <span>{seatName(seat as Seat)}</span>
-              <strong>{score}</strong>
-              <small>{[role, bombs].filter(Boolean).join(' · ')}</small>
-            </div>
-          );
-        })}
-      </section>
-
       <section className="table">
         <div className="opponents">
           {opponentSeats.map((seat) => (
-            <div className="opponent" key={seat}>
-              <strong>{seatName(seat)}</strong>
-              <span>{view.opponentCardCounts[seat]} kart</span>
+            <div
+              className={`opponent ${showingCompletedTrick && completedWinner === seat && displayedTrickStage !== 'arrival' ? 'trick-winner-source' : ''}`}
+              key={seat}
+              data-seat-anchor={seat}
+            >
+              <div className="seat-line">
+                <strong>{seatName(seat)}</strong>
+                <span className="seat-score">{view.scores[seat]}</span>
+              </div>
+              <span className="seat-role">{seatRole(seat) || '\u00a0'}</span>
+              <span className="seat-cards">{view.opponentCardCounts[seat]} kart</span>
               <div className="card-backs" aria-hidden="true">
                 {Array.from({ length: Math.min(view.opponentCardCounts[seat], 8) }, (_, index) => <i key={index} />)}
               </div>
+              {showingCompletedTrick && completedWinner === seat && displayedTrickStage === 'consequence' && (
+                <span className="capture-pulse">+{completedTrick?.points ?? 0} pkt</span>
+              )}
             </div>
           ))}
         </div>
@@ -170,20 +227,39 @@ export function GameTable({ projection, seatNames, message = '', onCommand, onNe
             </div>
           )}
 
-          <div className={`trick ${showingCompletedTrick ? 'completed' : ''}`} aria-label="Aktualna lewa">
+          <div
+            className={`trick ${showingCompletedTrick ? 'completed' : ''} trick-stage-${displayedTrickStage}`}
+            aria-label="Aktualna lewa"
+            data-presentation-kind={trickPresentation.kind}
+            data-fresh-play={freshPlay ? `${freshPlay.seat}:${freshPlay.card}` : ''}
+            data-trick-stage={displayedTrickStage}
+            data-winner-seat={completedWinner ?? ''}
+            data-winner-position={completedWinnerPosition}
+          >
             {visibleTrick.length === 0 ? (
               <span className="muted">Stół czeka na zagranie</span>
             ) : (
-              visibleTrick.map((play) => (
-                <div className={`played played-${playPosition(play.seat)}`} key={`${play.seat}-${play.card}`}>
-                  <small>{seatName(play.seat)}</small>
-                  <Card card={play.card} disabled />
-                </div>
-              ))
+              visibleTrick.map((play) => {
+                const isFresh = freshPlay?.seat === play.seat && freshPlay.card === play.card;
+                const isWinner = showingCompletedTrick && completedWinner === play.seat;
+                return (
+                  <div
+                    className={`played played-${playPosition(play.seat)} ${isFresh ? 'is-fresh-arrival' : ''} ${isWinner ? 'is-trick-winner' : ''}`}
+                    key={`${play.seat}-${play.card}`}
+                    data-seat={play.seat}
+                    data-card={play.card}
+                  >
+                    <small>{seatName(play.seat)}</small>
+                    <Card card={play.card} disabled />
+                  </div>
+                );
+              })
             )}
           </div>
-          {showingCompletedTrick && view.lastCompletedTrick && (
-            <div className="trick-result">Lewa {view.lastCompletedTrick.index}: {seatName(view.lastCompletedTrick.winner)} · {view.lastCompletedTrick.points} pkt</div>
+          {showingCompletedTrick && completedTrick && displayedTrickStage !== 'arrival' && (
+            <div className={`trick-result trick-result-${displayedTrickStage}`}>
+              Lewa {completedTrick.index}: {seatName(completedTrick.winner)} · {completedTrick.points} pkt
+            </div>
           )}
         </div>
 
@@ -278,8 +354,8 @@ export function GameTable({ projection, seatNames, message = '', onCommand, onNe
               )}
               <small className="decision-help">
                 {marriageCards.size > 0
-                  ? 'Meldunek K+Q daje punkty i ustawia ten kolor jako atut. Możesz też zagrać aktywną kartę bez meldowania.'
-                  : 'Kliknij jedną z aktywnych kart — interfejs blokuje zagrania nielegalne w tej lewie.'}
+                  ? 'Meldunek K+Q daje punkty i ustawia ten kolor jako atut. Możesz też zagrać legalną kartę bez meldowania.'
+                  : 'Każdą kartę możesz chwycić i przełożyć. Legalne zagrania dostają dodatkowy sygnał i możesz rzucić je na stół.'}
               </small>
             </div>
           )}
@@ -298,15 +374,31 @@ export function GameTable({ projection, seatNames, message = '', onCommand, onNe
         </section>
       </section>
 
-      <section className="hand-area">
-        <div className="hand-heading"><strong>Twoje karty</strong><span>{humanCards.length}</span></div>
-        <div className="hand" style={handStyle}>
-          {humanCards.map((card) => {
-            const exchangeMode = view.phase === 'exchange' && exchanges.length > 0;
-            const canPlay = view.phase === 'trick' && playable.has(card);
-            return <Card key={card} card={card} selected={selectedTransfer.includes(card)} disabled={!exchangeMode && !canPlay} onClick={exchangeMode ? () => toggleTransfer(card) : canPlay ? () => playCard(card) : undefined} />;
-          })}
+      <section
+        className={`hand-area ${showingCompletedTrick && completedWinner === humanSeat && displayedTrickStage !== 'arrival' ? 'trick-winner-source' : ''}`}
+        data-seat-anchor={humanSeat}
+      >
+        <div className="hand-heading">
+          <div className="hand-owner">
+            <strong>Twoje karty</strong>
+            <span>{seatRole(humanSeat) || `${humanCards.length} kart`}</span>
+            {showingCompletedTrick && completedWinner === humanSeat && displayedTrickStage === 'consequence' && (
+              <span className="capture-pulse">+{completedTrick?.points ?? 0} pkt</span>
+            )}
+          </div>
+          <div className="hand-score" aria-label={`Twój wynik ${view.scores[humanSeat]}`}>
+            <strong>{view.scores[humanSeat]}</strong>
+            <span>pkt</span>
+          </div>
         </div>
+        <TactileHand
+          cards={humanCards}
+          handNumber={view.handNumber}
+          selectedCards={selectedTransfer}
+          actionableCards={handActionable}
+          throwableCards={throwableCards}
+          onActivate={activateHandCard}
+        />
       </section>
 
       <footer className="footer">

@@ -1,0 +1,314 @@
+/*
+ * Run 04 P4 — First Living Slice.
+ * Event-driven presentation only. Static snapshots/reconnects do not replay motion.
+ */
+
+/* Run 04 replaces the older mount-driven trick animations. */
+.trick .played,
+.trick .played-self,
+.trick .played-left,
+.trick .played-right {
+  animation: none;
+}
+
+/* Only the exact card carried by the fresh authoritative card-played event arrives. */
+.trick .played-self.is-fresh-arrival {
+  animation: trick-from-self .24s cubic-bezier(.18, .82, .24, 1) both;
+}
+
+.trick .played-left.is-fresh-arrival {
+  animation: trick-from-left .24s cubic-bezier(.18, .82, .24, 1) both;
+}
+
+.trick .played-right.is-fresh-arrival {
+  animation: trick-from-right .24s cubic-bezier(.18, .82, .24, 1) both;
+}
+
+.trick.completed .played {
+  transition:
+    translate .22s cubic-bezier(.2, .76, .26, 1),
+    scale .22s cubic-bezier(.2, .76, .26, 1),
+    opacity .2s ease,
+    filter .16s ease;
+}
+
+.trick.completed.trick-stage-resolve .played:not(.is-trick-winner) {
+  filter: saturate(.74) brightness(.83);
+}
+
+.trick.completed.trick-stage-resolve .played.is-trick-winner .card {
+  transform: translateY(-4px) scale(1.045);
+  box-shadow: 0 16px 28px #0007, 0 0 0 2px #f1d98b55;
+}
+
+/*
+ * Desktop keeps the bounded group translation from P4-C. Mobile below uses
+ * per-card convergence because its trick locus already sits close to the seat
+ * anchors and the old desktop-scaled vector could drive an edge card offscreen.
+ */
+.trick.completed.trick-stage-collect[data-winner-position='left'] .played,
+.trick.completed.trick-stage-consequence[data-winner-position='left'] .played {
+  translate: -138px -58px;
+  scale: .74;
+}
+
+.trick.completed.trick-stage-collect[data-winner-position='right'] .played,
+.trick.completed.trick-stage-consequence[data-winner-position='right'] .played {
+  translate: 138px -58px;
+  scale: .74;
+}
+
+.trick.completed.trick-stage-collect[data-winner-position='self'] .played,
+.trick.completed.trick-stage-consequence[data-winner-position='self'] .played {
+  translate: 0 96px;
+  scale: .74;
+}
+
+.trick.completed.trick-stage-collect .played {
+  opacity: .34;
+  filter: saturate(.78) brightness(.9);
+}
+
+.trick.completed.trick-stage-consequence .played {
+  opacity: 0;
+}
+
+/*
+ * The visual scene now carries winner/value. Keep the prose result in the DOM
+ * for accessible announcement and mechanical tracing, but do not let it explain
+ * the picture for sighted play.
+ */
+.trick-result {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0 0 0 0) !important;
+  clip-path: inset(50%) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+.opponent,
+.hand-owner {
+  position: relative;
+}
+
+.opponent.trick-winner-source .seat-line,
+.hand-area.trick-winner-source .hand-heading {
+  filter: brightness(1.12);
+}
+
+.opponent.trick-winner-source .card-backs i {
+  box-shadow: 0 5px 14px #0005, 0 0 0 1px #e8d28b38;
+}
+
+.capture-pulse {
+  position: absolute;
+  z-index: 8;
+  left: 50%;
+  top: 54%;
+  transform: translate(-50%, -50%);
+  width: max-content;
+  padding: 3px 7px;
+  border: 1px solid #efd98a38;
+  border-radius: 999px;
+  background: #071b12e8;
+  color: #f5e4a8 !important;
+  font-size: .72rem !important;
+  font-weight: 850;
+  line-height: 1;
+  box-shadow: 0 7px 20px #0005;
+  animation: trick-capture-pulse .2s cubic-bezier(.18, .82, .24, 1) both;
+  pointer-events: none;
+}
+
+.hand-owner .capture-pulse {
+  left: calc(100% + 12px);
+  top: 50%;
+  transform: translate(0, -50%);
+}
+
+/* P4-D persistent ownership: deliberately quiet, attached to the owner. */
+.capture-state {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 14px;
+  margin-top: 1px;
+  color: #b8c9bf !important;
+  font-size: .58rem !important;
+  font-weight: 600;
+  line-height: 1;
+  opacity: .62;
+  transition: opacity .16s ease, color .16s ease, transform .18s ease, filter .18s ease;
+}
+
+.capture-state.is-empty {
+  opacity: 0;
+}
+
+.capture-state.is-empty.is-initiative {
+  opacity: 1;
+}
+
+.capture-state.is-empty.is-initiative > * {
+  opacity: 0;
+}
+
+.capture-state-mark {
+  color: #d8c57d;
+  font-size: .48rem;
+  opacity: .72;
+}
+
+.capture-state-tricks {
+  color: #e8eee9;
+  font-size: .62rem;
+  font-weight: 800;
+}
+
+.capture-state.is-updated {
+  color: #f1dda0 !important;
+  opacity: 1;
+  filter: brightness(1.08);
+}
+
+.seat-consequence {
+  position: absolute;
+  z-index: 7;
+  left: 50%;
+  bottom: -17px;
+  width: max-content;
+  margin: 0;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.hand-area > .seat-consequence {
+  top: 3px;
+  bottom: auto;
+}
+
+.seat-consequence.is-updated {
+  transform: translate(-50%, -1px);
+}
+
+/* Next initiative stays with the owner instead of becoming another turn banner. */
+.seat-consequence.is-initiative {
+  color: #fff0b9 !important;
+  opacity: 1;
+  filter: brightness(1.12);
+}
+
+.seat-consequence.is-initiative::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: -7px;
+  width: 5px;
+  height: 5px;
+  translate: -50% 0;
+  border-radius: 50%;
+  background: #ead27a;
+  box-shadow: 0 0 0 3px #ead27a18, 0 0 12px #ead27a45;
+}
+
+@keyframes trick-capture-pulse {
+  from { opacity: 0; scale: .82; }
+  to { opacity: 1; scale: 1; }
+}
+
+@media (max-width: 760px) {
+  /*
+   * Converge each card toward the mobile winner anchor instead of translating
+   * the whole trick by a desktop-derived vector. This keeps the edge cards
+   * inside the viewport while making collection read as actual ownership.
+   */
+  .trick.completed.trick-stage-collect[data-winner-position='left'] .played-left,
+  .trick.completed.trick-stage-consequence[data-winner-position='left'] .played-left {
+    translate: 18px -44px;
+  }
+
+  .trick.completed.trick-stage-collect[data-winner-position='left'] .played-self,
+  .trick.completed.trick-stage-consequence[data-winner-position='left'] .played-self {
+    translate: -70px -54px;
+  }
+
+  .trick.completed.trick-stage-collect[data-winner-position='left'] .played-right,
+  .trick.completed.trick-stage-consequence[data-winner-position='left'] .played-right {
+    translate: -150px -44px;
+  }
+
+  .trick.completed.trick-stage-collect[data-winner-position='right'] .played-left,
+  .trick.completed.trick-stage-consequence[data-winner-position='right'] .played-left {
+    translate: 150px -44px;
+  }
+
+  .trick.completed.trick-stage-collect[data-winner-position='right'] .played-self,
+  .trick.completed.trick-stage-consequence[data-winner-position='right'] .played-self {
+    translate: 70px -54px;
+  }
+
+  .trick.completed.trick-stage-collect[data-winner-position='right'] .played-right,
+  .trick.completed.trick-stage-consequence[data-winner-position='right'] .played-right {
+    translate: -18px -44px;
+  }
+
+  .trick.completed.trick-stage-collect[data-winner-position='self'] .played-left,
+  .trick.completed.trick-stage-consequence[data-winner-position='self'] .played-left {
+    translate: 72px 72px;
+  }
+
+  .trick.completed.trick-stage-collect[data-winner-position='self'] .played-self,
+  .trick.completed.trick-stage-consequence[data-winner-position='self'] .played-self {
+    translate: 0 72px;
+  }
+
+  .trick.completed.trick-stage-collect[data-winner-position='self'] .played-right,
+  .trick.completed.trick-stage-consequence[data-winner-position='self'] .played-right {
+    translate: -72px 72px;
+  }
+
+  .trick.completed.trick-stage-collect .played,
+  .trick.completed.trick-stage-consequence .played {
+    scale: .68;
+  }
+
+  .capture-pulse {
+    font-size: .66rem !important;
+  }
+
+  .capture-state {
+    gap: 3px;
+    min-height: 12px;
+    font-size: .52rem !important;
+  }
+
+  .capture-state-tricks {
+    font-size: .56rem;
+  }
+
+  .seat-consequence {
+    bottom: -13px;
+  }
+
+  .hand-area > .seat-consequence {
+    top: 1px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .trick .played.is-fresh-arrival,
+  .capture-pulse {
+    animation: none !important;
+  }
+
+  .trick.completed .played,
+  .capture-state {
+    transition: none !important;
+  }
+}

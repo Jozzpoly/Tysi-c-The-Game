@@ -9,12 +9,14 @@ import {
   productBotCommand,
   projectSeat,
   type Command,
+  type GameEvent,
   type MatchState,
   type Seat,
 } from './core/index.js';
 import { describeFeedback } from './presentation/feedback.js';
-import { GameTable } from './presentation/GameTable.js';
+import { LivingGameTable } from './presentation/LivingGameTable.js';
 import { RulesGuide } from './presentation/RulesGuide.js';
+import { presentationFrameDuration } from './presentation/trickPresentation.js';
 import { RemoteRoom } from './remote/RemoteRoom.js';
 import { createRemoteRoom, normalizedRoomCode, type RoomMode } from './remote/room-client.js';
 import './styles.css';
@@ -52,7 +54,8 @@ function LocalGame() {
   const [humanSeat] = useState<Seat>(startupSeat);
   const seatNames = useMemo(() => namesForHuman(humanSeat), [humanSeat]);
   const [authority, setAuthority] = useState<MatchState>(() => freshMatch(startupSeed()));
-  const [message, setMessage] = useState('Lokalny QA slice — profil PlayOK/Kurnik candidate.');
+  const [presentedEvents, setPresentedEvents] = useState<GameEvent[]>([]);
+  const [message, setMessage] = useState('');
   const projection = useMemo(() => projectSeat(authority, humanSeat), [authority, humanSeat]);
   const seatName = (seat: Seat) => seatNames[seat];
 
@@ -70,6 +73,7 @@ function LocalGame() {
     try {
       assertCoreInvariants(result.state);
       setAuthority(result.state);
+      setPresentedEvents(eventsForSeat(result.events, humanSeat));
       publishFeedback(result.events, 'Ruch przyjęty.');
     } catch (error) {
       setMessage(error instanceof Error ? error.message : String(error));
@@ -78,6 +82,7 @@ function LocalGame() {
 
   function startNewGame() {
     setAuthority(freshMatch());
+    setPresentedEvents([]);
     setMessage('Nowa gra.');
   }
 
@@ -86,7 +91,8 @@ function LocalGame() {
     const actor = actingSeat(authority);
     if (actor === null || actor === humanSeat) return;
 
-    const delay = authority.hand.phase === 'trick' ? 520 : 360;
+    const ordinaryDelay = authority.hand.phase === 'trick' ? 520 : 360;
+    const delay = Math.max(ordinaryDelay, presentationFrameDuration(presentedEvents));
     const timer = window.setTimeout(() => {
       try {
         const command = productBotCommand(authority, actor);
@@ -97,6 +103,7 @@ function LocalGame() {
         }
         assertCoreInvariants(result.state);
         setAuthority(result.state);
+        setPresentedEvents(eventsForSeat(result.events, humanSeat));
         publishFeedback(result.events, `${seatNames[actor]} wykonał ruch.`);
       } catch (error) {
         setMessage(error instanceof Error ? error.message : String(error));
@@ -104,12 +111,13 @@ function LocalGame() {
     }, delay);
 
     return () => window.clearTimeout(timer);
-  }, [authority, humanSeat, seatNames]);
+  }, [authority, humanSeat, seatNames, presentedEvents]);
 
   return (
-    <GameTable
+    <LivingGameTable
       projection={projection}
       seatNames={seatNames}
+      events={presentedEvents}
       message={message}
       onCommand={commit}
       onNewGame={startNewGame}
@@ -181,7 +189,7 @@ function App() {
       <section className="home-card">
         <div className="eyebrow">Tysiąc The Game</div>
         <h1>Usiądź do stołu</h1>
-        <p>Bez konta. Prywatny pokój działa na tym samym silniku reguł dla ludzi i botów.</p>
+        <p>Zagraj sam albo zaproś znajomego jednym linkiem. Bez konta.</p>
 
         <div className="home-guide-row">
           <span>Pierwszy raz grasz w Tysiąca?</span>
@@ -214,7 +222,6 @@ function App() {
         </div>
 
         {message && <div className="home-message">{message}</div>}
-        <small>Zasady: PlayOK/Kurnik 3P 800 · wersja testowa. Rzadkie warianty nadal weryfikujemy.</small>
       </section>
     </main>
   );

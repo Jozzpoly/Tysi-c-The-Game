@@ -1,0 +1,212 @@
+/*
+ * Run 04 — friend-demo first-minute flow.
+ * Presentation-only compression of existing authentic decisions.
+ */
+
+/* Keep the opening screen product-facing. The rules button carries variant detail. */
+.home-card > small {
+  display: none;
+}
+
+/* Never expose QA/revision chrome on the friend-facing surface. */
+.footer {
+  display: none !important;
+}
+
+/* Completed hands with no cards should not leave an empty private-territory label. */
+.hand-area:has(.hand:empty) {
+  display: none;
+}
+
+/* Musik is a game object, not a tiny diagnostic thumbnail. */
+.talon {
+  position: relative;
+  z-index: 3;
+  gap: 5px;
+}
+
+.talon > span {
+  padding: 3px 10px;
+  border: 1px solid #ffffff10;
+  background: #052016e8;
+  color: #e1e9e3;
+  box-shadow: 0 5px 15px #0003;
+}
+
+.mini-cards {
+  transform: scale(.82);
+  height: 78px;
+  filter: drop-shadow(0 8px 12px #0004);
+}
+
+/* Contextual choices should feel attached to the table, not like modal forms. */
+.decision {
+  min-height: 72px;
+}
+
+.decision-card {
+  width: min(590px, 92%);
+  padding: 8px 11px;
+  border-color: #d9c77a18;
+  border-radius: 17px;
+  background: linear-gradient(180deg, #04170fd9, #03120cce);
+  box-shadow: 0 10px 28px #00035, inset 0 1px #ffffff0b;
+  backdrop-filter: blur(4px);
+}
+
+.decision-card h2 {
+  margin-bottom: 4px;
+  font-size: .86rem;
+}
+
+.decision-card p {
+  max-width: 520px;
+  margin: 3px auto 7px;
+  color: #b6c8bc;
+  font-size: .72rem;
+  line-height: 1.32;
+}
+
+.decision-help {
+  max-width: 520px;
+  margin-top: 4px;
+  color: #94aa9c;
+  font-size: .64rem;
+  line-height: 1.28;
+}
+
+.decision .actions {
+  gap: 6px;
+}
+
+.decision button {
+  min-height: 36px;
+  padding: 6px 12px;
+}
+
+.bid-actions,
+.contract-actions {
+  max-height: none;
+  overflow: visible;
+  gap: 5px;
+}
+
+.contract-actions button {
+  min-width: 58px;
+}
+
+/* The disabled exchange confirmation still reads as the destination of selection. */
+.decision button.primary:disabled {
+  opacity: .48;
+  border-color: #d3bd6c55;
+  background: #8b7944;
+  color: #18150d;
+}
+
+/* Routine trick guidance should stay secondary to the cards, but remain readable
+   in peripheral vision on a phone. */
+.decision-card.compact {
+  width: min(520px, 86%);
+  padding: 4px 8px;
+  background: #04170f80;
+  border-color: #ffffff08;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.decision-card.compact h2 {
+  margin: 0;
+  font-size: .7rem;
+  font-weight: 720;
+  letter-spacing: .02em;
+  text-transform: none;
+  opacity: .78;
+}
+
+.decision-card.compact .decision-help {
+  margin-top: 2px;
+  font-size: .58rem;
+  opacity: .56;
+}
+
+/* Connection is useful truth, but it should remain peripheral during play. */
+.remote-room-active .connection-banner {
+  opacity: .58;
+  font-size: .62rem;
+  transition: opacity .15s ease;
+}
+
+.remote-room-active .connection-banner.reconnecting {
+  opacity: 1;
+}
+
+@media (max-width: 760px) {
+  .table {
+    padding-bottom: 154px;
+  }
+
+  .mini-cards {
+    transform: scale(.78);
+    height: 66px;
+  }
+
+  .decision {
+    min-height: 56px;
+  }
+
+  .decision-card {
+    width: calc(100% - 18px);
+    padding: 6px 8px;
+    border-radius: 14px;
+  }
+
+  .decision-card h2 {
+    margin-bottom: 3px;
+    font-size: .76rem;
+  }
+
+  .decision-card p {
+    margin: 2px auto 5px;
+    font-size: .59rem;
+    line-height: 1.22;
+  }
+
+  .decision-help {
+    margin-top: 3px;
+    font-size: .56rem;
+    line-height: 1.2;
+  }
+
+  .decision button {
+    min-height: 44px;
+    padding: 5px 9px;
+    font-size: .75rem;
+  }
+
+  .decision-card.compact {
+    width: 90%;
+    padding: 4px 7px;
+  }
+
+  .decision-card.compact h2 {
+    font-size: .74rem;
+    font-weight: 760;
+    opacity: .88;
+  }
+
+  .decision-card.compact .decision-help {
+    max-width: 320px;
+    font-size: .52rem;
+  }
+
+  .hand-area {
+    bottom: max(15px, env(safe-area-inset-bottom));
+  }
+
+  .remote-room-active .connection-banner {
+    max-width: 74vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}

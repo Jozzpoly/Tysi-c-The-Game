@@ -1,0 +1,75 @@
+/*
+ * Run 05 P3-A — material ownership transfer for the revealed talon.
+ *
+ * Canonical ownership changes immediately in core. Presentation keeps exactly one
+ * visible card identity while the three public talon cards travel into the
+ * declarer's real territory, then removes the physical talon from the scene.
+ */
+
+.material-talon-state {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+/* Keep source/target geometry measurable while the portal cards are the only
+ * visible representation of those exact identities. */
+.talon.is-talon-materializing .mini-cards > .card,
+.hand-slot.is-talon-materializing > .card {
+  visibility: hidden !important;
+}
+
+/* After ownership has visually settled, the historical revealedTalon projection
+ * no longer draws a second physical copy of the same cards. */
+.center:has(> .material-talon-state.is-settled) > .talon {
+  display: none !important;
+}
+
+.talon-transfer-layer {
+  position: fixed;
+  z-index: 120;
+  inset: 0;
+  overflow: visible;
+  pointer-events: none;
+  contain: layout style;
+}
+
+.talon-transfer-card {
+  position: fixed !important;
+  z-index: 121;
+  margin: 0 !important;
+  transform-origin: 0 0;
+  will-change: transform, filter, opacity;
+  pointer-events: none !important;
+  opacity: 1 !important;
+  animation-name: run05-talon-material-flight;
+  animation-duration: var(--talon-flight-duration);
+  animation-delay: var(--talon-flight-delay);
+  animation-timing-function: cubic-bezier(.18,.78,.22,1);
+  animation-fill-mode: forwards;
+}
+
+@keyframes run05-talon-material-flight {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1, 1) rotate(0deg);
+    filter: brightness(1.08) drop-shadow(0 5px 9px #0005);
+  }
+  62% {
+    filter: brightness(1.12) drop-shadow(0 9px 13px #0007);
+  }
+  100% {
+    transform:
+      translate3d(var(--talon-flight-x), var(--talon-flight-y), 0)
+      scale(var(--talon-flight-scale-x), var(--talon-flight-scale-y))
+      rotate(var(--talon-flight-rotate));
+    filter: brightness(1) drop-shadow(0 3px 7px #0004);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .talon-transfer-card {
+    animation: none !important;
+  }
+}
