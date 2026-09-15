@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - run04/friend-preview-candidate-01
+      - run05/post-friend-evolution
 
 permissions:
   contents: read
