@@ -17,6 +17,26 @@ function forbidMatch(label, source, pattern) {
   if (pattern.test(source)) throw new Error(`${label}: forbidden pattern present: ${pattern}`);
 }
 
+function requirePinnedUses(label, source) {
+  const uses = [...source.matchAll(/^\s*(?:-\s*)?uses:\s+([^\s#]+)/gmu)];
+  if (uses.length === 0) throw new Error(`${label}: expected at least one GitHub Action use`);
+  for (const match of uses) {
+    const action = match[1];
+    const at = action.lastIndexOf('@');
+    const revision = at >= 0 ? action.slice(at + 1) : '';
+    if (!/^[0-9a-f]{40}$/u.test(revision)) {
+      throw new Error(`${label}: action must be pinned to an immutable 40-character commit SHA: ${action}`);
+    }
+  }
+}
+
+const ACTION_PINS = Object.freeze({
+  checkout: 'actions/checkout@11d5960a326750d5838078e36cf38b85af677262',
+  setupNode: 'actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020',
+  uploadArtifact: 'actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02',
+  wrangler: 'cloudflare/wrangler-action@ebbaa1584979971c8614a24965b4405ff95890e0',
+});
+
 const [
   stable,
   temporary,
@@ -48,6 +68,24 @@ const [
   text('docs/EXECUTION_STATE.md'),
   exists('.github/workflows/friend-preview-pages.yml'),
 ]);
+
+for (const [label, source] of [
+  ['Foundation workflow', coreWorkflow],
+  ['stable workflow', stable],
+  ['stable recheck workflow', recheck],
+  ['temporary workflow', temporary],
+]) {
+  requirePinnedUses(label, source);
+}
+
+for (const pin of [ACTION_PINS.checkout, ACTION_PINS.setupNode, ACTION_PINS.uploadArtifact]) {
+  requireMatch('Foundation workflow action pins', coreWorkflow, new RegExp(pin.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&'), 'u'));
+  requireMatch('temporary workflow action pins', temporary, new RegExp(pin.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&'), 'u'));
+  requireMatch('stable recheck workflow action pins', recheck, new RegExp(pin.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&'), 'u'));
+}
+for (const pin of [ACTION_PINS.checkout, ACTION_PINS.setupNode, ACTION_PINS.uploadArtifact, ACTION_PINS.wrangler]) {
+  requireMatch('stable workflow action pins', stable, new RegExp(pin.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&'), 'u'));
+}
 
 requireMatch('stable workflow', stable, /^name: Stable Multiplayer Deploy$/mu);
 requireMatch('stable workflow', stable, /candidate_sha:/u);
