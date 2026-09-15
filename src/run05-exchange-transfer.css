@@ -140,16 +140,17 @@
   box-shadow: none;
 }
 
-/* This is still the same hand-slot/card object. It leaves the hand visually and
- * lives over the recipient territory until the second recipient is assigned.
- * `!important` deliberately outranks the hand's short Web-Animation return so a
- * successful recipient drop never visibly snaps back toward the hand first. */
+/* This is still the same hand-slot/card object. Keep the exchange translation on
+ * the independent transform longhands instead of reusing `transform`, because the
+ * tactile hand owns/animates `transform` for fan, reorder and release motion. */
 .exchange-mode .tactile-hand > .hand-slot.is-exchange-staged {
   z-index: 1180;
-  transform:
-    translate3d(var(--exchange-stage-x, 0px), var(--exchange-stage-y, 0px), 0)
-    scale(.78) !important;
-  transition: transform 165ms cubic-bezier(.18,.82,.25,1);
+  transform: none !important;
+  translate: var(--exchange-stage-x, 0px) var(--exchange-stage-y, 0px) !important;
+  scale: .78 !important;
+  transition:
+    translate 165ms cubic-bezier(.18,.82,.25,1),
+    scale 165ms cubic-bezier(.18,.82,.25,1);
   cursor: grab;
 }
 
@@ -222,9 +223,7 @@
   }
 
   .exchange-mode .tactile-hand > .hand-slot.is-exchange-staged {
-    transform:
-      translate3d(var(--exchange-stage-x, 0px), var(--exchange-stage-y, 0px), 0)
-      scale(.84) !important;
+    scale: .84 !important;
   }
 
   .exchange-mode .opponent.exchange-drop-target::after {
