@@ -64,17 +64,19 @@ Consequently:
 
 In both manual and declarative modes the workflow:
 
-- resolves one exact candidate SHA, never just a branch name;
-- validates that SHA;
-- checks out exactly that commit;
+- may execute only from `main`, which defines the current validation harness authority;
+- resolves one exact product candidate SHA, never just a branch name;
+- validates that product SHA;
+- checks out exactly that product commit for Foundation/build/deploy;
 - verifies `git rev-parse HEAD` matches it before testing or publishing;
 - requires an authenticated Cloudflare account;
 - requires repository secrets `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN`;
 - uses normal `wrangler deploy`, never `--temporary`;
-- stamps public provenance with the resolved candidate SHA and deployment class `stable`;
+- stamps public provenance with the resolved product SHA and deployment class `stable`;
 - deploys Worker name `tysiac-the-game` from `wrangler.jsonc`;
 - keeps `workers_dev: true` unless a deliberate custom-domain migration replaces it;
-- preserves SQLite-backed `MATCH_ROOM` Durable Object authority.
+- preserves SQLite-backed `MATCH_ROOM` Durable Object authority;
+- after publishing, checks out the workflow-triggering `main` SHA into a separate validation-harness directory and runs public evidence from that current harness rather than from the frozen product commit.
 
 For the current P0 recovery, the accepted friend origin is specifically the canonical root:
 
@@ -82,7 +84,16 @@ For the current P0 recovery, the accepted friend origin is specifically the cano
 
 The stable workflow rejects versioned preview URLs, foreign hosts, extra paths, query strings and fragments as the candidate origin. A future custom-domain migration must be a deliberate change to this contract rather than an accidental side effect of deployment output.
 
-The SHA of the workflow definition and the SHA of the game candidate can be different. Readiness evidence attaches to the resolved candidate SHA, not to whichever branch/ref happened to carry the workflow definition.
+### Product SHA and validation-harness SHA are separate authority
+
+The two SHAs answer different questions and must never be conflated:
+
+- **product SHA** — the exact immutable game commit that was built, deployed, and must be reported by public provenance;
+- **validation-harness SHA** — the exact `main` commit whose current public smoke tests produced the deployment evidence.
+
+A product candidate may stay frozen while the validation harness improves. This is intentional: freezing a product must not freeze our ability to discover new defects in that product. Stable-deploy summaries and later rechecks therefore record both SHAs.
+
+Public readiness evidence attaches to the pair: **product SHA + validation-harness SHA**. The validation-harness SHA does not replace product provenance, and the product SHA does not define the latest evidence contract.
 
 ## Stable-deploy evidence ladder
 
@@ -92,19 +103,21 @@ A single word such as `verified` is not sufficient. Evidence must be reported by
 
 PASS only when all are true:
 
-1. the resolved candidate is a full immutable 40-character Git SHA;
-2. checkout HEAD equals that exact candidate SHA;
+1. the resolved product candidate is a full immutable 40-character Git SHA;
+2. checkout HEAD equals that exact product SHA before build/deploy;
 3. Cloudflare account credentials are present in GitHub Secrets;
 4. the workflow uses normal authenticated `wrangler deploy`;
 5. `wrangler deployments list` succeeds against the owned account after deployment;
 6. the returned deployment target is the canonical `https://tysiac-the-game.<account-subdomain>.workers.dev` root;
 7. the stable workflow contains no `--temporary` path.
 
-This proves which exact commit was published and that it used the account-owned non-temporary mechanism at the intended canonical origin. It does not by itself prove gameplay, copied-link correctness, long-horizon availability or human usability.
+This proves which exact product commit was published and that it used the account-owned non-temporary mechanism at the intended canonical origin. It does not by itself prove gameplay, copied-link correctness, long-horizon availability or human usability.
 
-### B. Immediate public runtime
+### B. Current validation authority + immediate public runtime
 
-PASS only when `scripts/public-deploy-smoke.mjs` proves against the deployed public HTTPS origin:
+The stable workflow must record the exact `main` SHA used as its validation harness and run public evidence from that checkout, independently of the frozen product checkout.
+
+PASS only when the current validation harness runs `scripts/public-deploy-smoke.mjs` against the deployed public HTTPS origin and proves:
 
 - Worker health;
 - built SPA assets;
@@ -121,7 +134,7 @@ The stable workflow repeats this smoke after a short delay. That is repeatabilit
 
 ### C. Exact copied friend invite
 
-PASS only when `scripts/public-share-link-smoke.mjs` uses the real `Kopiuj link dla znajomego` control and proves that the exact URL produced by the UI:
+PASS only when the current validation harness runs `scripts/public-share-link-smoke.mjs`, uses the real `Kopiuj link dla znajomego` control and proves that the exact URL produced by the UI:
 
 - is HTTPS;
 - remains on the stable deployment origin;
@@ -139,23 +152,23 @@ Constructing a `?room=...` URL inside the test harness is not sufficient evidenc
 
 PASS only when `/api/match` reports:
 
-- `buildSha` equal to the exact resolved candidate SHA;
+- `buildSha` equal to the exact resolved product candidate SHA;
 - `deployClass: stable`.
 
-This prevents a correct-looking hostname from being mistaken for evidence that the intended build is actually serving.
+This prevents a correct-looking hostname or a newer validation harness from being mistaken for evidence that the intended product build is actually serving.
 
 ### E. Long-horizon availability
 
 Immediate deployment success cannot prove elapsed time.
 
-The same stable origin must therefore be rechecked after the initial deployment without redeploying it. `Stable Origin Recheck (NO REDEPLOY)` checks out the exact candidate SHA, asserts that the public origin still reports that SHA and `stable` deployment class, then re-runs public multiplayer and copied-invite evidence without publishing a replacement.
+The same stable origin must therefore be rechecked after the initial deployment without redeploying it. `Stable Origin Recheck (NO REDEPLOY)` runs only from current `main`, keeps that current checkout as the validation harness, verifies that the requested product SHA still exists in repository history, asserts that the public origin still reports that product SHA and `stable` deployment class, then re-runs current public multiplayer and copied-invite evidence without publishing a replacement.
 
 The recheck has two equivalent request paths:
 
-1. manual `workflow_dispatch` with the exact canonical origin and candidate SHA;
-2. declarative repository request by creating/updating `.github/deploy/stable-recheck.json` on `main` with exactly the canonical `origin` and immutable `sha` to recheck.
+1. manual `workflow_dispatch` with the exact canonical origin and product SHA;
+2. declarative repository request by creating/updating `.github/deploy/stable-recheck.json` on `main` with exactly the canonical `origin` and immutable product `sha` to recheck.
 
-Both paths must resolve the same canonical root + exact SHA pair, verify checkout identity, and execute only read/probe behavior. The recheck workflow is forbidden from containing `wrangler deploy`, `cloudflare/wrangler-action`, `temporary-deploy.mjs`, or any other publication step. The declarative JSON exists only to make the later evidence point auditable and agent-triggerable without pretending that a new deployment is a persistence check.
+Both paths must resolve the same canonical root + exact product SHA pair and execute only read/probe behavior. The recheck must **not** checkout the frozen product as its test harness. The recheck workflow is forbidden from containing `wrangler deploy`, `cloudflare/wrangler-action`, `temporary-deploy.mjs`, or any other publication step. The declarative JSON exists only to make the later evidence point auditable and agent-triggerable without pretending that a new deployment is a persistence check.
 
 Until such a later recheck exists, report `account-owned non-temporary origin: PASS` but do not report `long-horizon availability: PASS`.
 
@@ -194,13 +207,13 @@ The account must have a `workers.dev` account subdomain configured unless the pr
 
 Normal code pushes and pull requests do not publish a stable deployment.
 
-Stable deployment can be requested manually with `candidate_sha`, or declaratively by selecting the candidate in `.github/deploy/stable-candidate.txt` on `main`. The candidate file must contain exactly the immutable SHA intended for publication. A branch name, short SHA, comment, extra metadata or blank file is invalid and must fail before deployment.
+Stable deployment can be requested manually with `candidate_sha`, or declaratively by selecting the candidate in `.github/deploy/stable-candidate.txt` on `main`. Manual dispatch must also use the `main` ref; another ref is rejected because it would create an ambiguous validation-harness authority. The candidate file must contain exactly the immutable SHA intended for publication. A branch name, short SHA, comment, extra metadata or blank file is invalid and must fail before deployment.
 
 Changing `.github/deploy/stable-candidate.txt` is an operational candidate-selection/publication request, not ordinary documentation churn. Repository history provides the audit trail of who selected which candidate.
 
 If the same selected candidate needs another operational attempt — for example after account credentials are configured or a provider-side transient failure is resolved — change `.github/deploy/stable-deploy-request.txt`, not the candidate file. The retry marker does not select a build; it only causes the workflow to retry the SHA already present in `stable-candidate.txt`.
 
-A later persistence check can similarly be requested through `.github/deploy/stable-recheck.json`, but that workflow must never publish or redeploy anything. Its purpose is specifically to prove that the already-existing canonical origin still serves the already-deployed exact SHA after elapsed time.
+A later persistence check can similarly be requested through `.github/deploy/stable-recheck.json`, but that workflow must never publish or redeploy anything. Its purpose is specifically to prove that the already-existing canonical origin still serves the already-deployed exact product SHA after elapsed time, using the current `main` validation harness.
 
 Temporary preview remains manual because it requires explicit Cloudflare Terms/Privacy acceptance for each temporary deployment.
 
@@ -212,14 +225,15 @@ Allowed examples:
 
 - `Foundation CI: PASS`
 - `temporary public runtime during run X: PASS`
-- `exact candidate SHA checkout: PASS`
+- `exact product candidate SHA checkout: PASS`
+- `validation harness SHA Y: PASS`
 - `same-candidate retry request: submitted`
 - `account-owned non-temporary deploy mechanism: PASS`
 - `canonical workers.dev origin: PASS`
-- `public provenance for SHA X: PASS`
-- `actual copied invite behavior: PASS`
+- `public provenance for product SHA X: PASS`
+- `actual copied invite behavior under harness SHA Y: PASS`
 - `short-window repeatability: PASS`
-- `same canonical origin/SHA later recheck: PASS`
+- `same canonical origin/product SHA later recheck under harness SHA Y: PASS`
 - `long-horizon availability: not yet proven`
 - `real-human friend test: FAIL / pending`
 
@@ -227,9 +241,10 @@ Forbidden promotion:
 
 - temporary runtime PASS -> `stable link`;
 - normal deploy PASS -> `friend-ready` without public runtime evidence;
-- workflow-definition SHA -> candidate/game SHA;
+- validation-harness/workflow SHA -> product/game SHA;
+- product SHA -> proof that the latest validation contract was used;
 - retry-marker content -> candidate identity;
-- branch selection -> exact deployed candidate identity;
+- branch selection -> exact deployed product identity;
 - versioned preview URL -> canonical friend origin;
 - fresh redeploy -> evidence that the old origin survived elapsed time;
 - automation PASS -> `real-human test passed`;
@@ -240,13 +255,15 @@ Forbidden promotion:
 - expired temporary URL: expected temporary lifecycle;
 - temporary provisioning failure: temporary Cloudflare boundary;
 - malformed/missing declarative candidate file or manual candidate SHA: candidate identity blocker;
+- stable/recheck manual run not sourced from `main`: validation-authority blocker;
 - retry marker influences candidate identity: deployment-contract failure;
-- checkout SHA mismatch: candidate identity failure;
+- product checkout SHA mismatch: candidate identity failure;
+- validation harness silently replaced by frozen product checkout: validation-authority failure;
 - missing stable secrets: deployment setup blocker;
 - stable authenticated deploy failure: deployment/configuration defect;
 - owned deployment not listed after upload: stable-mechanism failure;
 - unexpected/versioned deployment target: canonical-origin failure;
-- public provenance mismatch: wrong build/deployment-class failure;
+- public provenance mismatch: wrong product build/deployment-class failure;
 - public health/assets failure: routing/runtime/deployment defect;
 - copied invite malformed/leaking credentials: product/security defect;
 - malformed recheck JSON/origin/SHA: recheck request failure;
