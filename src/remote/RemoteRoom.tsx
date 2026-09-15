@@ -322,6 +322,7 @@ export function RemoteRoom({ room, onLeave }: RemoteRoomProps) {
   async function copyShareLink() {
     const url = new URL(window.location.href);
     url.search = '';
+    url.hash = '';
     url.searchParams.set('room', room);
     try {
       await navigator.clipboard.writeText(url.toString());
