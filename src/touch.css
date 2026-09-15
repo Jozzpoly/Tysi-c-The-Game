@@ -97,3 +97,15 @@ button:active:not(:disabled) {
     transform: translateY(-10px);
   }
 }
+
+/*
+ * Responsive composition may extend above the coarse-pointer breakpoint, but
+ * primary controls still keep the defended finger-sized height contract.
+ */
+@media (max-width: 760px) {
+  .topbar-actions button,
+  .topbar-actions .rules-trigger,
+  .decision-card button {
+    min-height: 44px;
+  }
+}
