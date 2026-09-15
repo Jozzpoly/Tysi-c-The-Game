@@ -1,7 +1,7 @@
 # Execution state — live truth
 
 Date: 2026-09-15
-Status: **Run 05 recovery. Local exact-invite composition PASS; stable external origin + real friend test remain FAIL / P0.**
+Status: **Run 05 recovery. Account-owned stable origin + automated public friend flow PASS; elapsed-time no-redeploy + real-human Owner/friend gates remain open.**
 
 ## Strategic intent
 
@@ -13,12 +13,12 @@ The project must preserve three distinct truth tracks:
 - **experience truth** — card/table physicality, visual hierarchy, motion, feedback, UI/UX and overall feel;
 - **Operations / external truth** — what exact build is live, whether the share link really works, whether the origin persists, and whether a real second human can use it.
 
-The Owner is the primary authority for experience truth, not the exact-rules oracle and not a substitute for operational evidence. Broad visual polishing should be driven by Owner testing once the current external P0 is resolved, not by blind screenshot iteration.
+The Owner is the primary authority for experience truth, not the exact-rules oracle and not a substitute for operational evidence. Broad visual polishing should be driven by Owner testing rather than blind screenshot iteration.
 
 ## Current authority order
 
 1. this file for compact live state;
-2. `docs/INCIDENT_2026-09-15_FRIEND_LINK.md` for the open friend-link incident;
+2. `docs/INCIDENT_2026-09-15_FRIEND_LINK.md` for the friend-link recovery history and evidence failure;
 3. `docs/DEPLOYMENT.md` for deployment/evidence contracts;
 4. `AGENTS.md` for claim discipline;
 5. `docs/RUN05_PHYSICAL_TABLE_V2.md` for the integrated presentation direction.
@@ -40,7 +40,7 @@ Historical Run01–Run04 material remains useful donor/history only where it doe
 
 **Friend-link incident OPEN / P0 BLOCKER**
 
-The previous external-readiness claim remains invalidated. A temporary Cloudflare URL passing bounded smoke was not evidence of a durable friend origin.
+The original readiness claim remains invalidated: the old temporary Cloudflare preview never proved durable friend readiness. Recovery has now crossed the stable-public automation boundary, but P0 remains open until the later no-redeploy evidence point and the required real-human Owner+friend session are complete.
 
 ### Frozen external candidate
 
@@ -50,62 +50,62 @@ The product candidate remains immutable:
 - SHA: `52450baa04f22646474bf4676f70b2df5ba6812f`;
 - Foundation #672: PASS on that exact SHA.
 
-Later harness/docs/cleanup work on `main` does not silently move the product candidate.
+Later harness/docs/operations work on `main` does not move the product candidate.
 
-### Local exact-invite evidence — now closed at this layer
+### Stable public deployment — PASS
 
-PR #43 merged as `d5887e12e4981a55ce2182995ce106358cbf1fca` and Foundation #718 passed on `main`.
+Stable Multiplayer Deploy #6 (`35002263980`) completed successfully from validation-harness SHA `deb668081717effee5965a8e3423e051aed0d1c2` while deploying the unchanged frozen product SHA `52450baa04f22646474bf4676f70b2df5ba6812f`.
 
-The current validation harness now carries the **same exact copied invite session** through:
+Canonical account-owned origin:
 
-- clean second-browser join;
-- distinct private seat credentials;
-- disjoint private hands;
-- one legal human action;
-- both clients advancing to the same newer revision;
-- friend reopen/reconnect through the same room-only copied URL;
-- restoration of the same private friend credential from local browser state;
-- restored revision at least as new as the synchronized post-action revision.
+`https://tysiac-the-game.jozzpoly.workers.dev`
 
-Expected evidence fields are present: `friendJoined`, `privateHandsDisjoint`, `actionSynced`, `friendReconnected`, `restoredRevision`.
+Demonstrated in that run:
 
-**Evidence boundary:** Foundation #718 exercised this composition on local loopback HTTP. It proves the harness/session contract. It does **not** prove Cloudflare deployment, HTTPS public behaviour, long-horizon availability, or real-human friend readiness.
+- Cloudflare account token preflight: PASS / active account token;
+- complete Foundation + deployment-contract gate on the exact frozen product SHA: PASS;
+- authenticated normal Wrangler deployment: PASS;
+- owned-account deployment registration: PASS;
+- canonical non-versioned workers.dev root: PASS;
+- public provenance reports exact frozen product SHA and `deployClass: stable`: PASS;
+- public multiplayer join/sync/reconnect: PASS;
+- exact real in-game copied friend invite over HTTPS: PASS;
+- clean second-browser join: PASS;
+- distinct/disjoint private human hands: PASS;
+- legal shared human action synchronization: PASS;
+- friend reconnect through the same room-only copied URL with private credential restored locally: PASS;
+- second provenance/multiplayer/copied-invite pass after a 60-second wait without another deployment: PASS.
 
-Further local rehearsal is not the active P0 unless a concrete new gap is discovered.
+The successful Cloudflare deployment version was `757f437f-f3fd-4f01-8570-d4185193047b`.
 
-### Stable deployment blocker
+**Evidence boundary:** this closes stable mechanism, canonical origin, public provenance, public multiplayer, copied-invite composition and short-window repeatability. It does not prove long-horizon availability and it does not replace a real-human friend test.
 
-Latest real stable attempt:
+### Local exact-invite evidence — closed at this layer
 
-- Stable Multiplayer Deploy run `34980093207`;
-- request source `main` commit `29923513c39cb59bf9ba08945c3ca81e464bf440`;
-- frozen candidate correctly resolved and checked out as `52450baa04f22646474bf4676f70b2df5ba6812f`;
-- dependency installation succeeded;
-- execution stopped before product validation/deploy because permanent credentials were absent.
+PR #43 / Foundation #718 remains useful supporting evidence for the exact copied-invite session contract on loopback, but it is no longer the strongest external evidence. Stable run #6 exercised that contract publicly over HTTPS against the account-owned origin.
 
-Direct blocker:
+Further local rehearsal is not active P0 work unless a concrete new gap appears.
 
-- GitHub Actions secret `CLOUDFLARE_ACCOUNT_ID`: **missing**;
-- GitHub Actions secret `CLOUDFLARE_API_TOKEN`: **missing**.
+## Remaining mandatory external evidence
 
-No account-owned stable origin therefore exists yet. Do not substitute temporary Cloudflare deployments or move the product to another hosting architecture merely to bypass this boundary.
+Already PASS:
 
-The frozen candidate uses Cloudflare Worker + SQLite Durable Object `MatchRoom`; switching platforms before the friend test would be a product/authority migration, not a deployment shortcut.
+1. permanent account-owned Cloudflare credentials;
+2. exact frozen candidate identity;
+3. authenticated account-owned stable deployment;
+4. canonical `tysiac-the-game.jozzpoly.workers.dev` origin;
+5. exact public product SHA + stable deploy-class provenance;
+6. public runtime/multiplayer smoke;
+7. exact in-game copied invite carrying join/private-state/action/reconnect over HTTPS;
+8. short-window no-redeploy repeatability after 60 seconds.
 
-## Mandatory external evidence ladder
+Still open:
 
-1. configure the two permanent Cloudflare GitHub Actions secrets outside chat/source/logs;
-2. retrigger the exact frozen candidate;
-3. authenticated account-owned normal deployment succeeds;
-4. canonical `tysiac-the-game.<account>.workers.dev` root origin is established;
-5. exact public product SHA + deploy-class provenance passes;
-6. public runtime/multiplayer smoke passes;
-7. the exact in-game copied invite passes the same-session join/private-state/action/reconnect contract over HTTPS;
-8. the **same origin and same SHA** later pass `Stable Origin Recheck (NO REDEPLOY)`;
-9. Owner + real friend perform create → copy → open → join → shared action → reconnect in real use;
-10. only real-human success closes this P0 milestone.
+9. the **same canonical origin and same frozen SHA** must later pass `Stable Origin Recheck (NO REDEPLOY)` after meaningful elapsed time, without publishing a replacement;
+10. Owner + real friend perform create → copy → open → join → shared action → reconnect in real use;
+11. only the real-human success plus preserved elapsed-time evidence closes this P0 milestone.
 
-Automation cannot complete step 9 by itself.
+Automation cannot complete the real-human gate by itself. A fresh redeploy would not count as persistence evidence, so do not redeploy this candidate merely to check availability.
 
 ## Protected foundation
 
@@ -126,41 +126,38 @@ Current evidence is strong for:
 
 This is protected evidence, not a ban on later redesign. After Owner testing, presentation and even broader implementation choices may change aggressively when evidence justifies it.
 
-## Work discipline while P0 is blocked
+## Work discipline while P0 remains open
 
-Do **not** manufacture momentum by polishing unrelated areas.
+The infrastructure recovery is no longer the main workstream. Do not manufacture further deployment machinery now that the intended stable path works.
 
-Allowed before external access is restored:
+Allowed / high-value now:
 
-- fix a concrete defect that threatens the frozen deployment/test path;
-- maintain evidence/documentation when live truth materially changes;
-- bounded cleanup only when it removes a demonstrated risk without changing the frozen candidate.
+- preserve the current canonical origin without redeploying so elapsed-time evidence remains meaningful;
+- run the bounded real Owner+friend session through the actual UI;
+- later trigger the existing no-redeploy recheck against the same origin/SHA;
+- record concrete product/experience defects exposed by real use;
+- maintain evidence/documentation when live truth materially changes.
 
-Default pause:
+Default defer:
 
-- broad CSS consolidation;
-- blind visual redesign;
-- speculative new features;
-- architecture migration;
-- additional local deployment harness layers with no identified missing claim.
-
-The reason is product strategy: the next high-value information should come from real external use and then from Owner visual/UI/UX judgement.
+- more local deployment harness layers without an identified missing claim;
+- hosting migration;
+- speculative infrastructure work;
+- blind broad CSS redesign before Owner evidence.
 
 ## Preserved deferred debts — not current P0 work
 
-Keep these visible without letting them manufacture scope before the external gate is closed:
-
-- active CSS ownership is still distributed across visual-language, Run04 and Run05 layers; obvious dead selectors were already removed, so future consolidation is an ownership/refactor problem and should follow fresh Owner/browser evidence rather than filename-driven deletion;
-- Durable Object rooms still have no explicit expiry/cleanup policy and can persist indefinitely; this is acceptable for the bounded friend test but must be resolved before broader/public usage, with room-invite longevity treated as product behaviour rather than an implementation afterthought;
-- stale historical docs/PR branches must not compete with current authority, but archival cleanup is lower value than restoring the real product loop.
+- active CSS ownership is still distributed across visual-language, Run04 and Run05 layers; consolidate only from evidence rather than filename-driven cleanup;
+- Durable Object rooms still have no explicit expiry/cleanup policy; acceptable for this bounded friend test, but must be resolved before broader/public usage;
+- stale historical docs/branches remain lower value than the live product loop.
 
 These debts are intentionally deferred, not forgotten.
 
-## After P0 closes
+## Owner test direction
 
-The project immediately shifts back from recovery infrastructure to product development.
+The stable base URL is now valid for a bounded real test. The Owner does not need to validate exact Tysiąc rules or finish a match.
 
-Primary next evidence source becomes a broad Owner test on desktop and mobile, focused on:
+Primary experience evidence:
 
 - physicality/materiality of cards and table;
 - visual hierarchy and readability;
@@ -170,15 +167,14 @@ Primary next evidence source becomes a broad Owner test on desktop and mobile, f
 - onboarding and clarity without excessive explanatory text;
 - overall professional feel.
 
-The Owner is not expected to play through the entire game or validate exact Tysiąc rules. The purpose is to expose experience problems automation cannot judge. Larger visual/product changes should then be prioritized from that evidence.
+For the real-human friend gate specifically: open the stable root, create a duo room, use the real `Kopiuj link dla znajomego`, let the friend open that exact URL in their own browser/device context, exchange at least one real legal action, and exercise refresh/reconnect.
 
 ## Immediate direction
 
-1. keep `52450baa04f22646474bf4676f70b2df5ba6812f` frozen;
-2. obtain/configure the one-time account-owned Cloudflare credentials;
-3. rerun Stable Multiplayer Deploy on that exact SHA and classify each resulting claim separately;
-4. if public gates pass, preserve the same origin/SHA for elapsed-time no-redeploy recheck;
-5. only then ask the Owner to spend attention on the real friend session;
-6. after that real-human gate, move decisively into broad Owner-led experience testing rather than extending recovery infrastructure.
+1. keep product SHA `52450baa04f22646474bf4676f70b2df5ba6812f` frozen;
+2. keep `https://tysiac-the-game.jozzpoly.workers.dev` untouched — no redeploy for persistence checking;
+3. perform the real-human Owner+friend session when convenient and capture only concrete failures/experience feedback;
+4. after meaningful elapsed time, trigger `Stable Origin Recheck (NO REDEPLOY)` against that exact origin + frozen SHA;
+5. once both remaining gates pass, close the friend-link P0 and move decisively into broad Owner-led desktop/mobile experience iteration.
 
-The recovery is successful only when it returns the project to trustworthy product iteration. The deployment system is a means to that end, not the project direction.
+The deployment system has now done its job. The project direction returns to the actual game.
