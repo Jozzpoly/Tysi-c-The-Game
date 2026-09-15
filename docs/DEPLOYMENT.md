@@ -42,28 +42,36 @@ Visible name: `Stable Multiplayer Deploy`
 
 Mechanism:
 
+- the workflow definition lives on the default branch so it can be manually dispatched reliably;
+- the operator supplies one **exact candidate SHA** (`candidate_sha`), not merely a branch name;
+- the workflow validates that SHA, checks out exactly that commit and verifies `git rev-parse HEAD` matches it before testing or publishing;
 - authenticated Cloudflare account;
 - repository secrets `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN`;
 - normal `wrangler deploy`, never `--temporary`;
+- public provenance is stamped with the supplied candidate SHA and deployment class `stable`;
 - Worker name `tysiac-the-game` from `wrangler.jsonc`;
 - `workers_dev: true` unless a deliberate custom-domain migration replaces it;
 - SQLite-backed `MATCH_ROOM` Durable Object remains the authoritative room backend.
+
+This distinction matters: the SHA of the workflow definition and the SHA of the game candidate can be different. Readiness evidence attaches to `candidate_sha`, not to whichever branch/ref happened to be selected in the GitHub UI.
 
 ## Stable-deploy evidence ladder
 
 A single word such as `verified` is not sufficient. Evidence must be reported by property.
 
-### A. Deployment mechanism
+### A. Candidate identity + deployment mechanism
 
 PASS only when all are true:
 
-1. Cloudflare account credentials are present in GitHub Secrets.
-2. the workflow uses normal authenticated `wrangler deploy`;
-3. `wrangler deployments list` succeeds against the owned account after deployment;
-4. the returned public URL is HTTPS;
-5. the stable workflow contains no `--temporary` path.
+1. `candidate_sha` is a full immutable 40-character Git SHA;
+2. checkout HEAD equals that exact candidate SHA;
+3. Cloudflare account credentials are present in GitHub Secrets;
+4. the workflow uses normal authenticated `wrangler deploy`;
+5. `wrangler deployments list` succeeds against the owned account after deployment;
+6. the returned public URL is HTTPS;
+7. the stable workflow contains no `--temporary` path.
 
-This proves an account-owned non-temporary deployment mechanism. It does not by itself prove gameplay, copied-link correctness, long-horizon availability or human usability.
+This proves which exact commit was published and that it used the account-owned non-temporary mechanism. It does not by itself prove gameplay, copied-link correctness, long-horizon availability or human usability.
 
 ### B. Immediate public runtime
 
@@ -95,7 +103,16 @@ PASS only when `scripts/public-share-link-smoke.mjs` uses the real `Kopiuj link 
 
 Constructing a `?room=...` URL inside the test harness is not sufficient evidence for this property.
 
-### D. Long-horizon availability
+### D. Public provenance
+
+PASS only when `/api/match` reports:
+
+- `buildSha` equal to the exact candidate SHA supplied to the stable deployment;
+- `deployClass: stable`.
+
+This prevents a correct-looking hostname from being mistaken for evidence that the intended build is actually serving.
+
+### E. Long-horizon availability
 
 Immediate deployment success cannot prove elapsed time.
 
@@ -103,7 +120,7 @@ The same stable origin must therefore be rechecked after the initial deployment 
 
 Until such a later recheck exists, report `account-owned non-temporary origin: PASS` but do not report `long-horizon availability: PASS`.
 
-### E. Real-human friend gate
+### F. Real-human friend gate
 
 Automation is necessary but cannot complete the project milestone.
 
@@ -138,11 +155,11 @@ The account must have a `workers.dev` account subdomain configured unless the pr
 
 Normal pushes and pull requests do not publish a stable deployment.
 
-Stable deployment is manual because publishing a real account-owned public runtime is an operational action.
+Stable deployment is manual because publishing a real account-owned public runtime is an operational action. The operator must paste the exact candidate SHA to be deployed; selecting or remembering a branch is not the evidence boundary.
 
 Temporary preview is also manual because it requires explicit Cloudflare Terms/Privacy acceptance for each temporary deployment.
 
-The two workflows are intentionally named so that GitHub Actions itself communicates the evidence boundary.
+The workflows are intentionally named so that GitHub Actions itself communicates the evidence boundary.
 
 ## Claim language
 
@@ -150,7 +167,9 @@ Allowed examples:
 
 - `Foundation CI: PASS`
 - `temporary public runtime during run X: PASS`
+- `exact candidate SHA checkout: PASS`
 - `account-owned non-temporary deploy mechanism: PASS`
+- `public provenance for SHA X: PASS`
 - `actual copied invite behavior: PASS`
 - `short-window repeatability: PASS`
 - `long-horizon availability: not yet proven`
@@ -160,6 +179,8 @@ Forbidden promotion:
 
 - temporary runtime PASS -> `stable link`;
 - normal deploy PASS -> `friend-ready` without public runtime evidence;
+- workflow-definition SHA -> candidate/game SHA;
+- branch selection -> exact deployed candidate identity;
 - automation PASS -> `real-human test passed`;
 - current reachability -> `will remain available` without the non-temporary mechanism and later recheck.
 
@@ -167,9 +188,12 @@ Forbidden promotion:
 
 - expired temporary URL: expected temporary lifecycle;
 - temporary provisioning failure: temporary Cloudflare boundary;
+- malformed or missing `candidate_sha`: candidate identity blocker;
+- checkout SHA mismatch: candidate identity failure;
 - missing stable secrets: deployment setup blocker;
 - stable authenticated deploy failure: deployment/configuration defect;
 - owned deployment not listed after upload: stable-mechanism failure;
+- public provenance mismatch: wrong build/deployment-class failure;
 - public health/assets failure: routing/runtime/deployment defect;
 - copied invite malformed/leaking credentials: product/security defect;
 - second client cannot join: multiplayer product defect;
