@@ -1,10 +1,10 @@
-name: Deploy Foundation
+name: Stable Multiplayer Deploy
 
 on:
   workflow_dispatch:
     inputs:
       confirm:
-        description: "Publish the current main branch to the public Cloudflare workers.dev canary"
+        description: "Publish the selected branch to the account-owned persistent Cloudflare workers.dev deployment"
         required: true
         type: boolean
         default: false
@@ -32,7 +32,7 @@ jobs:
 
       - run: npm ci --no-audit --no-fund
 
-      - name: Verify deployment credentials are configured
+      - name: Verify permanent deployment credentials are configured
         env:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -40,18 +40,18 @@ jobs:
         run: |
           set -euo pipefail
           if [[ -z "$CLOUDFLARE_ACCOUNT_ID" ]]; then
-            echo "::error::Missing repository secret CLOUDFLARE_ACCOUNT_ID"
+            echo "::error::Missing repository secret CLOUDFLARE_ACCOUNT_ID. Stable/shareable multiplayer deploy requires an owned Cloudflare account."
             exit 1
           fi
           if [[ -z "$CLOUDFLARE_API_TOKEN" ]]; then
-            echo "::error::Missing repository secret CLOUDFLARE_API_TOKEN"
+            echo "::error::Missing repository secret CLOUDFLARE_API_TOKEN. Stable/shareable multiplayer deploy requires an owned Cloudflare account."
             exit 1
           fi
 
-      - name: Run complete Foundation gate before publishing
+      - name: Run complete Foundation gate before stable publishing
         run: npm run check
 
-      - name: Deploy to Cloudflare
+      - name: Deploy account-owned persistent Worker to Cloudflare
         id: deploy
         uses: cloudflare/wrangler-action@v4
         with:
@@ -71,26 +71,28 @@ jobs:
             echo "::error::Cloudflare deployment completed without a deployment-url output; public verification cannot proceed."
             exit 1
           fi
-          echo "### Public Foundation deployment" >> "$GITHUB_STEP_SUMMARY"
+          echo "### Stable public multiplayer deployment" >> "$GITHUB_STEP_SUMMARY"
           echo "$PUBLIC_URL" >> "$GITHUB_STEP_SUMMARY"
+          echo "This is the account-owned non-temporary origin. Room links copied from this deployment are the shareable friend links." >> "$GITHUB_STEP_SUMMARY"
 
       - name: Verify public desktop/mobile MatchRoom behavior
         env:
           TYSIAC_PUBLIC_URL: ${{ steps.deploy.outputs.deployment-url }}
         run: node scripts/public-deploy-smoke.mjs
 
-      - name: Record verified deployment
+      - name: Record verified stable deployment
         env:
           PUBLIC_URL: ${{ steps.deploy.outputs.deployment-url }}
         shell: bash
         run: |
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "**PASS:** public health, duo desktop↔mobile command sync, hidden-hand separation, and refresh/reconnect." >> "$GITHUB_STEP_SUMMARY"
-          echo "Verified URL: $PUBLIC_URL" >> "$GITHUB_STEP_SUMMARY"
+          echo "Verified stable origin: $PUBLIC_URL" >> "$GITHUB_STEP_SUMMARY"
+          echo "Use the in-game 'Kopiuj link dla znajomego' action on this origin for a persistent HTTPS multiplayer invite." >> "$GITHUB_STEP_SUMMARY"
 
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: public-deploy-smoke-${{ github.run_id }}
+          name: stable-public-smoke-${{ github.run_id }}
           path: artifacts/browser/public-deploy-*.png
           if-no-files-found: ignore
