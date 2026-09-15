@@ -8,6 +8,11 @@
   min-width: 0;
 }
 
+.rules-overlay {
+  z-index: 1000;
+  overscroll-behavior: contain;
+}
+
 .rules-dialog .rules-block,
 .rules-dialog .rules-dialog-header > div {
   overflow-wrap: anywhere;
@@ -20,4 +25,68 @@
 .rules-dialog .marriage-values span {
   padding-inline: 3px;
   white-space: normal;
+}
+
+@media (max-width: 620px) {
+  .rules-overlay {
+    align-items: start;
+    padding: 8px;
+  }
+
+  .rules-dialog {
+    width: 100%;
+    max-height: calc(100dvh - 16px);
+    border-radius: 16px;
+    padding: 16px 12px 14px;
+  }
+
+  .rules-dialog-header {
+    position: sticky;
+    top: -16px;
+    z-index: 1;
+    margin: -16px -12px 12px;
+    padding: 14px 12px 10px;
+    background: #081810f5;
+    backdrop-filter: blur(8px);
+  }
+
+  .rules-dialog-header h2 {
+    font-size: 1.35rem;
+  }
+
+  .rules-dialog-header .eyebrow {
+    font-size: .62rem;
+  }
+
+  .rules-grid {
+    grid-template-columns: 1fr;
+    gap: 7px;
+  }
+
+  .rules-block {
+    padding: 10px 11px;
+  }
+
+  .rules-block h3 {
+    font-size: .9rem;
+  }
+
+  .rules-block p {
+    font-size: .8rem;
+    line-height: 1.38;
+  }
+
+  .rules-dialog-footer {
+    position: sticky;
+    bottom: -14px;
+    margin: 10px -12px -14px;
+    padding: 9px 12px max(9px, env(safe-area-inset-bottom));
+    background: #081810f5;
+    backdrop-filter: blur(8px);
+  }
+
+  .rules-dialog-footer .primary {
+    width: 100%;
+    min-height: 44px;
+  }
 }

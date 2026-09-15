@@ -7,7 +7,9 @@ const WEBDRIVER = 'http://127.0.0.1:9520';
 const OUTPUT = 'artifacts/browser';
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-if (!/^https:\/\//u.test(BASE_URL)) throw new Error('TYSIAC_PUBLIC_URL must be an https:// deployment URL');
+if (!/^https:\/\//u.test(BASE_URL)) {
+  throw new Error('TYSIAC_PUBLIC_URL must be an https:// deployment URL');
+}
 
 async function waitFor(label, probe, timeoutMs = 60_000) {
   const deadline = Date.now() + timeoutMs;
@@ -25,7 +27,11 @@ async function waitFor(label, probe, timeoutMs = 60_000) {
 }
 
 function startDriver() {
-  return spawn('chromedriver', ['--port=9520'], { detached: true, stdio: 'ignore', env: process.env });
+  return spawn('chromedriver', ['--port=9520'], {
+    detached: true,
+    stdio: 'ignore',
+    env: process.env,
+  });
 }
 
 function stopProcess(child) {
@@ -40,7 +46,9 @@ async function webdriver(path, init = {}) {
     headers: { 'content-type': 'application/json', ...(init.headers ?? {}) },
   });
   const body = await response.json().catch(() => ({}));
-  if (!response.ok || body?.value?.error) throw new Error(`WebDriver ${init.method ?? 'GET'} ${path}: ${JSON.stringify(body)}`);
+  if (!response.ok || body?.value?.error) {
+    throw new Error(`WebDriver ${init.method ?? 'GET'} ${path}: ${JSON.stringify(body)}`);
+  }
   return body.value;
 }
 
@@ -69,7 +77,10 @@ async function execute(session, script) {
 }
 
 async function navigate(session, url) {
-  await webdriver(`/session/${session}/url`, { method: 'POST', body: JSON.stringify({ url }) });
+  await webdriver(`/session/${session}/url`, {
+    method: 'POST',
+    body: JSON.stringify({ url }),
+  });
 }
 
 async function closeSession(session) {
@@ -114,7 +125,11 @@ async function installClipboardCapture(session) {
       window.__tysiacCopiedLink = null;
       Object.defineProperty(navigator, 'clipboard', {
         configurable: true,
-        value: { writeText: async (text) => { window.__tysiacCopiedLink = String(text); } },
+        value: {
+          writeText: async (text) => {
+            window.__tysiacCopiedLink = String(text);
+          },
+        },
       });
       return { ok: true };
     } catch (error) {
@@ -132,12 +147,15 @@ function assertInviteContract(invite, room) {
   if (url.pathname !== base.pathname) throw new Error(`friend invite changed pathname: ${url.pathname} !== ${base.pathname}`);
   if (url.hash) throw new Error(`friend invite contains unexpected hash: ${url.hash}`);
   const keys = [...url.searchParams.keys()];
-  if (keys.length !== 1 || keys[0] !== 'room') throw new Error(`friend invite must contain only room query parameter: ${url.search}`);
+  if (keys.length !== 1 || keys[0] !== 'room') {
+    throw new Error(`friend invite must contain only room query parameter: ${url.search}`);
+  }
   if (url.searchParams.get('room') !== room) throw new Error('friend invite room does not match host room');
   if (/ts1_/u.test(invite)) throw new Error('friend invite leaked a seat credential');
 }
 
 await mkdir(OUTPUT, { recursive: true });
+
 const driver = startDriver();
 let host;
 let joiner;
@@ -190,7 +208,13 @@ try {
   await screenshot(joiner, 'public-share-link-friend');
 
   console.log('public share-link smoke: PASS');
-  console.log(JSON.stringify({ baseUrl: BASE_URL, room: lobby.room, copiedInvite: copied.copiedLink, sameOrigin: new URL(copied.copiedLink).origin === new URL(BASE_URL).origin, friendJoined: true }, null, 2));
+  console.log(JSON.stringify({
+    baseUrl: BASE_URL,
+    room: lobby.room,
+    copiedInvite: copied.copiedLink,
+    sameOrigin: new URL(copied.copiedLink).origin === new URL(BASE_URL).origin,
+    friendJoined: true,
+  }, null, 2));
 } catch (error) {
   try { if (host) await screenshot(host, 'public-share-link-failure-host'); } catch {}
   try { if (joiner) await screenshot(joiner, 'public-share-link-failure-friend'); } catch {}

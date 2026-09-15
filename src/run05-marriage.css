@@ -1,0 +1,205 @@
+/* Run 05 P5 — marriage materializes as a relation between public K/Q truth,
+ * the real trick destination and the real trump status. Local play uses exact
+ * hand provenance; opponent play uses only the public seat territory. */
+
+.material-marriage-state {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.played.is-marriage-materializing > .card,
+.hand-slot.is-marriage-materializing > .card {
+  visibility: hidden !important;
+}
+
+.status-strip > span.is-marriage-receiving > strong {
+  visibility: hidden;
+}
+
+.status-strip > span.is-marriage-receiving {
+  position: relative;
+}
+
+.status-strip > span.is-marriage-receiving::after {
+  content: '';
+  position: absolute;
+  inset: -5px -8px;
+  border: 1px solid #efd47766;
+  border-radius: 999px;
+  box-shadow: 0 0 18px #efd47730;
+  opacity: 0;
+  animation: run05-marriage-trump-receive .22s .34s ease-out forwards;
+  pointer-events: none;
+}
+
+.opponent.is-marriage-origin {
+  box-shadow: 0 0 0 1px #efd47770, 0 0 24px #efd47724;
+  filter: brightness(1.055);
+}
+
+.opponent.is-marriage-origin .card-backs {
+  filter: brightness(1.08);
+}
+
+.marriage-material-layer {
+  position: fixed;
+  z-index: 126;
+  inset: 0;
+  overflow: visible;
+  pointer-events: none;
+  contain: layout style;
+}
+
+.marriage-material-card {
+  position: fixed !important;
+  z-index: 127;
+  margin: 0 !important;
+  transform-origin: 50% 50%;
+  will-change: transform, filter, opacity;
+  pointer-events: none !important;
+  opacity: 1 !important;
+  animation-duration: var(--marriage-card-duration);
+  animation-timing-function: cubic-bezier(.18,.8,.2,1);
+  animation-fill-mode: forwards;
+}
+
+.marriage-material-card.is-played {
+  animation-name: run05-marriage-played;
+}
+
+.marriage-material-card.is-partner {
+  animation-name: run05-marriage-partner;
+}
+
+.marriage-material-layer.is-opponent .marriage-material-card.is-partner {
+  animation-name: run05-marriage-opponent-partner;
+}
+
+.marriage-trump-cue {
+  position: fixed;
+  z-index: 128;
+  width: 34px;
+  height: 34px;
+  margin: -17px 0 0 -17px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #f0d982a8;
+  border-radius: 50%;
+  background: radial-gradient(circle at 42% 34%, #f7e7ac 0 8%, #dfc465 45%, #6f5b21 100%);
+  color: #10261a;
+  box-shadow: 0 8px 24px #0008, 0 0 22px #efd47752;
+  font-size: 1.18rem;
+  font-weight: 900;
+  line-height: 1;
+  opacity: 0;
+  transform: translate3d(0, 0, 0) scale(.65);
+  animation: run05-marriage-trump-cue .39s .13s cubic-bezier(.18,.82,.2,1) forwards;
+}
+
+@keyframes run05-marriage-played {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1) rotate(0deg);
+    filter: brightness(1);
+  }
+  29% {
+    transform: translate3d(var(--marriage-pair-x), var(--marriage-pair-y), 0) scale(1.075) rotate(-5deg);
+    filter: brightness(1.14) drop-shadow(0 10px 16px #0008);
+  }
+  51% {
+    transform: translate3d(var(--marriage-pair-x), var(--marriage-pair-y), 0) scale(1.075) rotate(-3deg);
+    filter: brightness(1.12) drop-shadow(0 9px 15px #0007);
+  }
+  100% {
+    transform:
+      translate3d(var(--marriage-target-x), var(--marriage-target-y), 0)
+      scale(var(--marriage-target-scale-x), var(--marriage-target-scale-y))
+      rotate(0deg);
+    filter: brightness(1) drop-shadow(0 3px 7px #0004);
+  }
+}
+
+@keyframes run05-marriage-partner {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1) rotate(0deg);
+    filter: brightness(1);
+  }
+  29% {
+    transform: translate3d(var(--marriage-pair-x), var(--marriage-pair-y), 0) scale(1.075) rotate(5deg);
+    filter: brightness(1.14) drop-shadow(0 10px 16px #0008);
+  }
+  51% {
+    transform: translate3d(var(--marriage-pair-x), var(--marriage-pair-y), 0) scale(1.075) rotate(3deg);
+    filter: brightness(1.12) drop-shadow(0 9px 15px #0007);
+  }
+  100% {
+    transform:
+      translate3d(var(--marriage-target-x), var(--marriage-target-y), 0)
+      scale(var(--marriage-target-scale-x), var(--marriage-target-scale-y))
+      rotate(0deg);
+    filter: brightness(1) drop-shadow(0 3px 7px #0004);
+  }
+}
+
+@keyframes run05-marriage-opponent-partner {
+  0% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1) rotate(0deg);
+    filter: brightness(1);
+  }
+  29% {
+    opacity: 1;
+    transform: translate3d(var(--marriage-pair-x), var(--marriage-pair-y), 0) scale(1.075) rotate(5deg);
+    filter: brightness(1.14) drop-shadow(0 10px 16px #0008);
+  }
+  51% {
+    opacity: 1;
+    transform: translate3d(var(--marriage-pair-x), var(--marriage-pair-y), 0) scale(1.075) rotate(3deg);
+    filter: brightness(1.12) drop-shadow(0 9px 15px #0007);
+  }
+  84% {
+    opacity: .9;
+  }
+  100% {
+    opacity: 0;
+    transform:
+      translate3d(var(--marriage-target-x), var(--marriage-target-y), 0)
+      scale(var(--marriage-target-scale-x), var(--marriage-target-scale-y))
+      rotate(0deg);
+    filter: brightness(.92) drop-shadow(0 2px 4px #0003);
+  }
+}
+
+@keyframes run05-marriage-trump-cue {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 0, 0) scale(.65);
+  }
+  18% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1.08);
+  }
+  75% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(var(--marriage-cue-x), var(--marriage-cue-y), 0) scale(.58);
+  }
+}
+
+@keyframes run05-marriage-trump-receive {
+  0% { opacity: 0; scale: .88; }
+  50% { opacity: .9; scale: 1.04; }
+  100% { opacity: .36; scale: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marriage-material-layer,
+  .status-strip > span.is-marriage-receiving::after {
+    display: none !important;
+    animation: none !important;
+  }
+}

@@ -1,0 +1,279 @@
+/* Run 04 P3 — living hand mechanics inside the current friend-candidate scene. */
+
+.tactile-hand {
+  position: relative;
+  overflow: visible;
+  perspective: 1000px;
+  align-items: end;
+}
+
+.tactile-hand > .hand-slot {
+  position: relative;
+  width: var(--hand-card-width);
+  min-width: var(--hand-card-width);
+  aspect-ratio: .68;
+  display: grid;
+  place-items: stretch;
+  z-index: calc(10 + var(--hand-index));
+  transform: translateX(var(--hand-preview-shift-x, 0px));
+  transition: transform var(--tactile-neighbor-response-ms, 82ms) cubic-bezier(.18,.86,.22,1.04);
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  cursor: grab;
+  will-change: transform;
+}
+
+.tactile-hand > .hand-slot.is-held {
+  z-index: 80;
+  cursor: grabbing;
+}
+
+.tactile-hand .hand-slot > .card {
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  min-height: 0;
+  aspect-ratio: auto;
+  margin: 0;
+  transform-origin: 50% 112%;
+  transform: translateY(var(--fan-lift)) rotate(var(--fan-rotate));
+  transition:
+    transform .15s cubic-bezier(.2,.8,.24,1),
+    box-shadow .15s ease,
+    filter .15s ease,
+    opacity .12s ease,
+    border-color .12s ease;
+  cursor: grab;
+}
+
+/* Disabled remains an implementation detail. Every card stays physically alive. */
+.tactile-hand .hand-slot > .card:disabled {
+  pointer-events: none;
+  opacity: 1;
+  filter: none;
+  border-color: var(--card-edge, #e2d9c7);
+  box-shadow:
+    0 8px 17px #0004,
+    0 1px 1px #0005,
+    inset 0 0 0 1px #fff9;
+}
+
+/* Legal/useful cards gain a restrained positive affordance. */
+.tactile-hand .hand-slot.is-actionable > .card {
+  border-color: #e9d18a;
+  box-shadow:
+    0 10px 20px #00052,
+    0 0 0 1px #e9d18a55,
+    0 0 18px #e8c66f12,
+    inset 0 0 0 1px #fff;
+}
+
+.tactile-hand .hand-slot.is-throwable > .card {
+  border-color: #f2d783;
+  box-shadow:
+    0 11px 22px #00058,
+    0 0 0 1px #f2d78382,
+    0 -8px 28px #e8c66f1c,
+    inset 0 0 0 1px #fff;
+}
+
+.tactile-hand .hand-slot:hover > .card,
+.tactile-hand .hand-slot.is-held > .card,
+.tactile-hand .hand-slot:focus-within > .card {
+  transform: translateY(-11px) rotate(0deg) scale(1.025);
+  opacity: 1;
+  filter: none;
+  box-shadow:
+    0 18px 28px #00068,
+    0 0 0 1px #fff5d0a6,
+    0 0 24px #e8c66f1a,
+    inset 0 0 0 1px #fff;
+}
+
+.tactile-hand .hand-slot.is-throwable:hover > .card,
+.tactile-hand .hand-slot.is-throwable.is-held > .card {
+  border-color: #ffe29a;
+  box-shadow:
+    0 20px 31px #00068,
+    0 0 0 2px #f0cf73a0,
+    0 -10px 34px #e8c66f30,
+    inset 0 0 0 1px #fff;
+}
+
+.tactile-hand .hand-slot > .card.selected,
+.tactile-hand .hand-slot:hover > .card.selected,
+.tactile-hand .hand-slot:focus-within > .card.selected {
+  transform: translateY(-15px) rotate(0deg) scale(1.03);
+  outline: none;
+  border-color: #ffe49a;
+  box-shadow:
+    0 20px 30px #0006,
+    0 0 0 3px #f3cc61,
+    0 0 32px #f3cc613d,
+    inset 0 0 0 1px #fff;
+}
+
+.tactile-hand .hand-slot.is-dragging > .card {
+  opacity: 0;
+}
+
+/* A legal throw physically leaves the hand while authority is pending. */
+.tactile-hand .hand-slot.is-awaiting-authority > .card {
+  opacity: 0 !important;
+  pointer-events: none;
+}
+
+.tactile-card-float {
+  position: fixed;
+  z-index: 1200;
+  margin: 0;
+  pointer-events: none;
+  transform: rotate(var(--drag-tilt)) scale(1.055);
+  transform-origin: 50% 68%;
+  opacity: .99;
+  filter: none !important;
+  box-shadow:
+    0 26px 42px #0008,
+    0 6px 14px #00055,
+    0 0 0 1px #fff6c7aa,
+    inset 0 0 0 1px #fff;
+}
+
+.tactile-card-float.throw-intent {
+  transform: rotate(var(--drag-tilt)) translateY(-2px) scale(1.07);
+}
+
+.tactile-card-float.commit-ready {
+  transform: rotate(var(--drag-tilt)) translateY(-5px) scale(1.1);
+  border-color: #ffe69c;
+  box-shadow:
+    0 30px 48px #0008,
+    0 0 0 3px #f3cc61,
+    0 0 44px #e8c66f60,
+    inset 0 0 0 1px #fff;
+}
+
+.tactile-card-float.pending-handoff {
+  will-change: left, top, width, height, transform, opacity;
+}
+
+/* During a local throw the authoritative DOM target is geometry only until the
+ * same physical card reaches it. Reconnect/click/replay never receive this class. */
+.trick .played-self.is-local-handoff-target {
+  animation: none !important;
+  opacity: 0;
+}
+
+.trick .played-self.is-local-handoff-complete {
+  animation: none !important;
+}
+
+.tactile-commit-zone {
+  position: fixed;
+  left: 50%;
+  z-index: 1190;
+  transform: translate(-50%, -50%) scale(.96);
+  min-width: 190px;
+  padding: 8px 14px;
+  border: 1px solid #f1d47752;
+  border-radius: 999px;
+  background: #0a2016df;
+  color: #eadcae;
+  box-shadow: 0 10px 30px #0005, 0 0 22px #e8c66f13, inset 0 1px #ffffff0c;
+  text-align: center;
+  font-size: .78rem;
+  font-weight: 700;
+  letter-spacing: .02em;
+  pointer-events: none;
+  transition: transform .11s ease, color .11s ease, border-color .11s ease, background .11s ease, box-shadow .11s ease;
+}
+
+.tactile-commit-zone.ready {
+  transform: translate(-50%, -50%) scale(1.06);
+  border-color: #f7dc82c7;
+  background: #28331bed;
+  color: #fff0b5;
+  box-shadow: 0 12px 34px #0006, 0 0 34px #e8c66f42, inset 0 1px #fff4c024;
+}
+
+
+@media (min-width: 761px) {
+  /* Ten visible cards need readability more than fan curvature during exchange. */
+  .tactile-hand:has(> .hand-slot:nth-child(10)) .hand-slot > .card {
+    transform: translateY(var(--fan-lift)) rotate(0deg);
+  }
+}
+
+@media (pointer: coarse), (max-width: 620px) {
+  .tactile-hand {
+    --hand-card-width: 52px;
+  }
+
+  /* Ten exchange cards remain one physical hand: 52px cards with exposed centres. */
+  .tactile-hand:has(> .hand-slot:nth-child(10)) {
+    display: flex;
+    grid-template-columns: none;
+    align-items: end;
+    justify-content: center;
+    gap: 0;
+    width: 100%;
+    min-height: 108px;
+    padding: 13px 0 8px;
+  }
+
+  .tactile-hand:has(> .hand-slot:nth-child(10)) > .hand-slot {
+    flex: 0 0 52px;
+    width: 52px;
+    min-width: 52px;
+    max-width: 52px;
+  }
+
+  .tactile-hand:has(> .hand-slot:nth-child(10)) > .hand-slot + .hand-slot {
+    margin-left: -18px;
+  }
+
+  .tactile-hand .hand-slot:hover > .card,
+  .tactile-hand .hand-slot.is-held > .card,
+  .tactile-hand .hand-slot:focus-within > .card {
+    transform: translateY(-7px) rotate(0deg) scale(1.02);
+  }
+
+  .tactile-hand .hand-slot > .card.selected,
+  .tactile-hand .hand-slot:hover > .card.selected,
+  .tactile-hand .hand-slot:focus-within > .card.selected {
+    transform: translateY(-10px) rotate(0deg) scale(1.025);
+  }
+
+  /* Rendered card peeks above the physical finger; gesture coordinates stay unchanged. */
+  .tactile-card-float:not(.releasing) {
+    transform: translateY(-16px) rotate(var(--drag-tilt)) scale(1.055);
+  }
+
+  .tactile-card-float.throw-intent:not(.releasing) {
+    transform: translateY(-18px) rotate(var(--drag-tilt)) scale(1.07);
+  }
+
+  .tactile-card-float.commit-ready:not(.releasing) {
+    transform: translateY(-21px) rotate(var(--drag-tilt)) scale(1.1);
+  }
+
+
+  .tactile-commit-zone {
+    min-width: 176px;
+    padding: 7px 11px;
+    font-size: .72rem;
+  }
+}
+
+
+@media (prefers-reduced-motion: reduce) {
+  .tactile-hand > .hand-slot,
+  .tactile-hand .hand-slot > .card,
+  .tactile-card-float,
+  .tactile-commit-zone {
+    animation: none !important;
+    transition-duration: .001ms !important;
+  }
+}

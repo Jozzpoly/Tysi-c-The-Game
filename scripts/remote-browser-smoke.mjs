@@ -130,7 +130,7 @@ async function remoteState(session) {
       connection: document.querySelector('.connection-banner')?.textContent?.trim() ?? '',
       decision: document.querySelector('.decision-card h2')?.textContent?.trim() ?? '',
       handCards: [...document.querySelectorAll('.hand .card')].map((node) => node.getAttribute('aria-label')),
-      scoreLabels: [...document.querySelectorAll('.score span')].map((node) => node.textContent?.trim() ?? ''),
+      opponentLabels: [...document.querySelectorAll('.opponent .seat-line > strong')].map((node) => node.textContent?.trim() ?? ''),
       width: document.documentElement.clientWidth,
       scrollWidth: document.documentElement.scrollWidth,
       handClientWidth: hand?.clientWidth ?? 0,
@@ -302,7 +302,7 @@ async function runDuoCrossDevice() {
 
     await waitFor('duo: host sees joined human seat', async () => {
       const state = await remoteState(host);
-      return state.scoreLabels.includes('Gracz 2') ? state : false;
+      return state.opponentLabels.includes('Gracz 2') ? state : false;
     });
 
     const hostCards = new Set(hostGame.handCards);
@@ -329,8 +329,8 @@ async function runDuoCrossDevice() {
     await screenshot(joiner, 'mobile-remote-duo-joiner');
     return {
       room: hostGame.room,
-      hostSeatLabel: hostGame.scoreLabels,
-      joinerSeatLabel: joinerGame.scoreLabels,
+      hostOpponentLabels: hostGame.opponentLabels,
+      joinerOpponentLabels: joinerGame.opponentLabels,
       hostHand: hostGame.handCards.length,
       joinerHand: joinerGame.handCards.length,
       decision,

@@ -1,0 +1,116 @@
+/*
+ * Run 04 P2-C — scene compression.
+ * Presentation-only: make the table read as one continuous physical scene
+ * before importing tactile mechanics. Rules, projection and command paths stay untouched.
+ */
+
+.table {
+  padding-top: clamp(16px, 2vw, 24px);
+  padding-inline: clamp(16px, 3vw, 36px);
+  padding-bottom: clamp(132px, 15vw, 174px);
+}
+
+.opponents {
+  gap: clamp(44px, 14vw, 190px);
+  transform: translateY(clamp(6px, 1vw, 12px));
+}
+
+.center {
+  min-height: 218px;
+  margin-top: -8px;
+  gap: 5px;
+}
+
+.status-strip {
+  top: 2px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: #91aa9b;
+}
+
+.status-strip span {
+  padding: 1px 7px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.status-strip span + span {
+  border-left: 1px solid #ffffff12;
+}
+
+.status-strip strong {
+  color: #edf4ef;
+}
+
+.center::before {
+  width: min(390px, 64vw);
+  top: 54%;
+}
+
+.decision {
+  min-height: 72px;
+  margin-top: -18px;
+}
+
+.hand-area {
+  padding-top: 14px;
+  border-color: transparent;
+  border-radius: 0 0 24px 24px;
+  background: linear-gradient(180deg, transparent 0%, #04170fb0 30%, #03110be8 100%);
+  box-shadow: none;
+}
+
+.hand-heading {
+  transform: translateY(3px);
+}
+
+@media (max-width: 760px) {
+  .table {
+    padding: 10px 8px 140px;
+  }
+
+  .opponents {
+    gap: 30px;
+    transform: translateY(4px);
+  }
+
+  .opponent {
+    min-height: 66px;
+  }
+
+  .center {
+    min-height: 162px;
+    margin-top: -4px;
+    gap: 3px;
+  }
+
+  .status-strip {
+    top: 4px;
+  }
+
+  .status-strip span {
+    padding: 1px 4px;
+  }
+
+  .center::before {
+    width: 88%;
+    top: 56%;
+  }
+
+  .decision {
+    min-height: 60px;
+    margin-top: -10px;
+  }
+
+  .hand-area {
+    left: 4px;
+    right: 4px;
+    padding-top: 10px;
+    background: linear-gradient(180deg, transparent 0%, #04170fc2 24%, #03110bf0 100%);
+  }
+}
