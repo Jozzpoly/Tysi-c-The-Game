@@ -1,25 +1,36 @@
 # Run 05 — Physical Table V2
 
 Date updated: 2026-09-15
-Status: **presentation implementation advanced; P0 external-readiness recovery currently takes precedence**
+Status: **presentation implementation integrated into `main`; P0 external-readiness recovery still blocks friend-ready PASS**
 
-## Current hold
+## Current state
 
-Run 05 produced substantial physical-table work, but its next Owner/friend evidence loop was contaminated by the 2026-09-15 friend-link incident.
+Run 05 produced substantial physical-table work and its clean continuation has now been mechanically validated and integrated into `main`.
 
-Do not interpret the presentation work as failed. The failure is the external deployment/readiness gate: an intentionally temporary public preview was incorrectly treated as satisfying the Owner's hard requirement for a durable friend link.
+The old PR #23 is closed as superseded integration history. It is not the live implementation authority.
+
+The presentation work itself is not failed. The failed milestone is external readiness: an intentionally temporary public preview was previously treated as satisfying the Owner's hard requirement for a durable friend link even though repository evidence said it should expire.
 
 Until `docs/INCIDENT_2026-09-15_FRIEND_LINK.md` is closed:
 
-- preserve existing Run 05 presentation work;
+- preserve the integrated Run 05 presentation work on `main`;
 - keep core/authority/browser gates green;
-- do not resume broad blind visual polish;
-- repair the stable public path, exact copied-invite evidence and live project authority first;
-- after the real Owner+friend path works, resume Owner-led visual/interaction evaluation and bounded presentation debt cleanup.
+- keep the frozen external candidate immutable unless a replacement is explicitly cut and re-evidenced;
+- do not resume broad blind visual redesign;
+- finish the account-owned stable public path, public provenance, exact copied-invite evidence, later no-redeploy check and real Owner+friend test;
+- continue only bounded technical-debt work that does not silently redefine the external candidate.
+
+## Frozen external candidate
+
+The current friend-test candidate remains exactly:
+
+`52450baa04f22646474bf4676f70b2df5ba6812f`
+
+Later cleanup on `main` is not automatically a new friend candidate.
 
 ## Why Run 05 exists
 
-The earlier Friend Candidate proved that the rules/core, authoritative projection, remote room, reconnect, first-play flow and full-match completion could form a usable game foundation. Run 05 is not a polish pass over that historical candidate. It is an experimental replacement of the presentation language.
+The earlier Friend Candidate established that the rules/core, authoritative projection, remote room, reconnect, first-play flow and full-match completion could form a usable game foundation. Run 05 is not a polish pass over that historical candidate. It is an experimental replacement of the presentation language.
 
 Owner intent is stronger than “more animation”: cards should become the main material and interaction language. Important state changes should increasingly be understood from where physical card objects are, where they move, what pile they join, and how the table reacts, with text acting as support rather than the primary explanation.
 
@@ -85,7 +96,7 @@ Marriage presentation uses the actual card system and motion language rather tha
 
 ### Living trick / captured ownership
 
-Trick resolution now has observable lifecycle stages and persistent captured-pile consequence. Important sequence:
+Trick resolution now has observable lifecycle stages and persistent captured-pile consequence:
 
 `arrival -> resolve -> collect -> consequence -> settled`
 
@@ -109,6 +120,8 @@ Use combinations of:
 
 Automation should answer questions such as `did the exact card remain singular and reach the authoritative target?`, not `does this feel good?`.
 
+The real `Kopiuj link dla znajomego` path is now also rehearsed locally in Foundation: the exact UI-emitted invite is captured, checked for room-only/capability-free semantics and opened by a clean second browser. This protects the product path before deployment, but it does **not** prove public/stable availability.
+
 ## Owner evidence boundary
 
 Current automation demonstrates significant mechanical presentation behavior. It does **not** establish that the Owner likes the current visual hierarchy, table density, card aesthetics, motion feel or overall product impression.
@@ -119,26 +132,37 @@ The next broad visual direction should come from real Owner evidence, not anothe
 
 ### Layered CSS cascade
 
-`src/main.tsx` currently loads a long history of visual-language, Run04 and Run05 stylesheets. This has enabled fast experimentation but now creates real ownership/cascade debt:
+`src/main.tsx` still loads a history of visual-language, Run04 and Run05 stylesheets. This enabled fast experimentation but created real ownership/cascade debt:
 
-- later patches can silently override earlier assumptions;
+- later layers can silently override earlier assumptions;
 - fixed/absolute/transform containing-block behavior can cross concern boundaries;
-- responsive rules are distributed across historical layers;
-- it is harder to know whether a rule is current design or obsolete donor residue.
+- responsive rules are distributed across several historical layers;
+- naming does not always match present ownership.
 
-This debt is **real**, but the repair must be bounded. Do not replace all presentation CSS at once.
+A bounded cleanup campaign has already removed the easy, demonstrably dead or patch-on-patch debt with full Foundation evidence:
 
-After the P0 friend/deployment path is mechanically healthy:
+- the old tactile corrective patch was folded into the actual tactile owner;
+- obsolete `run04-mobile-hand.css` direct-card layout was removed;
+- the 44px mobile interaction minimum was moved into `touch.css` and strengthened so later visual compression cannot undercut the interaction contract;
+- unreachable old direct-child hand rules were removed from `touch.css`;
+- unreachable direct-card rules were removed from `visual-language-02.css`;
+- current code no longer contains the old `.hand > .card` production assumption.
 
-1. inventory duplicated/high-risk selectors and media queries;
-2. identify which Run04 layers are genuinely still authoritative for Run05;
-3. consolidate one concern at a time into current Run05-owned modules;
-4. delete superseded rules only after browser/geometry equivalence or deliberate Owner-approved change;
-5. rerun Foundation and inspect fresh desktop/mobile screenshots after each meaningful consolidation.
+The easy deletion phase is largely over. Remaining overlap is live architecture:
 
-### Historical naming / donor layers
+- `run04-tactile-hand.css` is a real mechanics owner for slots, drag ghost, interaction states, 10-card behavior and handoff;
+- `run04-scene-compression.css` still owns live intermediate-viewport composition;
+- Run05 layers intentionally override those concerns in bounded mobile/desktop regions.
 
-Run04 files that remain imported are implementation donors, not current roadmap authority. Their names should eventually stop being the primary organization mechanism once behavior is consolidated.
+Do not delete historical-looking Run04 files merely because of their names. Further consolidation is an ownership refactor and requires a specific target architecture, bounded slices and fresh browser evidence; visual changes additionally require Owner judgement.
+
+### Room retention / Durable Object lifecycle
+
+`MatchRoom` currently stores a persistent room under one Durable Object storage key with no explicit expiry policy.
+
+There is no safe cleanup point that can be chosen as a purely technical optimization: lobby invites, reconnect and completed-room persistence are observable product behavior. An arbitrary TTL could invalidate a link or reconnect promise.
+
+Therefore room expiry is a **P1 retention-design problem**, not a cleanup to slip into the frozen candidate. Before broader/public use, define the intended lifetime of lobby, active and completed rooms, then implement/test retention deliberately.
 
 ## What Run 05 still does not justify
 
@@ -148,16 +172,20 @@ Run04 files that remain imported are implementation donors, not current roadmap 
 - broad rules/core rewrite;
 - declaring Owner visual acceptance from screenshots/tests alone;
 - declaring friend readiness from a temporary public preview;
-- treating a successful public smoke as proof of persistence.
+- treating local exact-invite rehearsal as proof of public deployment;
+- treating a successful public smoke as proof of long-horizon persistence;
+- deleting live Run04 mechanics/composition layers without an ownership migration plan.
 
 ## Current next sequence
 
-1. regain green Foundation on the complete recovery head;
-2. establish and prove the account-owned stable multiplayer origin;
-3. later recheck the same origin/SHA without redeploying;
-4. complete the real Owner+friend test;
-5. resume Owner visual/interaction testing on that stable surface;
-6. turn Owner findings into bounded presentation changes;
-7. begin controlled CSS/cascade consolidation while preserving/measuring behavior.
+1. keep the frozen friend candidate unchanged;
+2. complete the one-time permanent Cloudflare account setup by adding the two required GitHub Actions secrets outside chat;
+3. retry the exact frozen candidate through the stable deployment path;
+4. require canonical stable origin, exact SHA/deploy-class provenance, public multiplayer and exact copied-invite PASS;
+5. later recheck the same origin/SHA without redeploying;
+6. complete the real Owner+friend session;
+7. then resume broad Owner visual/interaction evaluation on a trustworthy surface;
+8. use that evidence to guide presentation changes and the next phase of CSS ownership consolidation;
+9. separately design room-retention semantics before wider/public usage.
 
-Run 05 remains the active presentation experiment, but external truth is now a hard gate rather than something presentation automation can imply.
+Run 05 is now integrated product work on `main`, while external truth remains a hard independent gate that presentation automation cannot imply.
