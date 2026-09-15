@@ -17,8 +17,11 @@ interface RoomRoute {
 
 function normalizeRoom(raw: string): string | null {
   let room: string;
-  try { room = decodeURIComponent(raw).toUpperCase(); }
-  catch { return null; }
+  try {
+    room = decodeURIComponent(raw).toUpperCase();
+  } catch {
+    return null;
+  }
   return new RegExp(`^[${ROOM_ALPHABET}]{${ROOM_CODE_LENGTH}}$`).test(room) ? room : null;
 }
 
@@ -50,7 +53,10 @@ function bearerToken(request: Request): string | null {
 }
 
 function json(body: unknown, status = 200): Response {
-  return Response.json(body, { status, headers: { 'cache-control': 'no-store' } });
+  return Response.json(body, {
+    status,
+    headers: { 'cache-control': 'no-store' },
+  });
 }
 
 function roomStatus(reason: string): number {
@@ -122,20 +128,38 @@ async function handleMatch(request: Request, env: Env, route: MatchRoute): Promi
   if (request.method === 'GET') {
     const session = await stub.getSession(token);
     if (session.ok) {
-      return json({ room: route.room, ok: true, seat: session.seat, state: session.room, projection: session.projection });
+      return json({
+        room: route.room,
+        ok: true,
+        seat: session.seat,
+        state: session.room,
+        projection: session.projection,
+      });
     }
-    return json({ room: route.room, ok: false, reason: session.reason, state: session.room ?? null }, commandStatus(session.reason));
+    return json({
+      room: route.room,
+      ok: false,
+      reason: session.reason,
+      state: session.room ?? null,
+    }, commandStatus(session.reason));
   }
 
   if (request.method === 'POST') {
     let envelope: ClientCommandEnvelope;
-    try { envelope = (await request.json()) as ClientCommandEnvelope; }
-    catch { return json({ error: 'INVALID_JSON' }, 400); }
+    try {
+      envelope = (await request.json()) as ClientCommandEnvelope;
+    } catch {
+      return json({ error: 'INVALID_JSON' }, 400);
+    }
+
     const result = await stub.submitCommand(token, envelope);
     return json({ room: route.room, ...result }, result.ok ? 200 : commandStatus(result.reason));
   }
 
-  return new Response('Method not allowed', { status: 405, headers: { allow: 'GET, POST', 'cache-control': 'no-store' } });
+  return new Response('Method not allowed', {
+    status: 405,
+    headers: { allow: 'GET, POST', 'cache-control': 'no-store' },
+  });
 }
 
 export default {
