@@ -75,15 +75,26 @@ requireMatch('temporary deploy helper', temporaryDeploy, /TYSIAC_DEPLOY_CLASS:te
 requireMatch('temporary deploy helper', temporaryDeploy, /should expire automatically/u);
 
 requireMatch('stable recheck workflow', recheck, /^name: Stable Origin Recheck \(NO REDEPLOY\)$/mu);
-requireMatch('stable recheck workflow', recheck, /ref:\s*\$\{\{ inputs\.expected_sha \}\}/u);
+requireMatch('stable recheck workflow', recheck, /push:\s*\n\s*branches:\s*\[main\][\s\S]*\.github\/deploy\/stable-recheck\.json/u);
+requireMatch('stable recheck workflow', recheck, /github\.event_name == 'push' \|\| inputs\.confirm_no_redeploy/u);
+requireMatch('stable recheck workflow', recheck, /Resolve canonical origin and exact candidate SHA/u);
+requireMatch('stable recheck workflow', recheck, /stable-recheck\.json/u);
+requireMatch('stable recheck workflow', recheck, /TRIGGER_SOURCE="declarative-file"/u);
+requireMatch('stable recheck workflow', recheck, /TRIGGER_SOURCE="workflow-dispatch"/u);
 requireMatch('stable recheck workflow', recheck, /origin must be the canonical tysiac-the-game\.<account>\.workers\.dev root/u);
+requireMatch('stable recheck workflow', recheck, /full 40-character lowercase git SHA/u);
+requireMatch('stable recheck workflow', recheck, /ref:\s*\$\{\{ steps\.target\.outputs\.sha \}\}/u);
 requireMatch('stable recheck workflow', recheck, /git rev-parse HEAD/u);
+requireMatch('stable recheck workflow', recheck, /TYSIAC_PUBLIC_URL:\s*\$\{\{ steps\.target\.outputs\.origin \}\}/u);
+requireMatch('stable recheck workflow', recheck, /TYSIAC_EXPECTED_SHA:\s*\$\{\{ steps\.target\.outputs\.sha \}\}/u);
 requireMatch('stable recheck workflow', recheck, /TYSIAC_EXPECTED_DEPLOY_CLASS:\s*stable/u);
 requireMatch('stable recheck workflow', recheck, /public-provenance-smoke\.mjs/u);
 requireMatch('stable recheck workflow', recheck, /public-deploy-smoke\.mjs/u);
 requireMatch('stable recheck workflow', recheck, /public-share-link-smoke\.mjs/u);
+requireMatch('stable recheck workflow', recheck, /without redeploying/u);
 forbidMatch('stable recheck workflow', recheck, /wrangler\s+deploy/u);
 forbidMatch('stable recheck workflow', recheck, /cloudflare\/wrangler-action/u);
+forbidMatch('stable recheck workflow', recheck, /temporary-deploy\.mjs/u);
 
 requireMatch('Foundation concurrency', coreWorkflow, /cancel-in-progress:\s*true/u);
 requireMatch('Foundation concurrency', coreWorkflow, /github\.event\.pull_request\.number\s*\|\|\s*github\.ref/u);
@@ -105,6 +116,7 @@ requireMatch('deployment authority', deploymentDoc, /Real-human friend gate/u);
 requireMatch('deployment authority', deploymentDoc, /exact.*candidate.*SHA/isu);
 requireMatch('deployment authority', deploymentDoc, /canonical.*workers\.dev/isu);
 requireMatch('deployment authority', deploymentDoc, /stable-candidate\.txt/u);
+requireMatch('deployment authority', deploymentDoc, /stable-recheck\.json/u);
 requireMatch('incident authority', incident, /FAIL \/ NOT COMPLETE \/ P0 BLOCKER/u);
 requireMatch('incident authority', incident, /Automation is necessary but is not sufficient/iu);
 requireMatch('incident authority', incident, /contradictory lifecycle evidence was known/iu);
