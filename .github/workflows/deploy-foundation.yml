@@ -16,6 +16,7 @@ on:
     branches: [main]
     paths:
       - .github/deploy/stable-candidate.txt
+      - .github/deploy/stable-deploy-request.txt
 
 permissions:
   contents: read
