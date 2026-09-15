@@ -9,9 +9,9 @@ Current authority order:
 2. `docs/INCIDENT_2026-09-15_FRIEND_LINK.md` for the open P0 incident;
 3. `docs/DEPLOYMENT.md` for public/stable/friend-link evidence;
 4. `AGENTS.md` for agent/claim discipline;
-5. active Run 05 presentation documentation on the experimental branch.
+5. `docs/RUN05_PHYSICAL_TABLE_V2.md` for the active presentation direction now integrated into `main`.
 
-Earlier Run 01/Run 02 evidence remains useful history but is not current execution authority where it conflicts with this state.
+Earlier Run 01/Run 02/Run03/Run04 evidence remains useful history/donor material but is not current execution authority where it conflicts with this state.
 
 ## Current product target
 
@@ -34,7 +34,7 @@ The previous external-readiness claim is invalidated. A temporary Cloudflare URL
 
 The Owner had explicitly required a stable, safe, repeatedly verified link before proceeding. The project already contained evidence that the temporary route was unclaimed and expected to expire. Continuing past that contradiction was a verification/authority failure.
 
-### Frozen candidate
+### Frozen external candidate
 
 The current external-test candidate is immutable:
 
@@ -42,22 +42,26 @@ The current external-test candidate is immutable:
 - SHA: `52450baa04f22646474bf4676f70b2df5ba6812f`
 - Foundation #672: PASS on that exact SHA.
 
-Do not silently move the candidate because later Run 05 or cleanup work continues. A replacement requires a new exact SHA and fresh evidence.
+Do not silently move the candidate because later cleanup work continues on `main`. A replacement requires a new exact SHA and fresh evidence.
 
-### First real stable-deployment attempt
+### Stable deployment attempts
 
-A repository-native deployment request on `main` resolved and checked out the frozen candidate correctly.
+The repository-native stable deployment path now supports an immutable candidate file plus a separate retry request marker. Retrying does not alter candidate identity.
 
-Stable Multiplayer Deploy run `34968793778` proved:
+Two real stable-deployment attempts have exercised the account-owned path far enough to establish the same concrete blocker.
 
-- declarative request resolved exact candidate SHA `52450baa04f22646474bf4676f70b2df5ba6812f`;
-- exact checkout succeeded;
-- `git rev-parse HEAD` matched the requested candidate;
-- dependency installation succeeded.
+Latest attempt:
 
-The run then stopped at the permanent-account credential gate **before any Cloudflare upload**.
+- Stable Multiplayer Deploy run `34980093207`;
+- request source: `main` commit `29923513c39cb59bf9ba08945c3ca81e464bf440`;
+- frozen candidate resolved to `52450baa04f22646474bf4676f70b2df5ba6812f`;
+- exact candidate checkout succeeded;
+- checkout identity verification succeeded;
+- dependency installation succeeded;
+- permanent credential gate failed;
+- Foundation-on-candidate, Cloudflare upload, deployment registration and every public-runtime step were therefore skipped.
 
-Current external blocker is concrete, not inferred:
+Current external blocker is direct evidence, not inference:
 
 - GitHub Actions secret `CLOUDFLARE_ACCOUNT_ID`: **missing**;
 - GitHub Actions secret `CLOUDFLARE_API_TOKEN`: **missing**.
@@ -68,9 +72,9 @@ Do not substitute another temporary deployment for these missing credentials.
 
 Current mandatory ladder:
 
-1. recovery infrastructure and frozen candidate Foundation remain green;
+1. frozen candidate Foundation remains green;
 2. configure the two permanent Cloudflare GitHub Actions secrets without exposing them in chat/source/logs;
-3. rerun the same stable deployment job for the frozen candidate;
+3. retrigger the same frozen candidate through the repo-native retry marker;
 4. account-owned authenticated normal deployment must succeed;
 5. canonical workers.dev origin + exact public SHA/class provenance must pass;
 6. public runtime/multiplayer smoke must pass;
@@ -85,13 +89,14 @@ Automation cannot complete the real-human gate by itself.
 
 - `Stable Multiplayer Deploy` — account-owned normal deploy only;
 - manual or auditable declarative stable deployment request, both resolving one exact immutable candidate SHA;
+- separate stable retry marker that cannot change candidate identity;
 - `Temporary Preview (EXPIRES — DO NOT SHARE)` — bounded diagnostics only;
 - exact public build provenance (`buildSha`, `deployClass`);
 - `public-provenance-smoke.mjs`;
 - `public-share-link-smoke.mjs`, which clicks the real copy-link UI and uses the exact emitted URL in a clean second browser;
 - canonical friend origin restricted to the root `tysiac-the-game.<account>.workers.dev` target for the current recovery;
 - `Stable Origin Recheck (NO REDEPLOY)` for later elapsed-time evidence;
-- `deployment-contract-smoke.mjs` in Foundation;
+- machine-gated stable retry and no-redeploy contracts in Foundation;
 - cancellation of superseded Foundation PR runs;
 - frozen external candidate ref separate from continuing technical-debt work.
 
@@ -137,11 +142,40 @@ A PASS in game truth or experience mechanics cannot substitute for an operations
 
 ## Run 05 presentation state
 
-Run 05 on `run05/post-friend-evolution` has materially evolved the physical table: larger tactile/living hand, permissive manipulation separated from commit, spatial play target, material deal/talon/exchange/marriage flows, living trick/capture presentation and a distinct desktop composition.
+Run 05 is no longer an isolated experimental integration branch.
 
-Mechanical browser evidence is substantial, but broad Owner visual approval remains pending. Blind visual polish is paused while the P0 external trust boundary is repaired.
+The old PR #23 is closed as historical/superseded integration history. A clean continuation was reconstructed from recovered `main`, mechanically validated, and merged through PR #26. The active Run 05 presentation implementation now lives on `main`.
 
-PR #23 currently diverges from `main` after the recovery infrastructure was squash-merged independently. This is post-candidate integration debt. Do not resolve it by mutating the frozen candidate before external verification.
+Current Run 05 presentation includes:
+
+- larger tactile/living hand;
+- permissive manipulation separated from authoritative commit;
+- spatial play target/handoff;
+- material deal/talon/exchange/marriage flows;
+- living trick/capture presentation;
+- distinct desktop composition;
+- browser/geometry coverage for tactile, handoff, mobile touch and material-transfer mechanics.
+
+Mechanical browser evidence is substantial, but broad Owner visual approval remains pending. Blind visual redesign remains paused while the P0 external trust boundary is unresolved.
+
+### CSS debt cleanup completed so far
+
+The recovery campaign has already removed several concrete patch-on-patch or unreachable layers without moving the frozen candidate:
+
+- folded the old tactile corrective patch back into the actual tactile owner;
+- removed obsolete `run04-mobile-hand.css` direct-card layout;
+- moved the persistent 44px mobile interaction minimum into `touch.css` with sufficient specificity to survive later visual compression;
+- removed unreachable old direct-child hand rules from `touch.css`;
+- removed unreachable direct-card blocks from `visual-language-02.css`;
+- repeatedly defended mobile 10-card exchange geometry, touch hit centres, permissive/living hand and authoritative handoff through full Foundation runs.
+
+The easy dead-selector phase is now largely exhausted. Current active cascade contains real overlapping ownership rather than obviously unreachable rules. In particular:
+
+- `run04-tactile-hand.css` remains a live mechanics owner for hand slots, drag ghost, commit zone and 10-card interaction behavior;
+- `run04-scene-compression.css` still affects live intermediate viewport composition;
+- Run05 intentionally overrides those layers in bounded mobile/desktop presentation regions.
+
+Do not continue deleting Run04 files merely because their names are historical. Further consolidation requires an explicit ownership design plus fresh browser/Owner evidence.
 
 ## Technical debt priority
 
@@ -155,9 +189,9 @@ PR #23 currently diverges from `main` after the recovery infrastructure was squa
 
 ### P1
 
-- Run 05 presentation loads a long historical CSS cascade across visual-language, Run04 and Run05 layers. Multiple files own the same `.table`, `.opponents`, `.center`, `.trick`, `.hand-area` and tactile geometry concerns. This is a demonstrated regression risk and must be consolidated in bounded slices after the frozen candidate is protected;
+- active CSS ownership is still distributed across visual-language, Run04 and Run05 layers. Obvious dead selectors have been removed; remaining consolidation is architectural and must be bounded rather than treated as deletion cleanup;
 - Durable Object rooms currently have no explicit expiry/cleanup policy and can remain in persistent storage indefinitely. This does not block the bounded friend test, but must be resolved before broader/public usage. Do not introduce room expiry into the frozen candidate without an explicit lifecycle contract because room-invite longevity is a product behavior;
-- PR #23 integration with the new `main` recovery history must be resolved on a continuation line after candidate verification;
+- historical/donor PRs from Run02/Run03/Run04 should be closed as superseded while preserving their branches/history;
 - keep stale historical docs from competing with current authority;
 - keep deployment paths unambiguous and machine-gated.
 
@@ -187,8 +221,9 @@ Contradictory evidence is an automatic blocker. A critical Owner requirement can
 
 1. keep frozen candidate `52450baa04f22646474bf4676f70b2df5ba6812f` unchanged;
 2. complete the one-time permanent Cloudflare account setup by configuring the two required GitHub Actions secrets outside chat;
-3. rerun failed stable deployment run `34968793778` and continue through canonical-origin/provenance/public/copied-invite gates;
+3. retrigger the exact same frozen candidate through the stable retry marker and continue through canonical-origin/provenance/public/copied-invite gates;
 4. perform later same-origin/same-SHA no-redeploy evidence;
 5. complete the real Owner+friend multiplayer test;
-6. meanwhile continue bounded technical-debt work on separate branches without changing the frozen candidate;
-7. after external trust is restored, resume broad Owner-led visual iteration and controlled presentation consolidation.
+6. meanwhile archive superseded donor PRs and continue only bounded technical-debt work that does not alter the frozen candidate;
+7. treat further CSS consolidation as a real ownership/refactor problem, not dead-code deletion;
+8. after external trust is restored, resume broad Owner-led visual iteration and controlled presentation consolidation.
