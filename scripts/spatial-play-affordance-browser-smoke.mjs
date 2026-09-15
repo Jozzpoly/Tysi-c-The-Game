@@ -150,6 +150,9 @@ async function affordanceState(session, card) {
       surfaceBorder: surface.borderColor,
       legacyDisplay: legacy ? getComputedStyle(legacy).display : 'missing',
       ghostReady: ghost.classList.contains('commit-ready'),
+      magnetStrength: Number(ghost.dataset.magnetStrength ?? 0),
+      magnetOffsetX: Number(ghost.dataset.magnetOffsetX ?? 0),
+      magnetOffsetY: Number(ghost.dataset.magnetOffsetY ?? 0),
       acceptedSelectorMatches: Boolean(document.querySelector('.app-shell:has(.tactile-card-float.commit-ready:not(.pending-handoff))')),
     };
   `);
@@ -175,7 +178,7 @@ async function runViewport(label, width, height, mobile) {
 
     const outside = {
       x: playable.zone.x,
-      y: Math.max(18, playable.zone.top - Math.max(28, playable.height * .48)),
+      y: Math.max(18, playable.zone.top - Math.max(54, playable.height * .62)),
     };
     await touch(session, 'touchStart', [{ x: playable.x, y: playable.y, radiusX: 7, radiusY: 7, force: 1 }]);
     await sleep(30);
@@ -192,12 +195,23 @@ async function runViewport(label, width, height, mobile) {
     }
     await screenshot(session, `${label}-spatial-play-available`);
 
-    const inside = { x: playable.zone.x, y: playable.zone.y };
-    await moveTouch(session, outside, inside);
-    const acceptedGesture = await waitFor(`${label}: accepted gesture`, async () => {
+    // The pointer/card centre remains outside the canonical `.trick` rectangle.
+    // The bounded magnetic field must capture it before the strict geometry does.
+    const magneticEdge = { x: playable.zone.x, y: playable.zone.top - 16 };
+    await moveTouch(session, outside, magneticEdge);
+    const acceptedGesture = await waitFor(`${label}: magnetic accepted gesture`, async () => {
       const state = await affordanceState(session, playable.card);
-      return state?.phase === 'accepted' && state.ghostReady ? state : false;
+      return state?.phase === 'accepted'
+        && state.ghostReady
+        && state.magnetStrength > 0
+        && state.magnetOffsetY > 0
+        ? state
+        : false;
     }, 2_000);
+
+    if (magneticEdge.y >= playable.zone.top) {
+      throw new Error(`${label}: magnetic probe accidentally entered canonical table geometry`);
+    }
 
     // Gesture truth and CSS feedback have different clocks. Let the browser finish
     // the short visual transition, then assert the resulting computed surface.
@@ -206,22 +220,31 @@ async function runViewport(label, width, height, mobile) {
     if (!accepted
       || accepted.phase !== 'accepted'
       || !accepted.ghostReady
+      || accepted.magnetStrength <= 0
+      || accepted.magnetOffsetY <= 0
       || !accepted.acceptedSelectorMatches
       || accepted.surfaceOpacity < .75
       || accepted.cueOpacity < .65
       || !accepted.cueContent.toLowerCase().includes('puść')) {
-      throw new Error(`${label}: accepted visual surface disagrees with accepted gesture ${JSON.stringify({ acceptedGesture, accepted })}`);
+      throw new Error(`${label}: magnetic accepted surface disagrees with gesture ${JSON.stringify({ acceptedGesture, accepted })}`);
     }
-    await screenshot(session, `${label}-spatial-play-accepted`);
+    await screenshot(session, `${label}-spatial-play-magnetic-accepted`);
 
-    await touch(session, 'touchCancel', []);
-    await waitFor(`${label}: cancelled drag returned`, () => execute(session, `
+    await touch(session, 'touchEnd', []);
+    await waitFor(`${label}: magnetic release committed`, () => execute(session, `
       return document.querySelector('.tactile-hand')?.dataset.gesturePhase === 'idle'
-        && Boolean(document.querySelector('.hand-slot[data-card="${playable.card}"]'))
-        && !document.querySelector('.tactile-card-float[data-card-id="${playable.card}"]');
-    `), 3_000);
+        && !document.querySelector('.hand-slot[data-card="${playable.card}"]');
+    `), 4_000);
 
-    return { label, card: playable.card, available, acceptedGesture, accepted };
+    return {
+      label,
+      card: playable.card,
+      magneticOutsideByPx: playable.zone.top - magneticEdge.y,
+      available,
+      acceptedGesture,
+      accepted,
+      committedOutsideCanonical: true,
+    };
   } finally {
     try { await webdriver(`/session/${session}`, { method: 'DELETE' }); } catch {}
   }

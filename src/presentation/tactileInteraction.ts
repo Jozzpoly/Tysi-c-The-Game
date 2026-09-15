@@ -23,6 +23,9 @@ export interface TactilePointerState {
   height: number;
   offsetX: number;
   offsetY: number;
+  magnetOffsetX: number;
+  magnetOffsetY: number;
+  magnetStrength: number;
   moved: boolean;
   throwIntent: boolean;
   commitReady: boolean;
@@ -49,6 +52,9 @@ export interface AdvanceTactilePointerInput {
   timeMs: number;
   canCommit: boolean;
   inPlayZone: boolean;
+  magnetOffsetX?: number;
+  magnetOffsetY?: number;
+  magnetStrength?: number;
 }
 
 function clamp(value: number, min: number, max: number) {
@@ -72,6 +78,9 @@ export function beginTactilePointer(input: BeginTactilePointerInput): TactilePoi
     height: input.height,
     offsetX: input.offsetX,
     offsetY: input.offsetY,
+    magnetOffsetX: 0,
+    magnetOffsetY: 0,
+    magnetStrength: 0,
     moved: false,
     throwIntent: false,
     commitReady: false,
@@ -83,9 +92,9 @@ export function beginTactilePointer(input: BeginTactilePointerInput): TactilePoi
 export function advanceTactilePointer(state: TactilePointerState, input: AdvanceTactilePointerInput): TactilePointerState {
   const distance = Math.hypot(input.x - state.startX, input.y - state.startY);
   const moved = state.moved || distance >= TACTILE_DRAG_SLOP;
-  // Run 05 P2: table intent is spatial. The presentation adapter measures the
-  // real shared trick area and tells this pure gesture model whether the carried
-  // card centre is inside it. Distance from the hand is no longer game intent.
+  // Table intent remains spatial. The presentation adapter supplies the accepted
+  // play field derived from the real trick surface; it may include a bounded
+  // assistance margin, but raw pointer coordinates and velocity stay untouched.
   const throwIntent = moved && input.inPlayZone;
   const commitReady = throwIntent && input.canCommit;
 
@@ -106,6 +115,9 @@ export function advanceTactilePointer(state: TactilePointerState, input: Advance
     lastTimeMs: input.timeMs,
     velocityX,
     velocityY,
+    magnetOffsetX: input.magnetOffsetX ?? 0,
+    magnetOffsetY: input.magnetOffsetY ?? 0,
+    magnetStrength: input.magnetStrength ?? 0,
     moved,
     throwIntent,
     commitReady,

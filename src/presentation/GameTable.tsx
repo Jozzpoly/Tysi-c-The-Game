@@ -16,6 +16,7 @@ import {
 } from '../core/index.js';
 import { RulesGuide } from './RulesGuide.js';
 import { ScoreSummary } from './ScoreSummary.js';
+import { chooseMagneticTarget } from './spatialMagnetism.js';
 import { TactileHand } from './TactileHand.js';
 import {
   TRICK_COMPLETION_TIMELINE,
@@ -25,6 +26,10 @@ import {
 
 const SUIT_SYMBOL = { spades: '♠', clubs: '♣', diamonds: '♦', hearts: '♥' } as const;
 const ALL_SEATS: readonly Seat[] = [0, 1, 2];
+const EXCHANGE_MAGNET_MOUSE_ENTER_PX = 24;
+const EXCHANGE_MAGNET_MOUSE_RELEASE_PX = 40;
+const EXCHANGE_MAGNET_TOUCH_ENTER_PX = 30;
+const EXCHANGE_MAGNET_TOUCH_RELEASE_PX = 48;
 type ExchangeDraft = Partial<Record<Seat, CardId>>;
 
 export interface GameTableProps {
@@ -174,22 +179,25 @@ export function GameTable({ projection, seatNames, events = [], message = '', on
     return slot?.dataset.card as CardId | undefined ?? null;
   }
 
-  function exchangeTargetAt(clientX: number, clientY: number): Seat | null {
+  function exchangeTargetAt(clientX: number, clientY: number, pointerType: string): Seat | null {
     if (!exchangeMode) return null;
-    for (const seat of opponentSeats) {
+    const targets = opponentSeats.flatMap((seat) => {
       const target = document.querySelector<HTMLElement>(`[data-exchange-target-seat="${seat}"]`);
-      if (!target) continue;
-      const rect = target.getBoundingClientRect();
-      if (clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom) return seat;
-    }
-    return null;
+      return target ? [{ id: seat, rect: target.getBoundingClientRect() }] : [];
+    });
+    const coarse = pointerType === 'touch' || pointerType === 'pen';
+    return chooseMagneticTarget({ x: clientX, y: clientY }, targets, {
+      preferredId: exchangeHoverSeat,
+      enterPaddingPx: coarse ? EXCHANGE_MAGNET_TOUCH_ENTER_PX : EXCHANGE_MAGNET_MOUSE_ENTER_PX,
+      releasePaddingPx: coarse ? EXCHANGE_MAGNET_TOUCH_RELEASE_PX : EXCHANGE_MAGNET_MOUSE_RELEASE_PX,
+    });
   }
 
   function handleExchangePointerMove(event: ReactPointerEvent<HTMLElement>) {
     if (!exchangeMode || exchangeSubmitting) return;
     const card = exchangeCardFromPointerTarget(event.target);
     if (!card || !humanCards.includes(card)) return;
-    const target = exchangeTargetAt(event.clientX, event.clientY);
+    const target = exchangeTargetAt(event.clientX, event.clientY, event.pointerType);
     setExchangeHoverSeat((current) => current === target ? current : target);
   }
 
@@ -200,7 +208,7 @@ export function GameTable({ projection, seatNames, events = [], message = '', on
       setExchangeHoverSeat(null);
       return;
     }
-    const target = exchangeTargetAt(event.clientX, event.clientY);
+    const target = exchangeTargetAt(event.clientX, event.clientY, event.pointerType);
     if (target !== null) stageExchangeCard(card, target);
     else if (stagedSeatForCard(card) !== null) unstageExchangeCard(card);
     setExchangeHoverSeat(null);
@@ -304,6 +312,7 @@ export function GameTable({ projection, seatNames, events = [], message = '', on
     <main
       className={`app-shell ${exchangeMode ? 'exchange-mode' : ''}`}
       data-exchange-submitting={exchangeSubmitting ? 'true' : 'false'}
+      data-exchange-magnet-seat={exchangeHoverSeat ?? ''}
       onPointerMove={handleExchangePointerMove}
       onPointerUp={handleExchangePointerUp}
       onPointerCancel={() => setExchangeHoverSeat(null)}

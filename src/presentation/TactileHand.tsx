@@ -8,6 +8,7 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from 'react';
 import { rankOf, suitOf, type CardId } from '../core/index.js';
+import { magneticCapture, magneticOffsetToRect } from './spatialMagnetism.js';
 import {
   computeHandInsertionPreview,
   stabilizeInsertionTarget,
@@ -32,6 +33,9 @@ import {
 
 const SUIT_SYMBOL = { spades: '♠', clubs: '♣', diamonds: '♦', hearts: '♥' } as const;
 const TACTILE_AUTHORITY_TIMEOUT_MS = 2200;
+const TABLE_MAGNET_ENTER_PX = 30;
+const TABLE_MAGNET_RELEASE_PX = 48;
+const TABLE_MAGNET_MAX_PULL_PX = 10;
 
 interface TactileHandProps {
   cards: readonly CardId[];
@@ -99,12 +103,18 @@ function FloatingCard(props: FloatingCardProps) {
   let tilt: number;
   let commitReady = false;
   let throwIntent = false;
+  let magnetStrength = 0;
+  let magnetOffsetX = 0;
+  let magnetOffsetY = 0;
   let gesturePhase: string;
 
   if (props.dragging) {
     const ghost = props.ghost;
-    left = ghost.x - ghost.offsetX;
-    top = ghost.y - ghost.offsetY;
+    magnetStrength = ghost.magnetStrength;
+    magnetOffsetX = ghost.magnetOffsetX;
+    magnetOffsetY = ghost.magnetOffsetY;
+    left = ghost.x - ghost.offsetX + magnetOffsetX;
+    top = ghost.y - ghost.offsetY + magnetOffsetY;
     tilt = tactileCarryTiltDegrees(pointerMotionSample(ghost));
     commitReady = ghost.commitReady;
     throwIntent = ghost.throwIntent;
@@ -129,7 +139,7 @@ function FloatingCard(props: FloatingCardProps) {
 
   return (
     <div
-      className={`card tactile-card-float ${red ? 'red' : ''} ${throwIntent ? 'throw-intent' : ''} ${commitReady ? 'commit-ready' : ''} ${props.dragging ? '' : 'pending-handoff'}`}
+      className={`card tactile-card-float ${red ? 'red' : ''} ${throwIntent ? 'throw-intent' : ''} ${commitReady ? 'commit-ready' : ''} ${magnetStrength > 0 ? 'magnet-assisted' : ''} ${props.dragging ? '' : 'pending-handoff'}`}
       style={style}
       data-rank={rank}
       data-suit={symbol}
@@ -137,6 +147,9 @@ function FloatingCard(props: FloatingCardProps) {
       data-card-id={ghost.card}
       data-authority-state={props.dragging ? '' : 'pending'}
       data-motion-tilt={tilt.toFixed(2)}
+      data-magnet-strength={magnetStrength.toFixed(3)}
+      data-magnet-offset-x={magnetOffsetX.toFixed(2)}
+      data-magnet-offset-y={magnetOffsetY.toFixed(2)}
       aria-hidden="true"
     >
       <span className="rank" data-suit={symbol}>{rank}</span>
@@ -381,17 +394,25 @@ export function TactileHand({
     const playRect = readPlayZoneRect();
     const cardCenterX = event.clientX - drag.offsetX + drag.width / 2;
     const cardCenterY = event.clientY - drag.offsetY + drag.height / 2;
-    const inPlayZone = Boolean(playRect
-      && cardCenterX >= playRect.left
-      && cardCenterX <= playRect.right
-      && cardCenterY >= playRect.top
-      && cardCenterY <= playRect.bottom);
+    const cardCenter = { x: cardCenterX, y: cardCenterY };
+    const fieldPadding = drag.throwIntent ? TABLE_MAGNET_RELEASE_PX : TABLE_MAGNET_ENTER_PX;
+    const inPlayZone = Boolean(playRect && magneticCapture(cardCenter, playRect, {
+      latched: drag.throwIntent,
+      enterPaddingPx: TABLE_MAGNET_ENTER_PX,
+      releasePaddingPx: TABLE_MAGNET_RELEASE_PX,
+    }));
+    const magnet = playRect && inPlayZone
+      ? magneticOffsetToRect(cardCenter, playRect, fieldPadding, TABLE_MAGNET_MAX_PULL_PX)
+      : { x: 0, y: 0, strength: 0 };
     const next = advanceTactilePointer(drag, {
       x: event.clientX,
       y: event.clientY,
       timeMs: event.timeStamp,
       canCommit: throwableCards.has(drag.card),
       inPlayZone,
+      magnetOffsetX: magnet.x,
+      magnetOffsetY: magnet.y,
+      magnetStrength: magnet.strength,
     });
 
     if (next.moved) {
@@ -409,8 +430,8 @@ export function TactileHand({
     if (reduced) return;
 
     const rect = slot.getBoundingClientRect();
-    const currentLeft = state.x - state.offsetX;
-    const currentTop = state.y - state.offsetY;
+    const currentLeft = state.x - state.offsetX + state.magnetOffsetX;
+    const currentTop = state.y - state.offsetY + state.magnetOffsetY;
     const dx = currentLeft - rect.left;
     const dy = currentTop - rect.top;
     const motion = tactileReturnMotion(pointerMotionSample(state));
@@ -457,8 +478,8 @@ export function TactileHand({
     if (outcome === 'commit') {
       const pendingGhost: ReleaseGhost = {
         card: drag.card,
-        left: drag.x - drag.offsetX,
-        top: drag.y - drag.offsetY,
+        left: drag.x - drag.offsetX + drag.magnetOffsetX,
+        top: drag.y - drag.offsetY + drag.magnetOffsetY,
         width: drag.width,
         height: drag.height,
         tilt: tactileCarryTiltDegrees(pointerMotionSample(drag)),
@@ -518,6 +539,7 @@ export function TactileHand({
       data-insertion-target={insertionPreview?.targetIndex ?? ''}
       data-motion-energy={motionEnergy.toFixed(3)}
       data-neighbor-response-ms={neighborResponseMs}
+      data-magnet-strength={drag?.magnetStrength.toFixed(3) ?? '0.000'}
       aria-label="Twoje karty. Każdą możesz chwycić i przełożyć; stół podpowie, kiedy gest może stać się ruchem."
     >
       {visibleOrder.map((card, index) => {
