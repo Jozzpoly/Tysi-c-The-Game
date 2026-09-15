@@ -134,19 +134,25 @@ The stable workflow repeats this smoke after a short delay. That is repeatabilit
 
 ### C. Exact copied friend invite
 
-PASS only when the current validation harness runs `scripts/public-share-link-smoke.mjs`, uses the real `Kopiuj link dla znajomego` control and proves that the exact URL produced by the UI:
+PASS only when the current validation harness runs `scripts/public-share-link-smoke.mjs`, uses the real `Kopiuj link dla znajomego` control and proves that the **same session entered through the exact URL produced by the UI**:
 
-- is HTTPS;
+- uses HTTPS on a public deployment;
 - remains on the stable deployment origin;
 - contains only the room identifier;
 - contains no reconnect/seat credential;
 - contains no inherited fragment or unrelated query state;
-- opens in a clean second browser;
-- allows that second browser to join the same room and receive a distinct private seat credential.
+- opens in a clean second browser that owns no seat credential before joining;
+- allows that second browser to join the same room and receive a distinct private seat credential;
+- reaches a live table for both human clients with distinct credentials and disjoint private hands;
+- accepts at least one legal human game action after joining through that copied invite;
+- advances both clients to the same newer shared revision after that action;
+- allows the friend browser to reopen the same room-only copied URL without putting its private credential into the URL;
+- restores the **same private friend seat credential** from local browser state;
+- reconnects online to the same room at a revision at least as new as the synchronized post-action revision.
 
-The smoke deliberately starts the host from a URL containing an unrelated fragment so the no-fragment property is actually falsifiable.
+The smoke deliberately starts the host from a URL containing unrelated query/hash state so stripping that state from the copied invite is actually falsifiable. The reconnect leg deliberately reuses the exact room-only copied invite while requiring the previously issued private friend credential to survive locally.
 
-Constructing a `?room=...` URL inside the test harness is not sufficient evidence for this property.
+Constructing a `?room=...` URL inside the test harness, proving only that a second browser can join, or combining separate join/sync/reconnect tests is not sufficient evidence for this property. The exact copied-invite session itself must carry through join, private state, a shared action and reconnect.
 
 ### D. Public provenance
 

@@ -106,12 +106,20 @@ async function pageState(session) {
   return execute(session, `
     const room = new URLSearchParams(location.search).get('room');
     const token = room ? localStorage.getItem('tysiac:seat-token:' + room) : null;
+    const revText = [...document.querySelectorAll('.footer span')]
+      .map((node) => node.textContent?.trim() ?? '')
+      .find((text) => /^rev \\d+$/.test(text));
     return {
       url: location.href,
       room,
       token,
       body: document.body?.innerText ?? '',
       connection: document.querySelector('.connection-banner')?.textContent?.trim() ?? '',
+      decision: document.querySelector('.decision-card h2')?.textContent?.trim() ?? '',
+      revision: revText ? Number(revText.slice(4)) : null,
+      handCards: [...document.querySelectorAll('.hand .card')]
+        .map((node) => node.getAttribute('aria-label'))
+        .filter(Boolean),
       copiedLink: window.__tysiacCopiedLink ?? null,
     };
   `);
@@ -126,6 +134,23 @@ async function clickLeading(session, text) {
     return true;
   `);
   if (!clicked) throw new Error(`Enabled button ${text} not found`);
+}
+
+async function clickAuctionDecision(session, label) {
+  const clicked = await execute(session, `
+    const buttons = [...document.querySelectorAll('.decision-card button:not(:disabled)')];
+    const pass = buttons.find((button) => button.textContent?.trim() === 'Pas');
+    if (pass) { pass.click(); return 'pass'; }
+    const bid = buttons
+      .map((node) => ({ node, value: Number(node.textContent?.trim()) }))
+      .filter((entry) => Number.isFinite(entry.value))
+      .sort((a, b) => a.value - b.value)[0]?.node;
+    if (!bid) return null;
+    bid.click();
+    return 'bid';
+  `);
+  if (!clicked) throw new Error(`${label}: no legal auction action`);
+  return clicked;
 }
 
 async function installClipboardCapture(session) {
@@ -161,6 +186,16 @@ function assertInviteContract(invite, room) {
   }
   if (url.searchParams.get('room') !== room) throw new Error('friend invite room does not match host room');
   if (/ts1_/u.test(invite)) throw new Error('friend invite leaked a seat credential');
+}
+
+function assertPrivateHands(hostState, friendState) {
+  if (hostState.handCards.length === 0 || friendState.handCards.length === 0) {
+    throw new Error('live exact-invite session did not expose both private hands');
+  }
+  const hostCards = new Set(hostState.handCards);
+  for (const card of friendState.handCards) {
+    if (hostCards.has(card)) throw new Error(`private card appears in both exact-invite seats: ${card}`);
+  }
 }
 
 await mkdir(OUTPUT, { recursive: true });
@@ -206,12 +241,53 @@ try {
   if (beforeJoin.url !== copied.copiedLink) throw new Error('joiner did not remain on the exact copied friend link');
 
   await clickLeading(joiner, 'Dołącz do stołu');
-  const joined = await waitFor('joiner enters live room from copied link', async () => {
-    const value = await pageState(joiner);
-    return value.token?.startsWith('ts1_') && value.connection.includes('online') ? value : false;
+  const [hostGame, friendGame] = await Promise.all([
+    waitFor('host reaches live exact-invite session', async () => {
+      const value = await pageState(host);
+      return value.connection.includes('online') && value.revision !== null && value.handCards.length > 0 ? value : false;
+    }),
+    waitFor('friend reaches live exact-invite session', async () => {
+      const value = await pageState(joiner);
+      return value.token?.startsWith('ts1_') && value.connection.includes('online') && value.revision !== null && value.handCards.length > 0 ? value : false;
+    }),
+  ]);
+  if (friendGame.token === lobby.token) throw new Error('host and friend received the same private seat credential');
+  if (friendGame.url.includes(friendGame.token)) throw new Error('friend credential leaked into URL after join');
+  assertPrivateHands(hostGame, friendGame);
+
+  const actor = await waitFor('human auction actor in exact-invite session', async () => {
+    const hostState = await pageState(host);
+    if (hostState.decision === 'Twoja licytacja') return { session: host, other: joiner, before: hostState, label: 'host' };
+    const friendState = await pageState(joiner);
+    if (friendState.decision === 'Twoja licytacja') return { session: joiner, other: host, before: friendState, label: 'friend' };
+    return false;
   });
-  if (joined.token === lobby.token) throw new Error('host and friend received the same private seat credential');
-  if (joined.url.includes(joined.token)) throw new Error('friend credential leaked into URL after join');
+
+  const action = await clickAuctionDecision(actor.session, `exact-invite ${actor.label}`);
+  const synchronized = await waitFor('exact-invite action synchronized', async () => {
+    const a = await pageState(actor.session);
+    const b = await pageState(actor.other);
+    return actor.before.revision !== null && a.revision !== null && b.revision !== null
+      && a.revision > actor.before.revision && b.revision === a.revision
+      ? { actor: a, other: b }
+      : false;
+  });
+  const synchronizedRevision = synchronized.actor.revision;
+
+  const friendToken = friendGame.token;
+  await navigate(joiner, copied.copiedLink);
+  const restored = await waitFor('friend reconnects through same copied room URL', async () => {
+    const value = await pageState(joiner);
+    return value.room === lobby.room
+      && value.token === friendToken
+      && value.connection.includes('online')
+      && value.revision !== null
+      && value.revision >= synchronizedRevision
+      && value.handCards.length > 0
+      ? value
+      : false;
+  });
+  if (restored.url.includes(friendToken)) throw new Error('friend credential leaked into URL after reconnect');
 
   await screenshot(host, LOCAL_HTTP ? 'local-share-link-host' : 'public-share-link-host');
   await screenshot(joiner, LOCAL_HTTP ? 'local-share-link-friend' : 'public-share-link-friend');
@@ -223,6 +299,12 @@ try {
     copiedInvite: copied.copiedLink,
     sameOrigin: new URL(copied.copiedLink).origin === new URL(BASE_URL).origin,
     friendJoined: true,
+    privateHandsDisjoint: true,
+    action,
+    actionSynced: true,
+    synchronizedRevision,
+    friendReconnected: true,
+    restoredRevision: restored.revision,
     transport: LOCAL_HTTP ? 'loopback-http' : 'https',
   }, null, 2));
 } catch (error) {

@@ -197,6 +197,10 @@ requireMatch('deployment authority', deploymentDoc, /Temporary Preview — bound
 requireMatch('deployment authority', deploymentDoc, /not acceptable as the Owner\/friend candidate origin/u);
 requireMatch('deployment authority', deploymentDoc, /Stable Multiplayer Deploy/u);
 requireMatch('deployment authority', deploymentDoc, /Exact copied friend invite/u);
+requireMatch('deployment authority', deploymentDoc, /same session entered through the exact URL produced by the UI/iu);
+requireMatch('deployment authority', deploymentDoc, /distinct credentials and disjoint private hands/iu);
+requireMatch('deployment authority', deploymentDoc, /same private friend seat credential/iu);
+requireMatch('deployment authority', deploymentDoc, /same newer shared revision/iu);
 requireMatch('deployment authority', deploymentDoc, /Long-horizon availability/u);
 requireMatch('deployment authority', deploymentDoc, /Real-human friend gate/u);
 requireMatch('deployment authority', deploymentDoc, /exact.*candidate.*SHA/isu);
