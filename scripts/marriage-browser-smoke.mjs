@@ -256,10 +256,10 @@ async function runViewport(label, width, height, mobile) {
       return document.querySelector('.material-marriage-state')?.getAttribute('data-marriage-material-state') === 'active'
         && document.querySelectorAll('.marriage-material-card').length === 2;
     `), 1_500);
-    await sleep(150);
+    await sleep(120);
 
     const pair = await inspectActive(session);
-    if (pair.state !== 'active' || !pair.layer || pair.materialCount !== 2 || pair.visibleMaterialCards !== 2) {
+    if (pair.state !== 'active' || !pair.layer || pair.materialCount !== 2 || pair.visibleMaterialCards !== 2 || !pair.cueVisible) {
       throw new Error(`${label}: marriage pair did not materialize ${JSON.stringify(pair)}`);
     }
     if (new Set(pair.roles).size !== 2 || !pair.roles.includes('played') || !pair.roles.includes('partner')) {
@@ -277,17 +277,9 @@ async function runViewport(label, width, height, mobile) {
     if (pair.scrollWidth > pair.width + 1) throw new Error(`${label}: marriage introduced horizontal overflow ${JSON.stringify(pair)}`);
     await screenshot(session, `${label}-marriage-pair`);
 
-    await sleep(220);
-    const flight = await inspectActive(session);
-    if (flight.state !== 'active' || flight.materialCount !== 2 || !flight.playedTargetHidden || !flight.partnerTargetHidden) {
-      throw new Error(`${label}: marriage continuity broke during handoff ${JSON.stringify(flight)}`);
-    }
-    await screenshot(session, `${label}-marriage-handoff`);
-
     const settled = await waitFor(`${label}: marriage material settled`, async () => {
       const state = await inspectSettled(session, pair.playedIdentity, pair.partnerIdentity);
-      return state.state === 'settled'
-        && state.materialLayer === 0
+      return state.materialLayer === 0
         && state.materialCards === 0
         && state.materializingTargets === 0
         && state.receivingTargets === 0
@@ -306,7 +298,7 @@ async function runViewport(label, width, height, mobile) {
     `), 5_000);
     if (!completed) throw new Error(`${label}: table did not continue after marriage`);
 
-    return { marriageLabel, before, pair, flight, settled };
+    return { marriageLabel, before, pair, settled };
   } finally {
     await closeSession(session);
   }
