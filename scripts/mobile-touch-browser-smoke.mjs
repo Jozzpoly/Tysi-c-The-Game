@@ -103,12 +103,23 @@ async function screenshot(session, name) {
 }
 
 async function touchAt(session, x, y) {
-  await cdp(session, 'Input.dispatchTouchEvent', {
-    type: 'touchStart',
-    touchPoints: [{ x, y, radiusX: 7, radiusY: 7, force: 1 }],
+  const pointerId = `touch-tap-${Date.now()}-${Math.round(x)}-${Math.round(y)}`;
+  await webdriver(`/session/${session}/actions`, {
+    method: 'POST',
+    body: JSON.stringify({
+      actions: [{
+        type: 'pointer',
+        id: pointerId,
+        parameters: { pointerType: 'touch' },
+        actions: [
+          { type: 'pointerMove', duration: 0, x: Math.round(x), y: Math.round(y), origin: 'viewport' },
+          { type: 'pointerDown', button: 0 },
+          { type: 'pause', duration: 55 },
+          { type: 'pointerUp', button: 0 },
+        ],
+      }],
+    }),
   });
-  await sleep(55);
-  await cdp(session, 'Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
 }
 
 async function dragTouch(session, from, to, steps = 8) {
