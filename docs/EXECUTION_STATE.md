@@ -146,6 +146,16 @@ Default pause:
 
 The reason is product strategy: the next high-value information should come from real external use and then from Owner visual/UI/UX judgement.
 
+## Preserved deferred debts — not current P0 work
+
+Keep these visible without letting them manufacture scope before the external gate is closed:
+
+- active CSS ownership is still distributed across visual-language, Run04 and Run05 layers; obvious dead selectors were already removed, so future consolidation is an ownership/refactor problem and should follow fresh Owner/browser evidence rather than filename-driven deletion;
+- Durable Object rooms still have no explicit expiry/cleanup policy and can persist indefinitely; this is acceptable for the bounded friend test but must be resolved before broader/public usage, with room-invite longevity treated as product behaviour rather than an implementation afterthought;
+- stale historical docs/PR branches must not compete with current authority, but archival cleanup is lower value than restoring the real product loop.
+
+These debts are intentionally deferred, not forgotten.
+
 ## After P0 closes
 
 The project immediately shifts back from recovery infrastructure to product development.
