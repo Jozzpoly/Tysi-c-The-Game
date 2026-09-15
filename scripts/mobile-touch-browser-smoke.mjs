@@ -219,6 +219,45 @@ async function touchLowestPhysicalNumeric(session) {
   return { target, targets };
 }
 
+async function armContractTouchTrace(session, value) {
+  return execute(session, `
+    const node = [...document.querySelectorAll('.decision-card button:not(:disabled)')]
+      .find((candidate) => Number(candidate.textContent?.trim()) === ${Number(value)});
+    if (!node) return false;
+    window.__contractTouchTrace = [];
+    const record = (scope) => (event) => {
+      const touch = event.changedTouches?.[0] ?? event.touches?.[0] ?? null;
+      window.__contractTouchTrace.push({
+        scope,
+        type: event.type,
+        target: event.target?.closest?.('button')?.textContent?.trim() ?? event.target?.className ?? '',
+        currentTarget: event.currentTarget === node ? 'contract-button' : 'document',
+        pointerType: event.pointerType ?? '',
+        pointerId: event.pointerId ?? null,
+        button: event.button ?? null,
+        buttons: event.buttons ?? null,
+        clientX: event.clientX ?? touch?.clientX ?? null,
+        clientY: event.clientY ?? touch?.clientY ?? null,
+        touches: event.touches?.length ?? null,
+        changedTouches: event.changedTouches?.length ?? null,
+        cancelable: event.cancelable,
+        defaultPrevented: event.defaultPrevented,
+        timeStamp: Math.round(event.timeStamp * 10) / 10,
+      });
+    };
+    const events = ['touchstart', 'touchmove', 'touchend', 'touchcancel', 'pointerdown', 'pointermove', 'pointerup', 'pointercancel', 'mousedown', 'mouseup', 'click'];
+    for (const type of events) {
+      node.addEventListener(type, record('button'), { capture: true });
+      document.addEventListener(type, record('document'), { capture: true });
+    }
+    return true;
+  `);
+}
+
+async function contractTouchTrace(session) {
+  return execute(session, `return window.__contractTouchTrace ?? [];`);
+}
+
 async function touchButton(session, text) {
   const target = await execute(session, `
     const node = [...document.querySelectorAll('button:not(:disabled)')]
@@ -374,9 +413,13 @@ async function run() {
     assertTouchControls('contract', await enabledControlGeometry(session));
 
     const contractState = await uiState(session);
+    const contractTargets = await numericTargets(session);
+    const contractCandidate = [...contractTargets].reverse().find((entry) => entry.touchableAtCenter && entry.withinViewport);
+    if (!contractCandidate) throw new Error(`no physically touchable contract decision: ${JSON.stringify(contractTargets)}`);
+    if (!(await armContractTouchTrace(session, contractCandidate.value))) throw new Error('could not arm contract touch trace');
     const contractTouch = await touchLowestPhysicalNumeric(session);
     await waitForRevisionAdvance(session, contractState.revision, `contract touch ${contractTouch.target.value} accepted`).catch(async (error) => {
-      throw new Error(`${error}; current=${JSON.stringify(await uiState(session))}; numeric=${JSON.stringify(await numericTargets(session))}; chosen=${JSON.stringify(contractTouch.target)}`);
+      throw new Error(`${error}; current=${JSON.stringify(await uiState(session))}; numeric=${JSON.stringify(await numericTargets(session))}; chosen=${JSON.stringify(contractTouch.target)}; events=${JSON.stringify(await contractTouchTrace(session))}`);
     });
     await waitFor('playable hand', () => execute(session, `return document.querySelectorAll('.hand .card:not(:disabled)').length > 0;`));
 
@@ -400,6 +443,7 @@ async function run() {
       firstDrop,
       secondDrop,
       contractValue: contractTouch.target.value,
+      contractEvents: await contractTouchTrace(session),
     };
   } finally {
     await closeSession(session);
