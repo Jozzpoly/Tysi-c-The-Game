@@ -43,6 +43,8 @@ requireMatch('stable workflow', stable, /TYSIAC_BUILD_SHA:\$\{\{ inputs\.candida
 requireMatch('stable workflow', stable, /TYSIAC_EXPECTED_SHA:\s*\$\{\{ inputs\.candidate_sha \}\}/u);
 requireMatch('stable workflow', stable, /TYSIAC_DEPLOY_CLASS:stable/u);
 requireMatch('stable workflow', stable, /wrangler deployments list/u);
+requireMatch('stable workflow', stable, /Expected canonical account-owned workers\.dev root for tysiac-the-game/u);
+requireMatch('stable workflow', stable, /Versioned preview URLs, foreign hosts, paths, query strings and fragments are not accepted/u);
 requireMatch('stable workflow', stable, /public-provenance-smoke\.mjs/u);
 requireMatch('stable workflow', stable, /public-deploy-smoke\.mjs/u);
 requireMatch('stable workflow', stable, /public-share-link-smoke\.mjs/u);
@@ -93,6 +95,7 @@ requireMatch('deployment authority', deploymentDoc, /Exact copied friend invite/
 requireMatch('deployment authority', deploymentDoc, /Long-horizon availability/u);
 requireMatch('deployment authority', deploymentDoc, /Real-human friend gate/u);
 requireMatch('deployment authority', deploymentDoc, /exact.*candidate.*SHA/isu);
+requireMatch('deployment authority', deploymentDoc, /canonical.*workers\.dev/isu);
 requireMatch('incident authority', incident, /FAIL \/ NOT COMPLETE \/ P0 BLOCKER/u);
 requireMatch('incident authority', incident, /Automation is necessary but is not sufficient/iu);
 requireMatch('incident authority', incident, /contradictory lifecycle evidence was known/iu);
