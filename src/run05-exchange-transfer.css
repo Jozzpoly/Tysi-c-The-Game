@@ -200,3 +200,39 @@
     opacity: .98;
   }
 }
+
+/* Desktop composition already owns absolute opponent territories. Exchange mode
+ * must not collapse those seats back into normal document flow. */
+@media (min-width: 960px) and (min-height: 720px) {
+  .exchange-mode .opponent.exchange-drop-target {
+    position: absolute;
+  }
+}
+
+@media (pointer: coarse), (max-width: 620px) {
+  .exchange-mode .opponent.exchange-drop-target {
+    min-height: 80px;
+    outline-offset: 3px;
+  }
+
+  .exchange-mode .tactile-hand > .hand-slot.is-exchange-staged {
+    scale: .84 !important;
+  }
+
+  .exchange-mode .opponent.exchange-drop-target::after {
+    bottom: -14px;
+    font-size: .58rem;
+    padding: 2px 6px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .exchange-transfer-card {
+    animation: none !important;
+  }
+
+  .exchange-mode .opponent.exchange-drop-target,
+  .exchange-mode .tactile-hand > .hand-slot.is-exchange-staged {
+    transition: none !important;
+  }
+}
