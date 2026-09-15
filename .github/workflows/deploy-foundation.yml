@@ -97,7 +97,7 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: npx wrangler deployments list
 
-      - name: Require a public deployment URL
+      - name: Require the canonical account-owned workers.dev origin
         env:
           PUBLIC_URL: ${{ steps.deploy.outputs.deployment-url }}
           CANDIDATE_SHA: ${{ inputs.candidate_sha }}
@@ -108,15 +108,16 @@ jobs:
             echo "::error::Cloudflare deployment completed without a deployment-url output; public verification cannot proceed."
             exit 1
           fi
-          case "$PUBLIC_URL" in
-            https://*) ;;
-            *) echo "::error::Stable deployment URL is not HTTPS: $PUBLIC_URL"; exit 1 ;;
-          esac
+          if [[ ! "$PUBLIC_URL" =~ ^https://tysiac-the-game\.[a-z0-9-]+\.workers\.dev/?$ ]]; then
+            echo "::error::Expected canonical account-owned workers.dev root for tysiac-the-game, got: $PUBLIC_URL"
+            echo "::error::Versioned preview URLs, foreign hosts, paths, query strings and fragments are not accepted as the friend origin."
+            exit 1
+          fi
           echo "### Account-owned non-temporary multiplayer origin" >> "$GITHUB_STEP_SUMMARY"
           echo "$PUBLIC_URL" >> "$GITHUB_STEP_SUMMARY"
           echo "Candidate SHA: $CANDIDATE_SHA" >> "$GITHUB_STEP_SUMMARY"
           echo "Workflow-definition SHA: $GITHUB_SHA" >> "$GITHUB_STEP_SUMMARY"
-          echo "Mechanism evidence: exact candidate checkout + authenticated normal 'wrangler deploy' + owned-account deployment registration." >> "$GITHUB_STEP_SUMMARY"
+          echo "Mechanism evidence: exact candidate checkout + authenticated normal 'wrangler deploy' + owned-account deployment registration + canonical workers.dev target." >> "$GITHUB_STEP_SUMMARY"
           echo "This does NOT by itself certify long-horizon availability or real-human friend readiness." >> "$GITHUB_STEP_SUMMARY"
 
       - name: Verify exact public build provenance
@@ -159,6 +160,7 @@ jobs:
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "**PASS — candidate identity:** exact commit $CANDIDATE_SHA was checked out and deployed." >> "$GITHUB_STEP_SUMMARY"
           echo "**PASS — deployment mechanism:** authenticated account-owned normal deploy; not an unclaimed temporary account." >> "$GITHUB_STEP_SUMMARY"
+          echo "**PASS — canonical origin:** deployment target is the root tysiac-the-game.<account>.workers.dev origin, not a versioned preview URL." >> "$GITHUB_STEP_SUMMARY"
           echo "**PASS — provenance:** public runtime reports exact candidate SHA $CANDIDATE_SHA and deploy class stable." >> "$GITHUB_STEP_SUMMARY"
           echo "**PASS — public runtime, repeated:** health, built SPA, duo desktop↔mobile sync, hidden-hand separation, command propagation, refresh/reconnect." >> "$GITHUB_STEP_SUMMARY"
           echo "**PASS — copied invite:** the exact URL produced by 'Kopiuj link dla znajomego' is HTTPS, same-origin, room-only, credential-free, and joins a second client." >> "$GITHUB_STEP_SUMMARY"
