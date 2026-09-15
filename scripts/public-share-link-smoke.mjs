@@ -147,7 +147,7 @@ try {
   host = await createSession(1440, 1000);
   joiner = await createSession(390, 844);
 
-  await navigate(host, `${BASE_URL}/?__share_link_smoke=${Date.now()}`);
+  await navigate(host, `${BASE_URL}/?__share_link_smoke=${Date.now()}#must-not-leak-into-friend-invite`);
   await waitFor('public home', async () => {
     const value = await pageState(host);
     return value.body.includes('Usiądź do stołu') ? value : false;
