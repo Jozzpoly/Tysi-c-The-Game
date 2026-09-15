@@ -78,6 +78,73 @@ async function cdp(session, cmd, params = {}) {
   });
 }
 
+async function touch(session, type, points) {
+  await cdp(session, 'Input.dispatchTouchEvent', { type, touchPoints: points });
+}
+
+async function dragPointer(session, from, to, mobile, steps = 8) {
+  if (mobile) {
+    await touch(session, 'touchStart', [{ x: from.x, y: from.y, radiusX: 7, radiusY: 7, force: 1 }]);
+    await sleep(32);
+    for (let step = 1; step <= steps; step += 1) {
+      const ratio = step / steps;
+      await touch(session, 'touchMove', [{
+        x: from.x + (to.x - from.x) * ratio,
+        y: from.y + (to.y - from.y) * ratio,
+        radiusX: 7,
+        radiusY: 7,
+        force: 1,
+      }]);
+      await sleep(20);
+    }
+    await touch(session, 'touchEnd', []);
+    return;
+  }
+
+  await cdp(session, 'Input.dispatchMouseEvent', { type: 'mouseMoved', x: from.x, y: from.y });
+  await cdp(session, 'Input.dispatchMouseEvent', {
+    type: 'mousePressed', x: from.x, y: from.y, button: 'left', buttons: 1, clickCount: 1,
+  });
+  await sleep(28);
+  for (let step = 1; step <= steps; step += 1) {
+    const ratio = step / steps;
+    await cdp(session, 'Input.dispatchMouseEvent', {
+      type: 'mouseMoved',
+      x: from.x + (to.x - from.x) * ratio,
+      y: from.y + (to.y - from.y) * ratio,
+      button: 'left',
+      buttons: 1,
+    });
+    await sleep(18);
+  }
+  await cdp(session, 'Input.dispatchMouseEvent', {
+    type: 'mouseReleased', x: to.x, y: to.y, button: 'left', buttons: 0, clickCount: 1,
+  });
+}
+
+async function exchangeDragGeometry(session, targetIndex) {
+  return execute(session, `
+    const sourceSlot = [...document.querySelectorAll('.hand .hand-slot')]
+      .find((slot) => !slot.classList.contains('is-exchange-staged'));
+    const sourceCard = sourceSlot?.querySelector(':scope > .card');
+    const targets = [...document.querySelectorAll('[data-exchange-target-seat]')];
+    const target = targets[${targetIndex}];
+    if (!sourceSlot || !sourceCard || !target) return null;
+    const sourceRect = sourceCard.getBoundingClientRect();
+    const targetRect = target.getBoundingClientRect();
+    return {
+      from: { x: sourceRect.left + sourceRect.width / 2, y: sourceRect.top + sourceRect.height / 2 },
+      to: { x: targetRect.left + targetRect.width / 2, y: targetRect.top + targetRect.height / 2 },
+    };
+  `);
+}
+
+async function dragNextExchangeCard(session, targetIndex, mobile) {
+  const geometry = await exchangeDragGeometry(session, targetIndex);
+  if (!geometry) throw new Error(`physical exchange geometry unavailable for target ${targetIndex}`);
+  await dragPointer(session, geometry.from, geometry.to, mobile);
+}
+
 async function emulateViewport(session, width, height, mobile) {
   await cdp(session, 'Emulation.setDeviceMetricsOverride', {
     width,
@@ -220,7 +287,7 @@ async function waitForActionableState(session, label, previousRevision = null) {
   }, 30_000);
 }
 
-async function takeDecision(session, current, counters) {
+async function takeDecision(session, current, counters, mobile) {
   const heading = current.heading;
 
   if (heading === 'Twoja licytacja') {
@@ -236,18 +303,16 @@ async function takeDecision(session, current, counters) {
   }
 
   if (heading === 'Oddaj po jednej karcie') {
-    for (let selected = 1; selected <= 2; selected += 1) {
-      const clicked = await execute(session, `
-        const card = [...document.querySelectorAll('.hand .card:not(:disabled)')]
-          .find((node) => !node.classList.contains('selected'));
-        if (!card) return false;
-        card.click();
-        return true;
-      `);
-      if (!clicked) throw new Error(`exchange card ${selected} unavailable`);
-      await waitFor(`exchange selection ${selected}`, () => execute(session, `return document.querySelectorAll('.hand .card.selected').length === ${selected};`));
-    }
-    if (!await clickButton(session, 'Potwierdź wymianę')) throw new Error('exchange confirm unavailable');
+    await dragNextExchangeCard(session, 0, mobile);
+    await waitFor('exchange physical assignment 1', () => execute(session, `
+      return document.querySelectorAll('.hand-slot.is-exchange-staged').length === 1;
+    `), 1_000);
+    await dragNextExchangeCard(session, 1, mobile);
+    await waitFor('exchange physical commit', () => execute(session, `
+      const state = document.querySelector('.material-exchange-state')?.getAttribute('data-exchange-material-state');
+      const heading = document.querySelector('.decision-card h2')?.textContent?.trim() ?? '';
+      return state === 'active' || state === 'settled' || heading === 'Ile ostatecznie grasz?';
+    `), 2_000);
     counters.exchanges += 1;
     return 'exchange';
   }
@@ -336,7 +401,7 @@ async function runFullMatch(label, width, height, mobile) {
         maxRevision = Math.max(maxRevision, current.revision);
       }
 
-      await takeDecision(session, current, counters);
+      await takeDecision(session, current, counters, mobile);
       counters.decisions += 1;
       const previousRevision = current.revision;
 

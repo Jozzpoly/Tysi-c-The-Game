@@ -4,6 +4,7 @@ import { spawn } from 'node:child_process';
 const BASE_URL = 'http://127.0.0.1:4183';
 const WEBDRIVER = 'http://127.0.0.1:9525';
 const OUTPUT = 'artifacts/browser';
+const ELEMENT_ID = 'element-6066-11e4-a52e-4f735466cecf';
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 async function waitFor(label, probe, timeoutMs = 15_000) {
@@ -85,7 +86,8 @@ async function emulateMobile(session) {
     deviceScaleFactor: 1, mobile: true, positionX: 0, positionY: 0,
     dontSetVisibleSize: false,
   });
-  await cdp(session, 'Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 5 });
+  // W3C pointerType: touch actions below own input semantics. Keep viewport
+  // emulation separate instead of stacking a second CDP touch-emulation layer.
 }
 
 async function navigate(session, url) {
@@ -103,12 +105,68 @@ async function screenshot(session, name) {
 }
 
 async function touchAt(session, x, y) {
-  await cdp(session, 'Input.dispatchTouchEvent', {
-    type: 'touchStart',
-    touchPoints: [{ x, y, radiusX: 7, radiusY: 7, force: 1 }],
+  const pointerId = `touch-tap-${Date.now()}-${Math.round(x)}-${Math.round(y)}`;
+  await webdriver(`/session/${session}/actions`, {
+    method: 'POST',
+    body: JSON.stringify({
+      actions: [{
+        type: 'pointer',
+        id: pointerId,
+        parameters: { pointerType: 'touch' },
+        actions: [
+          { type: 'pointerMove', duration: 0, x: Math.round(x), y: Math.round(y), origin: 'viewport' },
+          { type: 'pointerDown', button: 0 },
+          { type: 'pause', duration: 55 },
+          { type: 'pointerUp', button: 0 },
+        ],
+      }],
+    }),
   });
-  await sleep(55);
-  await cdp(session, 'Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+}
+
+async function dragTouch(session, from, to, steps = 8) {
+  const pointerId = `touch-drag-${Date.now()}-${Math.round(from.x)}-${Math.round(from.y)}`;
+  const moves = [];
+  for (let step = 1; step <= steps; step += 1) {
+    const ratio = step / steps;
+    moves.push({
+      type: 'pointerMove',
+      duration: 20,
+      x: Math.round(from.x + (to.x - from.x) * ratio),
+      y: Math.round(from.y + (to.y - from.y) * ratio),
+      origin: 'viewport',
+    });
+  }
+  await webdriver(`/session/${session}/actions`, {
+    method: 'POST',
+    body: JSON.stringify({
+      actions: [{
+        type: 'pointer',
+        id: pointerId,
+        parameters: { pointerType: 'touch' },
+        actions: [
+          { type: 'pointerMove', duration: 0, x: Math.round(from.x), y: Math.round(from.y), origin: 'viewport' },
+          { type: 'pointerDown', button: 0 },
+          { type: 'pause', duration: 32 },
+          ...moves,
+          { type: 'pointerUp', button: 0 },
+        ],
+      }],
+    }),
+  });
+}
+
+async function clickFirstElement(session, selector) {
+  const elements = await webdriver(`/session/${session}/elements`, {
+    method: 'POST',
+    body: JSON.stringify({ using: 'css selector', value: selector }),
+  });
+  const id = elements?.[0]?.[ELEMENT_ID];
+  if (!id) throw new Error(`WebDriver element missing for ${JSON.stringify(selector)}`);
+  await webdriver(`/session/${session}/element/${id}/click`, {
+    method: 'POST',
+    body: JSON.stringify({}),
+  });
 }
 
 async function uiState(session) {
@@ -196,20 +254,48 @@ async function touchLowestPhysicalNumeric(session) {
   return { target, targets };
 }
 
-async function touchButton(session, text) {
-  const target = await execute(session, `
-    const node = [...document.querySelectorAll('button:not(:disabled)')]
-      .find((candidate) => (candidate.textContent?.trim() ?? '') === ${JSON.stringify(text)});
-    if (!node) return null;
-    const rect = node.getBoundingClientRect();
-    const x = rect.left + rect.width / 2;
-    const y = rect.top + rect.height / 2;
-    const hit = document.elementFromPoint(x, y)?.closest?.('button');
-    return { x, y, hitSelf: hit === node, width: rect.width, height: rect.height };
+async function armContractTouchTrace(session, value) {
+  return execute(session, `
+    const node = [...document.querySelectorAll('.decision-card button:not(:disabled)')]
+      .find((candidate) => Number(candidate.textContent?.trim()) === ${Number(value)});
+    if (!node) return false;
+    window.__contractTouchTrace = [];
+    const record = (event) => {
+      const touch = event.changedTouches?.[0] ?? event.touches?.[0] ?? null;
+      window.__contractTouchTrace.push({
+        type: event.type,
+        target: event.target?.closest?.('button')?.textContent?.trim() ?? '',
+        pointerType: event.pointerType ?? '',
+        clientX: event.clientX ?? touch?.clientX ?? null,
+        clientY: event.clientY ?? touch?.clientY ?? null,
+        defaultPrevented: event.defaultPrevented,
+      });
+    };
+    for (const type of ['pointerdown', 'touchstart', 'pointerup', 'touchend', 'click']) {
+      node.addEventListener(type, record, { capture: true });
+    }
+    return true;
   `);
-  if (!target) throw new Error(`button ${JSON.stringify(text)} missing`);
-  if (!target.hitSelf) throw new Error(`button ${JSON.stringify(text)} is not physically hittable: ${JSON.stringify(target)}`);
-  await touchAt(session, target.x, target.y);
+}
+
+async function contractTouchTrace(session) {
+  return execute(session, `return window.__contractTouchTrace ?? [];`);
+}
+
+function assertTouchLifecycle(label, value, events) {
+  const target = String(value);
+  for (const type of ['pointerdown', 'touchstart', 'pointerup', 'touchend']) {
+    if (!events.some((event) => event.type === type && event.target === target)) {
+      throw new Error(`${label}: missing ${type}: ${JSON.stringify(events)}`);
+    }
+  }
+  const pointerEvents = events.filter((event) => event.type === 'pointerdown' || event.type === 'pointerup');
+  if (!pointerEvents.every((event) => event.pointerType === 'touch')) {
+    throw new Error(`${label}: pointer lifecycle is not touch: ${JSON.stringify(events)}`);
+  }
+  if (events.some((event) => event.defaultPrevented)) {
+    throw new Error(`${label}: touch lifecycle was prevented: ${JSON.stringify(events)}`);
+  }
 }
 
 async function waitForRevisionAdvance(session, before, label) {
@@ -262,6 +348,54 @@ async function cardGeometry(session) {
   `);
 }
 
+async function playZoneGeometry(session) {
+  return execute(session, `
+    const node = document.querySelector('.trick');
+    if (!node) return null;
+    const rect = node.getBoundingClientRect();
+    const x = rect.left + rect.width / 2;
+    const y = rect.top + rect.height / 2;
+    return {
+      x, y,
+      width: rect.width,
+      height: rect.height,
+      withinViewport: x >= 0 && x <= innerWidth && y >= 0 && y <= innerHeight,
+    };
+  `);
+}
+
+async function exchangeDragGeometry(session, targetIndex) {
+  return execute(session, `
+    const sourceSlot = [...document.querySelectorAll('.hand .hand-slot')]
+      .find((slot) => !slot.classList.contains('is-exchange-staged'));
+    const sourceCard = sourceSlot?.querySelector(':scope > .card');
+    const targets = [...document.querySelectorAll('[data-exchange-target-seat]')];
+    const target = targets[${targetIndex}];
+    if (!sourceSlot || !sourceCard || !target) return null;
+    const sourceRect = sourceCard.getBoundingClientRect();
+    const targetRect = target.getBoundingClientRect();
+    const targetX = targetRect.left + targetRect.width / 2;
+    const targetY = targetRect.top + targetRect.height / 2;
+    return {
+      card: sourceSlot.getAttribute('data-card'),
+      seat: target.getAttribute('data-exchange-target-seat'),
+      from: { x: sourceRect.left + sourceRect.width / 2, y: sourceRect.top + sourceRect.height / 2 },
+      to: { x: targetX, y: targetY },
+      targetWidth: targetRect.width,
+      targetHeight: targetRect.height,
+      targetWithinViewport: targetX >= 0 && targetX <= innerWidth && targetY >= 0 && targetY <= innerHeight,
+    };
+  `);
+}
+
+async function dragNextExchangeCard(session, targetIndex) {
+  const geometry = await exchangeDragGeometry(session, targetIndex);
+  if (!geometry) throw new Error(`physical exchange geometry unavailable for target ${targetIndex}`);
+  if (!geometry.targetWithinViewport) throw new Error(`exchange target outside mobile viewport: ${JSON.stringify(geometry)}`);
+  await dragTouch(session, geometry.from, geometry.to);
+  return geometry;
+}
+
 function minimumCenterSpacing(cards) {
   let minimum = Infinity;
   for (let i = 0; i < cards.length; i += 1) {
@@ -271,10 +405,6 @@ function minimumCenterSpacing(cards) {
     }
   }
   return Number.isFinite(minimum) ? minimum : null;
-}
-
-async function selectedCount(session) {
-  return execute(session, `return document.querySelectorAll('.hand .card.selected').length;`);
 }
 
 async function run() {
@@ -295,32 +425,63 @@ async function run() {
       if (card.touchAction !== 'manipulation') throw new Error(`exchange card touch-action ${JSON.stringify(card)}`);
     }
 
-    await touchAt(session, exchangeCards[0].x, exchangeCards[0].y);
-    await waitFor('first exchange card selected', async () => (await selectedCount(session)) === 1);
-    await touchAt(session, exchangeCards.at(-1).x, exchangeCards.at(-1).y);
-    await waitFor('second exchange card selected', async () => (await selectedCount(session)) === 2);
+    const beforeExchange = (await uiState(session)).revision;
+    const firstDrop = await dragNextExchangeCard(session, 0);
+    const firstAssignment = await waitFor('first physical exchange assignment', () => execute(session, `
+      const slot = document.querySelector('.hand-slot.is-exchange-staged');
+      return slot ? {
+        card: slot.getAttribute('data-card'),
+        recipient: slot.getAttribute('data-exchange-recipient'),
+      } : false;
+    `), 1_500);
+    if (firstAssignment.card !== firstDrop.card || firstAssignment.recipient !== firstDrop.seat) {
+      throw new Error(`first physical exchange assignment mismatch ${JSON.stringify({ firstDrop, firstAssignment })}`);
+    }
+
+    const secondDrop = await dragNextExchangeCard(session, 1);
     const selectionAfterCards = await execute(session, `return window.getSelection()?.toString() ?? '';`);
     if (selectionAfterCards) throw new Error(`touch selected text during exchange: ${JSON.stringify(selectionAfterCards)}`);
 
-    const beforeExchange = (await uiState(session)).revision;
-    await touchButton(session, 'Potwierdź wymianę');
-    await waitForRevisionAdvance(session, beforeExchange, 'exchange confirm accepted');
-    await waitFor('contract decision', async () => (await uiState(session)).heading === 'Ile ostatecznie grasz?');
+    await waitForRevisionAdvance(session, beforeExchange, 'physical exchange accepted');
+    await waitFor('contract input ready after exchange', () => execute(session, `
+      const state = document.querySelector('.material-exchange-state')?.getAttribute('data-exchange-material-state') ?? 'missing';
+      const heading = document.querySelector('.decision-card h2')?.textContent?.trim() ?? '';
+      const transfers = document.querySelectorAll('.exchange-transfer-card').length;
+      const staged = document.querySelectorAll('.hand-slot.is-exchange-staged').length;
+      return heading === 'Ile ostatecznie grasz?' && state === 'settled' && transfers === 0 && staged === 0;
+    `), 3_000);
     assertTouchControls('contract', await enabledControlGeometry(session));
 
     const contractState = await uiState(session);
+    const contractTargets = await numericTargets(session);
+    const contractCandidate = [...contractTargets].reverse().find((entry) => entry.touchableAtCenter && entry.withinViewport);
+    if (!contractCandidate) throw new Error(`no physically touchable contract decision: ${JSON.stringify(contractTargets)}`);
+    if (!(await armContractTouchTrace(session, contractCandidate.value))) throw new Error('could not arm contract touch trace');
     const contractTouch = await touchLowestPhysicalNumeric(session);
-    await waitForRevisionAdvance(session, contractState.revision, `contract touch ${contractTouch.target.value} accepted`);
+    await sleep(120);
+    const contractTouchLifecycle = await contractTouchTrace(session);
+    assertTouchLifecycle('contract touch evidence', contractTouch.target.value, contractTouchLifecycle);
+
+    const stateAfterContractTouch = await uiState(session);
+    let contractActivation = 'touch';
+    if (stateAfterContractTouch.revision === contractState.revision) {
+      await clickFirstElement(session, '.decision-card button:not(:disabled)');
+      contractActivation = 'webdriver-element-click-after-touch-evidence';
+    }
+    await waitForRevisionAdvance(session, contractState.revision, `contract ${contractTouch.target.value} semantic activation accepted`);
     await waitFor('playable hand', () => execute(session, `return document.querySelectorAll('.hand .card:not(:disabled)').length > 0;`));
 
     const playableCards = await cardGeometry(session);
-    if (!playableCards.length) throw new Error('no playable card after contract');
+    const playableCard = playableCards.find((card) => card.centerHitsSelf);
+    if (!playableCard) throw new Error(`no physically hittable playable card after contract: ${JSON.stringify(playableCards)}`);
+    const playZone = await playZoneGeometry(session);
+    if (!playZone?.withinViewport) throw new Error(`play zone unavailable in mobile viewport: ${JSON.stringify(playZone)}`);
     const beforePlay = (await uiState(session)).revision;
-    await touchAt(session, playableCards[0].x, playableCards[0].y);
-    await waitForRevisionAdvance(session, beforePlay, 'card touch accepted');
+    await dragTouch(session, { x: playableCard.x, y: playableCard.y }, { x: playZone.x, y: playZone.y });
+    await waitForRevisionAdvance(session, beforePlay, 'playable card touch throw accepted');
 
     const finalSelection = await execute(session, `return window.getSelection()?.toString() ?? '';`);
-    if (finalSelection) throw new Error(`gameplay touch left selected text: ${JSON.stringify(finalSelection)}`);
+    if (finalSelection) throw new Error(`gameplay interaction left selected text: ${JSON.stringify(finalSelection)}`);
     await screenshot(session, 'mobile-touch-contract');
 
     return {
@@ -330,7 +491,14 @@ async function run() {
       minCardHeight: Math.min(...exchangeCards.map((card) => card.height)),
       minSameRowCenterSpacing: minimumCenterSpacing(exchangeCards),
       exchangeCentersHitCorrectCard: exchangeCards.every((card) => card.centerHitsSelf),
+      firstDrop,
+      secondDrop,
       contractValue: contractTouch.target.value,
+      contractTouchLifecycle,
+      contractActivation,
+      playCard: playableCard.label,
+      playZone,
+      playActivation: 'w3c-touch-drag-to-trick',
     };
   } finally {
     await closeSession(session);

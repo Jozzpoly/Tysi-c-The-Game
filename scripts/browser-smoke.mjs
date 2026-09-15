@@ -96,6 +96,71 @@ async function cdp(session, cmd, params = {}) {
   });
 }
 
+async function touch(session, type, points) {
+  await cdp(session, 'Input.dispatchTouchEvent', { type, touchPoints: points });
+}
+
+async function dragPointer(session, from, to, mobile, steps = 8) {
+  if (mobile) {
+    await touch(session, 'touchStart', [{ x: from.x, y: from.y, radiusX: 7, radiusY: 7, force: 1 }]);
+    await sleep(35);
+    for (let step = 1; step <= steps; step += 1) {
+      const ratio = step / steps;
+      await touch(session, 'touchMove', [{
+        x: from.x + (to.x - from.x) * ratio,
+        y: from.y + (to.y - from.y) * ratio,
+        radiusX: 7,
+        radiusY: 7,
+        force: 1,
+      }]);
+      await sleep(22);
+    }
+    await touch(session, 'touchEnd', []);
+    return;
+  }
+
+  await cdp(session, 'Input.dispatchMouseEvent', { type: 'mouseMoved', x: from.x, y: from.y });
+  await cdp(session, 'Input.dispatchMouseEvent', {
+    type: 'mousePressed', x: from.x, y: from.y, button: 'left', buttons: 1, clickCount: 1,
+  });
+  await sleep(30);
+  for (let step = 1; step <= steps; step += 1) {
+    const ratio = step / steps;
+    await cdp(session, 'Input.dispatchMouseEvent', {
+      type: 'mouseMoved',
+      x: from.x + (to.x - from.x) * ratio,
+      y: from.y + (to.y - from.y) * ratio,
+      button: 'left',
+      buttons: 1,
+    });
+    await sleep(20);
+  }
+  await cdp(session, 'Input.dispatchMouseEvent', {
+    type: 'mouseReleased', x: to.x, y: to.y, button: 'left', buttons: 0, clickCount: 1,
+  });
+}
+
+async function dragNextExchangeCard(session, targetIndex, mobile) {
+  const geometry = await execute(session, `
+    const sourceSlot = [...document.querySelectorAll('.hand .hand-slot')]
+      .find((slot) => !slot.classList.contains('is-exchange-staged'));
+    const sourceCard = sourceSlot?.querySelector(':scope > .card');
+    const target = [...document.querySelectorAll('[data-exchange-target-seat]')][${targetIndex}];
+    if (!sourceSlot || !sourceCard || !target) return null;
+    const sourceRect = sourceCard.getBoundingClientRect();
+    const targetRect = target.getBoundingClientRect();
+    return {
+      card: sourceSlot.getAttribute('data-card'),
+      seat: target.getAttribute('data-exchange-target-seat'),
+      from: { x: sourceRect.left + sourceRect.width / 2, y: sourceRect.top + sourceRect.height / 2 },
+      to: { x: targetRect.left + targetRect.width / 2, y: targetRect.top + targetRect.height / 2 },
+    };
+  `);
+  if (!geometry) throw new Error(`Physical exchange geometry unavailable for target ${targetIndex}`);
+  await dragPointer(session, geometry.from, geometry.to, mobile);
+  return geometry;
+}
+
 async function emulateViewport(session, width, height, mobile) {
   await cdp(session, 'Emulation.setDeviceMetricsOverride', {
     width,
@@ -164,16 +229,6 @@ async function clickNumericDecisionButton(session, mode) {
   return clicked;
 }
 
-async function clickFirstUnselectedHandCard(session) {
-  const clicked = await execute(session, `
-    const card = [...document.querySelectorAll('.hand .card:not(:disabled)')].find((node) => !node.classList.contains('selected'));
-    if (!card) return false;
-    card.click();
-    return true;
-  `);
-  if (!clicked) throw new Error('No unselected enabled hand card found');
-}
-
 async function clickFirstPlayableHandCard(session) {
   const clicked = await execute(session, `
     const card = document.querySelector('.hand .card:not(:disabled)');
@@ -199,6 +254,10 @@ async function inspectLayout(session) {
       devicePixelRatio: window.devicePixelRatio,
       enabledHandCards: document.querySelectorAll('.hand .card:not(:disabled)').length,
       selectedHandCards: document.querySelectorAll('.hand .card.selected').length,
+      stagedExchangeCards: document.querySelectorAll('.hand-slot.is-exchange-staged').length,
+      exchangeTargets: document.querySelectorAll('[data-exchange-target-seat]').length,
+      hasLegacyExchangeConfirm: [...document.querySelectorAll('.decision-card button')]
+        .some((button) => button.textContent?.trim() === 'Potwierdź wymianę'),
       handCards: document.querySelectorAll('.hand .card').length,
       handClientWidth: hand?.clientWidth ?? 0,
       handScrollWidth: hand?.scrollWidth ?? 0,
@@ -278,15 +337,24 @@ async function runDeclarerViewport(label, width, height, mobile) {
     const exchange = await inspectLayout(session);
     assertViewport(`${label}: declarer exchange`, exchange, width);
     if (exchange.handCards !== 10 || exchange.enabledHandCards !== 10) {
-      throw new Error(`${label}: expected 10 selectable cards at exchange, got hand=${exchange.handCards}, enabled=${exchange.enabledHandCards}`);
+      throw new Error(`${label}: expected 10 draggable cards at exchange, got hand=${exchange.handCards}, enabled=${exchange.enabledHandCards}`);
+    }
+    if (exchange.exchangeTargets !== 2 || exchange.hasLegacyExchangeConfirm) {
+      throw new Error(`${label}: physical exchange territories are not authoritative ${JSON.stringify(exchange)}`);
     }
     await screenshot(session, `${label}-declarer-exchange`);
 
-    await clickFirstUnselectedHandCard(session);
-    await waitFor(`${label}: first exchange card selection`, async () => (await inspectLayout(session)).selectedHandCards === 1);
-    await clickFirstUnselectedHandCard(session);
-    await waitFor(`${label}: second exchange card selection`, async () => (await inspectLayout(session)).selectedHandCards === 2);
-    await clickButtonByText(session, 'Potwierdź wymianę');
+    const firstDrop = await dragNextExchangeCard(session, 0, mobile);
+    await waitFor(`${label}: first physical exchange card`, async () => {
+      const layout = await inspectLayout(session);
+      return layout.stagedExchangeCards === 1 ? layout : false;
+    }, 2_000);
+    await screenshot(session, `${label}-declarer-exchange-first-card`);
+
+    const secondDrop = await dragNextExchangeCard(session, 1, mobile);
+    if (firstDrop.seat === secondDrop.seat || firstDrop.card === secondDrop.card) {
+      throw new Error(`${label}: spatial exchange did not target two distinct recipients/cards ${JSON.stringify({ firstDrop, secondDrop })}`);
+    }
 
     await waitForText(session, 'Ile ostatecznie grasz?');
     const contract = await inspectLayout(session);
@@ -307,7 +375,7 @@ async function runDeclarerViewport(label, width, height, mobile) {
     assertViewport(`${label}: declarer completed trick`, completed, width);
     await screenshot(session, `${label}-declarer-completed-trick`);
 
-    return { exchange, contract, contractValue, lead, completed };
+    return { exchange, firstDrop, secondDrop, contract, contractValue, lead, completed };
   } finally {
     await closeSession(session);
   }

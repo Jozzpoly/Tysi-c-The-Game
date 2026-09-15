@@ -75,6 +75,139 @@ async function cdp(session, cmd, params = {}) {
   });
 }
 
+async function touch(session, type, points) {
+  await cdp(session, 'Input.dispatchTouchEvent', { type, touchPoints: points });
+}
+
+async function dragPointer(session, from, to, mobile, steps = 8) {
+  if (mobile) {
+    await touch(session, 'touchStart', [{ x: from.x, y: from.y, radiusX: 7, radiusY: 7, force: 1 }]);
+    await sleep(32);
+    for (let step = 1; step <= steps; step += 1) {
+      const ratio = step / steps;
+      await touch(session, 'touchMove', [{
+        x: from.x + (to.x - from.x) * ratio,
+        y: from.y + (to.y - from.y) * ratio,
+        radiusX: 7, radiusY: 7, force: 1,
+      }]);
+      await sleep(20);
+    }
+    await touch(session, 'touchEnd', []);
+    return;
+  }
+
+  await cdp(session, 'Input.dispatchMouseEvent', { type: 'mouseMoved', x: from.x, y: from.y });
+  await cdp(session, 'Input.dispatchMouseEvent', {
+    type: 'mousePressed', x: from.x, y: from.y, button: 'left', buttons: 1, clickCount: 1,
+  });
+  await sleep(28);
+  for (let step = 1; step <= steps; step += 1) {
+    const ratio = step / steps;
+    await cdp(session, 'Input.dispatchMouseEvent', {
+      type: 'mouseMoved',
+      x: from.x + (to.x - from.x) * ratio,
+      y: from.y + (to.y - from.y) * ratio,
+      button: 'left',
+      buttons: 1,
+    });
+    await sleep(18);
+  }
+  await cdp(session, 'Input.dispatchMouseEvent', {
+    type: 'mouseReleased', x: to.x, y: to.y, button: 'left', buttons: 0, clickCount: 1,
+  });
+}
+
+async function exchangeDragGeometry(session, targetIndex) {
+  return execute(session, `
+    const sourceSlot = [...document.querySelectorAll('.hand .hand-slot')]
+      .find((slot) => !slot.classList.contains('is-exchange-staged'));
+    const sourceCard = sourceSlot?.querySelector(':scope > .card');
+    const targets = [...document.querySelectorAll('[data-exchange-target-seat]')];
+    const target = targets[${targetIndex}];
+    if (!sourceSlot || !sourceCard || !target) return null;
+    const sourceRect = sourceCard.getBoundingClientRect();
+    const targetRect = target.getBoundingClientRect();
+    return {
+      card: sourceSlot.getAttribute('data-card'),
+      seat: target.getAttribute('data-exchange-target-seat'),
+      from: { x: sourceRect.left + sourceRect.width / 2, y: sourceRect.top + sourceRect.height / 2 },
+      to: { x: targetRect.left + targetRect.width / 2, y: targetRect.top + targetRect.height / 2 },
+    };
+  `);
+}
+
+async function dragNextExchangeCard(session, targetIndex, mobile) {
+  const geometry = await exchangeDragGeometry(session, targetIndex);
+  if (!geometry) throw new Error(`physical exchange geometry unavailable for target ${targetIndex}`);
+  await dragPointer(session, geometry.from, geometry.to, mobile);
+  return geometry;
+}
+
+async function inspectExchangeDraft(session) {
+  return execute(session, `
+    const rectData = (rect) => rect ? ({
+      left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom,
+      width: rect.width, height: rect.height,
+      centerX: rect.left + rect.width / 2,
+      centerY: rect.top + rect.height / 2,
+    }) : null;
+    const staged = [...document.querySelectorAll('.hand-slot.is-exchange-staged')].map((slot) => {
+      const card = slot.querySelector(':scope > .card');
+      const rect = card?.getBoundingClientRect();
+      const slotRect = slot.getBoundingClientRect();
+      const recipient = slot.getAttribute('data-exchange-recipient') ?? '';
+      const target = document.querySelector('[data-exchange-target-seat="' + recipient + '"]');
+      const targetRect = target?.getBoundingClientRect();
+      const stageTarget = target?.querySelector('.card-backs');
+      const stageTargetRect = stageTarget?.getBoundingClientRect();
+      const centerX = rect ? rect.left + rect.width / 2 : null;
+      const centerY = rect ? rect.top + rect.height / 2 : null;
+      const stageCenterX = stageTargetRect ? stageTargetRect.left + stageTargetRect.width / 2 : null;
+      const stageCenterY = stageTargetRect ? stageTargetRect.top + stageTargetRect.height / 2 : null;
+      const stageCenterDistance = centerX !== null && centerY !== null && stageCenterX !== null && stageCenterY !== null
+        ? Math.hypot(centerX - stageCenterX, centerY - stageCenterY)
+        : null;
+      const slotStyle = getComputedStyle(slot);
+      const cardStyle = card ? getComputedStyle(card) : null;
+      return {
+        card: slot.getAttribute('data-card'),
+        recipient,
+        centerX,
+        centerY,
+        stageXInline: slot.style.getPropertyValue('--exchange-stage-x'),
+        stageYInline: slot.style.getPropertyValue('--exchange-stage-y'),
+        computedTranslate: slotStyle.translate,
+        computedScale: slotStyle.scale,
+        computedTransform: slotStyle.transform,
+        cardTransform: cardStyle?.transform ?? null,
+        slotRect: rectData(slotRect),
+        cardRect: rectData(rect),
+        targetRect: rectData(targetRect),
+        stageTargetRect: rectData(stageTargetRect),
+        stageCenterDistance,
+        atRecipientHand: stageCenterDistance !== null && stageCenterDistance <= 8,
+        insideRecipient: Boolean(rect && targetRect
+          && centerX >= targetRect.left && centerX <= targetRect.right
+          && centerY >= targetRect.top && centerY <= targetRect.bottom),
+      };
+    });
+    const targets = [...document.querySelectorAll('[data-exchange-target-seat]')].map((target) => ({
+      seat: target.getAttribute('data-exchange-target-seat'),
+      assignedCard: target.getAttribute('data-exchange-assigned-card') ?? '',
+      hot: target.classList.contains('is-exchange-hot'),
+      rect: rectData(target.getBoundingClientRect()),
+    }));
+    return {
+      staged,
+      targets,
+      hasLegacyConfirm: [...document.querySelectorAll('.decision-card button')]
+        .some((button) => button.textContent?.trim() === 'Potwierdź wymianę'),
+      help: document.querySelector('.physical-exchange-help')?.textContent?.trim() ?? '',
+      materialActive: Boolean(document.querySelector('.material-exchange-state.is-active')),
+    };
+  `);
+}
+
 async function screenshot(session, name) {
   const base64 = await webdriver(`/session/${session}/screenshot`);
   await writeFile(`${OUTPUT}/${name}.png`, Buffer.from(base64, 'base64'));
@@ -106,16 +239,6 @@ async function clickHighestBid(session) {
     chosen.button.click();
     return chosen.value;
   `);
-}
-
-async function clickFirstUnselectedHandCard(session) {
-  const clicked = await execute(session, `
-    const card = [...document.querySelectorAll('.hand .card:not(:disabled)')].find((node) => !node.classList.contains('selected'));
-    if (!card) return false;
-    card.click();
-    return true;
-  `);
-  if (!clicked) throw new Error('no unselected enabled hand card');
 }
 
 async function driveToTransfer(session, label) {
@@ -186,8 +309,14 @@ async function inspectTalonSettled(session) {
 async function inspectExchangeTransfer(session) {
   return execute(session, `
     const transfers = [...document.querySelectorAll('.exchange-transfer-card')];
-    const materialSlots = [...document.querySelectorAll('.hand-slot.is-exchange-materializing')];
-    const receiving = [...document.querySelectorAll('[data-seat-anchor].is-exchange-receiving')];
+    const materialMarkers = [...document.querySelectorAll('[data-exchange-materializing-card]')];
+    const materialSlots = materialMarkers
+      .map((marker) => marker.closest('.hand-slot'))
+      .filter(Boolean);
+    const receivingMarkers = [...document.querySelectorAll('[data-exchange-receiving-seat]')];
+    const receiving = receivingMarkers
+      .map((marker) => marker.closest('[data-seat-anchor]'))
+      .filter(Boolean);
     return {
       state: document.querySelector('.material-exchange-state')?.getAttribute('data-exchange-material-state') ?? 'missing',
       transfers: transfers.length,
@@ -200,7 +329,7 @@ async function inspectExchangeTransfer(session) {
         const card = node.querySelector(':scope > .card');
         return card && getComputedStyle(card).visibility === 'hidden';
       }).length,
-      receivingAnchors: receiving.length,
+      receivingAnchors: receivingMarkers.length,
       hiddenRecipientBacks: receiving.filter((node) => {
         const back = node.querySelector('.card-backs i:last-child');
         return back && getComputedStyle(back).visibility === 'hidden';
@@ -220,8 +349,8 @@ async function inspectExchangeSettled(session) {
     return {
       state: document.querySelector('.material-exchange-state')?.getAttribute('data-exchange-material-state') ?? 'missing',
       transfers: document.querySelectorAll('.exchange-transfer-card').length,
-      materialSlots: document.querySelectorAll('.hand-slot.is-exchange-materializing').length,
-      receivingAnchors: document.querySelectorAll('[data-seat-anchor].is-exchange-receiving').length,
+      materialSlots: document.querySelectorAll('[data-exchange-materializing-card]').length,
+      receivingAnchors: document.querySelectorAll('[data-exchange-receiving-seat]').length,
       handCards: document.querySelectorAll('.hand .card').length,
       decisionHeading: document.querySelector('.decision-card h2')?.textContent?.trim() ?? '',
       numericButtons,
@@ -277,21 +406,53 @@ async function runDeclarerViewport(label, width, height, mobile) {
         : false;
     }, 3_000);
     if (talonSettled.scrollWidth > talonSettled.width + 1) throw new Error(`${label}: talon transfer introduced horizontal overflow ${JSON.stringify(talonSettled)}`);
-    await screenshot(session, `${label}-talon-transfer-settled`);
 
-    await clickFirstUnselectedHandCard(session);
-    await waitFor(`${label}: first exchange selection`, () => execute(session, `return document.querySelectorAll('.hand .card.selected').length === 1;`));
-    await clickFirstUnselectedHandCard(session);
-    await waitFor(`${label}: second exchange selection`, () => execute(session, `return document.querySelectorAll('.hand .card.selected').length === 2;`));
-    await clickButtonByText(session, 'Potwierdź wymianę');
+    const initialDraft = await inspectExchangeDraft(session);
+    if (initialDraft.hasLegacyConfirm) throw new Error(`${label}: legacy confirm button survived physical exchange ${JSON.stringify(initialDraft)}`);
+    if (initialDraft.targets.length !== 2 || initialDraft.staged.length !== 0) throw new Error(`${label}: physical recipient territories not ready ${JSON.stringify(initialDraft)}`);
+    await screenshot(session, `${label}-physical-exchange-ready`);
 
-    await waitFor(`${label}: exchange material active`, () => execute(session, `return Boolean(document.querySelector('.material-exchange-state.is-active'));`), 1_000);
-    await waitFor(`${label}: two exchange cards`, async () => (await inspectExchangeTransfer(session)).transfers === 2, 500);
-    await sleep(90);
-    const exchangeFlight = await inspectExchangeTransfer(session);
-    if (exchangeFlight.state !== 'active' || exchangeFlight.transfers !== 2 || exchangeFlight.faces !== 2 || exchangeFlight.backs !== 0) {
-      throw new Error(`${label}: declarer must see exactly two known outgoing card faces ${JSON.stringify(exchangeFlight)}`);
+    const firstDrop = await dragNextExchangeCard(session, 0, mobile);
+    const firstDraft = await waitFor(`${label}: first physical recipient assignment`, async () => {
+      const state = await inspectExchangeDraft(session);
+      return state.staged.length === 1 ? state : false;
+    }, 1_000);
+    if (firstDraft.hasLegacyConfirm) throw new Error(`${label}: physical assignment exposed legacy confirmation ${JSON.stringify(firstDraft)}`);
+    if (firstDraft.staged[0].recipient !== firstDrop.seat || firstDraft.staged[0].card !== firstDrop.card || !firstDraft.staged[0].insideRecipient || !firstDraft.staged[0].atRecipientHand) {
+      throw new Error(`${label}: first recipient was not derived from spatial drop target and staged at its physical hand ${JSON.stringify({ firstDrop, firstDraft })}`);
     }
+    if (firstDraft.materialActive) throw new Error(`${label}: exchange committed before both physical recipients were assigned ${JSON.stringify(firstDraft)}`);
+    await screenshot(session, `${label}-physical-exchange-first-card`);
+
+    const secondDrop = await dragNextExchangeCard(session, 1, mobile);
+    const secondDraft = await waitFor(`${label}: second physical recipient assignment`, async () => {
+      const state = await inspectExchangeDraft(session);
+      return state.staged.length === 2 ? state : false;
+    }, 170);
+    const recipientMap = new Map(secondDraft.staged.map((entry) => [entry.recipient, entry.card]));
+    if (recipientMap.get(firstDrop.seat) !== firstDrop.card || recipientMap.get(secondDrop.seat) !== secondDrop.card) {
+      throw new Error(`${label}: two-card exchange mapping does not match spatial recipients ${JSON.stringify({ firstDrop, secondDrop, secondDraft })}`);
+    }
+    if (!secondDraft.staged.every((entry) => entry.insideRecipient && entry.atRecipientHand)) {
+      throw new Error(`${label}: staged cards are not physically resident at recipient hands ${JSON.stringify(secondDraft)}`);
+    }
+    await screenshot(session, `${label}-physical-exchange-two-cards`);
+
+    const exchangeFlight = await waitFor(`${label}: complete declarer exchange flight`, async () => {
+      const state = await inspectExchangeTransfer(session);
+      return state.state === 'active'
+        && state.transfers === 2
+        && state.faces === 2
+        && state.backs === 0
+        && state.knownCards.length === 2
+        && new Set(state.knownCards).size === 2
+        && state.receivingAnchors === 2
+        && state.hiddenRecipientBacks === 2
+        && state.enabledHandCards === 0
+        && state.decisionHeading !== 'Ile ostatecznie grasz?'
+        ? state
+        : false;
+    }, 1_500);
     if (exchangeFlight.knownCards.length !== 2 || new Set(exchangeFlight.knownCards).size !== 2) {
       throw new Error(`${label}: declarer transfer lost exact outgoing identities ${JSON.stringify(exchangeFlight)}`);
     }
@@ -324,7 +485,7 @@ async function runDeclarerViewport(label, width, height, mobile) {
     if (exchangeSettled.scrollWidth > exchangeSettled.width + 1) throw new Error(`${label}: exchange transfer introduced horizontal overflow ${JSON.stringify(exchangeSettled)}`);
     await screenshot(session, `${label}-exchange-transfer-settled`);
 
-    return { label, talonFlight, talonSettled, exchangeFlight, exchangeSettled };
+    return { label, talonFlight, talonSettled, firstDrop, firstDraft, secondDrop, secondDraft, exchangeFlight, exchangeSettled };
   } finally {
     await closeSession(session);
   }
@@ -352,10 +513,20 @@ async function runDefenderPrivacyViewport(label, width, height, mobile) {
       return marker?.getAttribute('data-talon-material-state') === 'settled' && talon && getComputedStyle(talon).display === 'none';
     `), 2_000);
 
-    await waitFor(`${label}: private exchange material active`, () => execute(session, `return Boolean(document.querySelector('.material-exchange-state.is-active'));`), 5_000);
-    await waitFor(`${label}: private exchange cards`, async () => (await inspectExchangeTransfer(session)).transfers === 2, 500);
-    await sleep(80);
-    const privateFlight = await inspectExchangeTransfer(session);
+    const privateFlight = await waitFor(`${label}: complete private exchange flight`, async () => {
+      const state = await inspectExchangeTransfer(session);
+      return state.state === 'active'
+        && state.transfers === 2
+        && state.faces === 0
+        && state.backs === 2
+        && state.knownCards.length === 1
+        && state.materialSlots.length === 1
+        && state.hiddenMaterialTargets === 1
+        && state.receivingAnchors === 2
+        && state.hiddenRecipientBacks === 1
+        ? state
+        : false;
+    }, 5_000);
     if (privateFlight.state !== 'active' || privateFlight.transfers !== 2 || privateFlight.faces !== 0 || privateFlight.backs !== 2) {
       throw new Error(`${label}: defender saw exchange card faces ${JSON.stringify(privateFlight)}`);
     }

@@ -94,6 +94,8 @@ export function MaterialExchangeTransfer({
   onComplete,
 }: MaterialExchangeTransferProps) {
   const [flights, setFlights] = useState<ExchangeFlight[]>([]);
+  const [receivingAnchors, setReceivingAnchors] = useState<HTMLElement[]>([]);
+  const [materializingTarget, setMaterializingTarget] = useState<HTMLElement | null>(null);
   const capturedKey = capturedOutgoing?.map((item) => `${item.card}>${item.to}`).join('|') ?? '';
 
   useLayoutEffect(() => {
@@ -102,6 +104,9 @@ export function MaterialExchangeTransfer({
     const humanIsDeclarer = event.from === humanSeat;
 
     if (!sourceAnchor || recipientAnchors.some((anchor) => !anchor)) {
+      setFlights([]);
+      setReceivingAnchors([]);
+      setMaterializingTarget(null);
       const timer = window.setTimeout(onComplete, 0);
       return () => window.clearTimeout(timer);
     }
@@ -115,12 +120,16 @@ export function MaterialExchangeTransfer({
     const ownTargetCard = ownTargetSlot?.querySelector<HTMLElement>(':scope > .card') ?? null;
 
     if (!humanIsDeclarer && event.recipients.includes(humanSeat) && (!ownTargetSlot || !ownTargetCard)) {
+      setFlights([]);
+      setReceivingAnchors([]);
+      setMaterializingTarget(null);
       const timer = window.setTimeout(onComplete, 0);
       return () => window.clearTimeout(timer);
     }
 
+    const resolvedRecipientAnchors = recipientAnchors as HTMLElement[];
     const nextFlights = event.recipients.map((recipient, index) => {
-      const targetAnchor = recipientAnchors[index]!;
+      const targetAnchor = resolvedRecipientAnchors[index]!;
       if (humanIsDeclarer) {
         const captured = capturedOutgoing?.find((item) => item.to === recipient) ?? null;
         const fallback = sourceBackRect(sourceAnchor, index);
@@ -153,21 +162,21 @@ export function MaterialExchangeTransfer({
       } satisfies ExchangeFlight;
     });
 
-    for (const anchor of recipientAnchors) anchor?.classList.add('is-exchange-receiving');
-    ownTargetSlot?.classList.add('is-exchange-materializing');
+    // These markers are React-owned portals inside the authoritative targets.
+    // They replace the old classList mutation race with GameTable/TactileHand:
+    // CSS can hide the already-authoritative back/card while the transfer object
+    // is still visibly materializing, without React wiping presentation state.
+    setReceivingAnchors(resolvedRecipientAnchors);
+    setMaterializingTarget(ownTargetSlot);
     setFlights(nextFlights);
 
     const timer = window.setTimeout(onComplete, EXCHANGE_TRANSFER_TOTAL_MS);
-    return () => {
-      window.clearTimeout(timer);
-      for (const anchor of recipientAnchors) anchor?.classList.remove('is-exchange-receiving');
-      ownTargetSlot?.classList.remove('is-exchange-materializing');
-    };
+    return () => window.clearTimeout(timer);
   }, [capturedKey, event.from, event.recipients, humanSeat, onComplete, receivedEvent]);
 
   if (flights.length === 0) return null;
 
-  return createPortal(
+  const transferLayer = createPortal(
     <div className="exchange-transfer-layer" aria-hidden="true" data-exchange-transfer-count={flights.length}>
       {flights.map((flight) => {
         const scaleX = flight.from.width > 0 ? flight.to.width / flight.from.width : 1;
@@ -215,5 +224,35 @@ export function MaterialExchangeTransfer({
     </div>,
     document.body,
     'exchange-transfer-layer',
+  );
+
+  const receivingMarkers = receivingAnchors.map((anchor, index) => createPortal(
+    <span
+      className="exchange-receiving-marker"
+      data-exchange-receiving-seat={event.recipients[index]}
+      aria-hidden="true"
+    />,
+    anchor,
+    `exchange-receiving-${event.recipients[index]}`,
+  ));
+
+  const materializingMarker = materializingTarget && receivedEvent
+    ? createPortal(
+      <span
+        className="exchange-materializing-marker"
+        data-exchange-materializing-card={receivedEvent.card}
+        aria-hidden="true"
+      />,
+      materializingTarget,
+      `exchange-materializing-${receivedEvent.card}`,
+    )
+    : null;
+
+  return (
+    <>
+      {transferLayer}
+      {receivingMarkers}
+      {materializingMarker}
+    </>
   );
 }

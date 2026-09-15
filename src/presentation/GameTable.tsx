@@ -1,4 +1,10 @@
-import { useEffect, useMemo, useState } from 'react';
+import {
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+} from 'react';
 import {
   rankOf,
   suitOf,
@@ -19,6 +25,7 @@ import {
 
 const SUIT_SYMBOL = { spades: '♠', clubs: '♣', diamonds: '♦', hearts: '♥' } as const;
 const ALL_SEATS: readonly Seat[] = [0, 1, 2];
+type ExchangeDraft = Partial<Record<Seat, CardId>>;
 
 export interface GameTableProps {
   projection: SeatProjection;
@@ -52,7 +59,9 @@ function Card({ card, disabled, selected, onClick }: { card: CardId; disabled?: 
 export function GameTable({ projection, seatNames, events = [], message = '', onCommand, onNewGame }: GameTableProps) {
   const view = projection.observation;
   const humanSeat = view.seat;
-  const [selectedTransfer, setSelectedTransfer] = useState<CardId[]>([]);
+  const [exchangeDraft, setExchangeDraft] = useState<ExchangeDraft>({});
+  const [exchangeHoverSeat, setExchangeHoverSeat] = useState<Seat | null>(null);
+  const [exchangeSubmitting, setExchangeSubmitting] = useState(false);
   const [confirmBomb, setConfirmBomb] = useState(false);
   const [trickCompletionStage, setTrickCompletionStage] = useState<TrickCompletionStage>('settled');
   const [trickStageRevision, setTrickStageRevision] = useState<number | null>(null);
@@ -65,7 +74,9 @@ export function GameTable({ projection, seatNames, events = [], message = '', on
   const humanCommands = presentationBlocksInput ? [] : projection.legalCommands;
 
   useEffect(() => {
-    setSelectedTransfer([]);
+    setExchangeDraft({});
+    setExchangeHoverSeat(null);
+    setExchangeSubmitting(false);
     setConfirmBomb(false);
   }, [view.revision]);
 
@@ -118,23 +129,138 @@ export function GameTable({ projection, seatNames, events = [], message = '', on
   );
   const contracts = humanCommands.filter((command): command is Extract<Command, { type: 'contract' }> => command.type === 'contract');
   const nextHand = humanCommands.find((command): command is Extract<Command, { type: 'next-hand' }> => command.type === 'next-hand');
-  const exchangeMode = view.phase === 'exchange' && exchanges.length > 0;
+  const exchangeMode = view.phase === 'exchange' && exchanges.length > 0 && !confirmBomb;
+  const selectedTransfer: CardId[] = opponentSeats.flatMap((seat) => {
+    const card = exchangeDraft[seat];
+    return card ? [card] : [];
+  });
+  const assignedExchangeCount = selectedTransfer.length;
   const handActionable = exchangeMode ? new Set<CardId>(humanCards) : playable;
   const throwableCards = view.phase === 'trick' ? playable : new Set<CardId>();
 
-  function toggleTransfer(card: CardId) {
-    setSelectedTransfer((current) => {
-      if (current.includes(card)) return current.filter((value) => value !== card);
-      if (current.length >= 2) return [current[1], card];
-      return [...current, card];
+  function stagedSeatForCard(card: CardId): Seat | null {
+    return opponentSeats.find((seat) => exchangeDraft[seat] === card) ?? null;
+  }
+
+  function stageExchangeCard(card: CardId, to: Seat) {
+    if (!exchangeMode || exchangeSubmitting || to === humanSeat || !humanCards.includes(card)) return;
+    setExchangeDraft((current) => {
+      const next: ExchangeDraft = { ...current };
+      for (const seat of opponentSeats) {
+        if (next[seat] === card) delete next[seat];
+      }
+      next[to] = card;
+      return next;
     });
   }
 
-  function confirmTransfer() {
-    if (view.declarer !== humanSeat || selectedTransfer.length !== 2) return;
-    const command = exchanges.find((candidate) => candidate.give[0].card === selectedTransfer[0] && candidate.give[1].card === selectedTransfer[1]);
-    if (command) void onCommand(command);
+  function unstageExchangeCard(card: CardId) {
+    setExchangeDraft((current) => {
+      const next: ExchangeDraft = { ...current };
+      let changed = false;
+      for (const seat of opponentSeats) {
+        if (next[seat] === card) {
+          delete next[seat];
+          changed = true;
+        }
+      }
+      return changed ? next : current;
+    });
   }
+
+  function exchangeCardFromPointerTarget(target: EventTarget | null): CardId | null {
+    if (!(target instanceof Element)) return null;
+    const slot = target.closest<HTMLElement>('.hand-slot[data-card]');
+    return slot?.dataset.card as CardId | undefined ?? null;
+  }
+
+  function exchangeTargetAt(clientX: number, clientY: number): Seat | null {
+    if (!exchangeMode) return null;
+    for (const seat of opponentSeats) {
+      const target = document.querySelector<HTMLElement>(`[data-exchange-target-seat="${seat}"]`);
+      if (!target) continue;
+      const rect = target.getBoundingClientRect();
+      if (clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom) return seat;
+    }
+    return null;
+  }
+
+  function handleExchangePointerMove(event: ReactPointerEvent<HTMLElement>) {
+    if (!exchangeMode || exchangeSubmitting) return;
+    const card = exchangeCardFromPointerTarget(event.target);
+    if (!card || !humanCards.includes(card)) return;
+    const target = exchangeTargetAt(event.clientX, event.clientY);
+    setExchangeHoverSeat((current) => current === target ? current : target);
+  }
+
+  function handleExchangePointerUp(event: ReactPointerEvent<HTMLElement>) {
+    if (!exchangeMode || exchangeSubmitting) return;
+    const card = exchangeCardFromPointerTarget(event.target);
+    if (!card || !humanCards.includes(card)) {
+      setExchangeHoverSeat(null);
+      return;
+    }
+    const target = exchangeTargetAt(event.clientX, event.clientY);
+    if (target !== null) stageExchangeCard(card, target);
+    else if (stagedSeatForCard(card) !== null) unstageExchangeCard(card);
+    setExchangeHoverSeat(null);
+  }
+
+  useLayoutEffect(() => {
+    const clearStagedGeometry = () => {
+      for (const slot of document.querySelectorAll<HTMLElement>('.hand-slot.is-exchange-staged')) {
+        slot.classList.remove('is-exchange-staged');
+        delete slot.dataset.exchangeRecipient;
+        slot.style.removeProperty('--exchange-stage-x');
+        slot.style.removeProperty('--exchange-stage-y');
+      }
+    };
+
+    clearStagedGeometry();
+    if (!exchangeMode) return clearStagedGeometry;
+
+    for (const seat of opponentSeats) {
+      const card = exchangeDraft[seat];
+      if (!card) continue;
+      const slot = document.querySelector<HTMLElement>(`.hand-slot[data-card="${card}"]`);
+      const cardNode = slot?.querySelector<HTMLElement>(':scope > .card');
+      const stageTarget = document.querySelector<HTMLElement>(`[data-exchange-target-seat="${seat}"] .card-backs`);
+      if (!slot || !cardNode || !stageTarget) continue;
+
+      // The tactile hand starts its generic return-to-hand animation before this
+      // parent sees pointer-up. Once the drop is accepted by a recipient, cancel
+      // that return first so staging measures the card's true hand geometry.
+      slot.getAnimations().forEach((animation) => animation.cancel());
+      const source = cardNode.getBoundingClientRect();
+      const target = stageTarget.getBoundingClientRect();
+      const sourceX = source.left + source.width / 2;
+      const sourceY = source.top + source.height / 2;
+      const targetX = target.left + target.width / 2;
+      const targetY = target.top + target.height / 2;
+      slot.style.setProperty('--exchange-stage-x', `${targetX - sourceX}px`);
+      slot.style.setProperty('--exchange-stage-y', `${targetY - sourceY}px`);
+      slot.dataset.exchangeRecipient = String(seat);
+      slot.classList.add('is-exchange-staged');
+    }
+
+    return clearStagedGeometry;
+  }, [exchangeDraft, exchangeMode, view.revision]);
+
+  useEffect(() => {
+    if (!exchangeMode || exchangeSubmitting || opponentSeats.length !== 2) return;
+    const firstCard = exchangeDraft[opponentSeats[0]];
+    const secondCard = exchangeDraft[opponentSeats[1]];
+    if (!firstCard || !secondCard || firstCard === secondCard) return;
+
+    const command = exchanges.find((candidate) => candidate.give.every(({ to, card }) => exchangeDraft[to] === card));
+    if (!command) return;
+
+    const timer = window.setTimeout(() => {
+      setExchangeSubmitting(true);
+      void onCommand(command);
+    }, 180);
+    return () => window.clearTimeout(timer);
+  }, [exchangeDraft, exchangeMode, exchangeSubmitting, exchanges, onCommand]);
 
   function playCard(card: CardId, marriage = false) {
     const command = humanCommands.find(
@@ -146,7 +272,7 @@ export function GameTable({ projection, seatNames, events = [], message = '', on
 
   function activateHandCard(card: CardId) {
     if (exchangeMode) {
-      toggleTransfer(card);
+      if (stagedSeatForCard(card) !== null) unstageExchangeCard(card);
       return;
     }
     if (view.phase === 'trick' && playable.has(card)) playCard(card);
@@ -175,7 +301,13 @@ export function GameTable({ projection, seatNames, events = [], message = '', on
   const winnerSeat = view.winner ?? humanSeat;
 
   return (
-    <main className="app-shell">
+    <main
+      className={`app-shell ${exchangeMode ? 'exchange-mode' : ''}`}
+      data-exchange-submitting={exchangeSubmitting ? 'true' : 'false'}
+      onPointerMove={handleExchangePointerMove}
+      onPointerUp={handleExchangePointerUp}
+      onPointerCancel={() => setExchangeHoverSeat(null)}
+    >
       <header className="topbar">
         <div>
           <div className="eyebrow">Tysiąc The Game</div>
@@ -191,9 +323,11 @@ export function GameTable({ projection, seatNames, events = [], message = '', on
         <div className="opponents">
           {opponentSeats.map((seat) => (
             <div
-              className={`opponent ${showingCompletedTrick && completedWinner === seat && displayedTrickStage !== 'arrival' ? 'trick-winner-source' : ''}`}
+              className={`opponent ${showingCompletedTrick && completedWinner === seat && displayedTrickStage !== 'arrival' ? 'trick-winner-source' : ''} ${exchangeMode ? 'exchange-drop-target' : ''} ${exchangeHoverSeat === seat ? 'is-exchange-hot' : ''} ${exchangeDraft[seat] ? 'has-exchange-card' : ''}`}
               key={seat}
               data-seat-anchor={seat}
+              data-exchange-target-seat={exchangeMode ? seat : undefined}
+              data-exchange-assigned-card={exchangeDraft[seat] ?? ''}
             >
               <div className="seat-line">
                 <strong>{seatName(seat)}</strong>
@@ -292,7 +426,7 @@ export function GameTable({ projection, seatNames, events = [], message = '', on
           )}
 
           {view.status === 'playing' && view.phase === 'exchange' && (exchanges.length > 0 || bomb) && (
-            <div className="decision-card">
+            <div className="decision-card physical-exchange-decision">
               {bomb && confirmBomb ? (
                 <>
                   <h2>Potwierdź bombę</h2>
@@ -306,12 +440,28 @@ export function GameTable({ projection, seatNames, events = [], message = '', on
                 <>
                   <h2>Oddaj po jednej karcie</h2>
                   {exchanges.length > 0 && (
-                    <>
-                      <p>Po musiku oddajesz po jednej karcie każdemu rywalowi. 1. wybrana → {seatName(exchanges[0].give[0].to)}, 2. wybrana → {seatName(exchanges[0].give[1].to)}.</p>
-                      <button className="primary" disabled={selectedTransfer.length !== 2} onClick={confirmTransfer}>Potwierdź wymianę</button>
-                    </>
+                    <small className="decision-help physical-exchange-help">
+                      {exchangeSubmitting
+                        ? 'Karty są oddawane.'
+                        : assignedExchangeCount === 0
+                          ? 'Przeciągnij kartę z ręki na gracza, któremu chcesz ją oddać.'
+                          : assignedExchangeCount === 1
+                            ? 'Dobrze. Przeciągnij drugą kartę do drugiego gracza. Kliknij oddaną kartę, żeby ją cofnąć.'
+                            : 'Obie karty mają odbiorców — oddaję je.'}
+                    </small>
                   )}
-                  {bomb && <button className="ghost" onClick={() => setConfirmBomb(true)}>Bomba — wycofaj się</button>}
+                  {bomb && (
+                    <button
+                      className="ghost"
+                      onClick={() => {
+                        setExchangeDraft({});
+                        setExchangeHoverSeat(null);
+                        setConfirmBomb(true);
+                      }}
+                    >
+                      Bomba — wycofaj się
+                    </button>
+                  )}
                 </>
               )}
             </div>
