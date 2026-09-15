@@ -15,7 +15,6 @@ import '../../src/visual-language-03.css';
 import '../../src/run04-scene-compression.css';
 import '../../src/run04-mobile-hand.css';
 import '../../src/run04-tactile-hand.css';
-import '../../src/run04-tactile-fix.css';
 import '../../src/run04-touch-contract.css';
 import '../../src/run04-trick-lifecycle.css';
 import '../../src/run04-friend-demo.css';
