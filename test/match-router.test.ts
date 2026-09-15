@@ -85,7 +85,13 @@ async function createTrio(): Promise<{ room: string; tokens: [string, string, st
 describe('MatchRoom Worker router', () => {
   it('creates shareable room codes while keeping seat capabilities out of the public room state', async () => {
     const health = await workerExports.default.fetch('https://example.com/api/match');
-    expect(await health.json()).toEqual({ ok: true, service: 'match-room', auth: 'seat-capability-v1' });
+    expect(await health.json()).toEqual({
+      ok: true,
+      service: 'match-room',
+      auth: 'seat-capability-v1',
+      buildSha: 'dev-unpinned',
+      deployClass: 'local',
+    });
 
     const created = await createRoom('trio');
     expect(created.state).toEqual({ mode: 'trio', status: 'lobby', seats: ['human', 'open', 'open'], revision: null });
