@@ -3,7 +3,9 @@
 .tactile-hand {
   position: relative;
   overflow: visible;
-  perspective: 1000px;
+  /* A transformed/perspective ancestor would create a containing block for the
+   * viewport-fixed drag ghost. Keep the hand itself out of that geometry path. */
+  perspective: none;
   align-items: end;
 }
 
@@ -125,7 +127,9 @@
   pointer-events: none;
 }
 
-.tactile-card-float {
+/* Match the baseline `.hand > .card` specificity so the drag ghost's fixed
+ * viewport geometry is owned here instead of by a later corrective patch. */
+.tactile-hand > .tactile-card-float {
   position: fixed;
   z-index: 1200;
   margin: 0;
