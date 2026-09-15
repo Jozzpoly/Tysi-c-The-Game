@@ -1,21 +1,31 @@
 # Execution state — live truth
 
 Date: 2026-09-15
-Status: **Run 05 recovery. Friend-link incident OPEN / P0 BLOCKER.**
+Status: **Run 05 recovery. Local exact-invite composition PASS; stable external origin + real friend test remain FAIL / P0.**
 
-Current authority order:
+## Strategic intent
+
+Tysiąc is not an infrastructure exercise. The target is a high-quality browser card-table product for desktop and mobile that can be trusted enough to use naturally with real people.
+
+The project must preserve three distinct truth tracks:
+
+- **game truth** — correct rules, legality, scoring and bot behaviour;
+- **experience truth** — card/table physicality, visual hierarchy, motion, feedback, UI/UX and overall feel;
+- **external/operations truth** — what exact build is live, whether the share link really works, whether the origin persists, and whether a real second human can use it.
+
+The Owner is the primary authority for experience truth, not the exact-rules oracle and not a substitute for operational evidence. Broad visual polishing should be driven by Owner testing once the current external P0 is resolved, not by blind screenshot iteration.
+
+## Current authority order
 
 1. this file for compact live state;
-2. `docs/INCIDENT_2026-09-15_FRIEND_LINK.md` for the open P0 incident;
-3. `docs/DEPLOYMENT.md` for public/stable/friend-link evidence;
-4. `AGENTS.md` for agent/claim discipline;
-5. `docs/RUN05_PHYSICAL_TABLE_V2.md` for the active presentation direction now integrated into `main`.
+2. `docs/INCIDENT_2026-09-15_FRIEND_LINK.md` for the open friend-link incident;
+3. `docs/DEPLOYMENT.md` for deployment/evidence contracts;
+4. `AGENTS.md` for claim discipline;
+5. `docs/RUN05_PHYSICAL_TABLE_V2.md` for the integrated presentation direction.
 
-Earlier Run 01/Run 02/Run03/Run04 evidence remains useful history/donor material but is not current execution authority where it conflicts with this state.
+Historical Run01–Run04 material remains useful donor/history only where it does not conflict with current live truth.
 
 ## Current product target
-
-Build a high-quality browser Tysiąc table for desktop and mobile that can be used naturally with real people.
 
 - 3-player auction Tysiąc first;
 - solo = human + 2 bots;
@@ -23,207 +33,142 @@ Build a high-quality browser Tysiąc table for desktop and mobile that can be us
 - trio = 3 humans;
 - private room by link/code without mandatory accounts;
 - desktop and mobile are equal product targets;
-- refresh/reconnect/background lifecycle is normal;
-- presentation may evolve aggressively while game/authority boundaries remain protected.
+- reconnect/background lifecycle is normal product behaviour;
+- presentation may evolve aggressively after real Owner evidence while core authority/privacy boundaries remain protected.
 
 ## P0 — friend-link recovery
 
 **Status: FAIL / BLOCKED**
 
-The previous external-readiness claim is invalidated. A temporary Cloudflare URL that passed bounded public smoke later disappeared, exactly as the temporary deployment lifecycle allowed.
-
-The Owner had explicitly required a stable, safe, repeatedly verified link before proceeding. The project already contained evidence that the temporary route was unclaimed and expected to expire. Continuing past that contradiction was a verification/authority failure.
+The previous external-readiness claim remains invalidated. A temporary Cloudflare URL passing bounded smoke was not evidence of a durable friend origin.
 
 ### Frozen external candidate
 
-The current external-test candidate is immutable:
+The product candidate remains immutable:
 
-- ref: `friend-candidate/run05-2026-09-15`
-- SHA: `52450baa04f22646474bf4676f70b2df5ba6812f`
+- ref: `friend-candidate/run05-2026-09-15`;
+- SHA: `52450baa04f22646474bf4676f70b2df5ba6812f`;
 - Foundation #672: PASS on that exact SHA.
 
-Do not silently move the candidate because later cleanup work continues on `main`. A replacement requires a new exact SHA and fresh evidence.
+Later harness/docs/cleanup work on `main` does not silently move the product candidate.
 
-### Stable deployment attempts
+### Local exact-invite evidence — now closed at this layer
 
-The repository-native stable deployment path now supports an immutable candidate file plus a separate retry request marker. Retrying does not alter candidate identity.
+PR #43 merged as `d5887e12e4981a55ce2182995ce106358cbf1fca` and Foundation #718 passed on `main`.
 
-Two real stable-deployment attempts have exercised the account-owned path far enough to establish the same concrete blocker.
+The current validation harness now carries the **same exact copied invite session** through:
 
-Latest attempt:
+- clean second-browser join;
+- distinct private seat credentials;
+- disjoint private hands;
+- one legal human action;
+- both clients advancing to the same newer revision;
+- friend reopen/reconnect through the same room-only copied URL;
+- restoration of the same private friend credential from local browser state;
+- restored revision at least as new as the synchronized post-action revision.
+
+Expected evidence fields are present: `friendJoined`, `privateHandsDisjoint`, `actionSynced`, `friendReconnected`, `restoredRevision`.
+
+**Evidence boundary:** Foundation #718 exercised this composition on local loopback HTTP. It proves the harness/session contract. It does **not** prove Cloudflare deployment, HTTPS public behaviour, long-horizon availability, or real-human friend readiness.
+
+Further local rehearsal is not the active P0 unless a concrete new gap is discovered.
+
+### Stable deployment blocker
+
+Latest real stable attempt:
 
 - Stable Multiplayer Deploy run `34980093207`;
-- request source: `main` commit `29923513c39cb59bf9ba08945c3ca81e464bf440`;
-- frozen candidate resolved to `52450baa04f22646474bf4676f70b2df5ba6812f`;
-- exact candidate checkout succeeded;
-- checkout identity verification succeeded;
+- request source `main` commit `29923513c39cb59bf9ba08945c3ca81e464bf440`;
+- frozen candidate correctly resolved and checked out as `52450baa04f22646474bf4676f70b2df5ba6812f`;
 - dependency installation succeeded;
-- permanent credential gate failed;
-- Foundation-on-candidate, Cloudflare upload, deployment registration and every public-runtime step were therefore skipped.
+- execution stopped before product validation/deploy because permanent credentials were absent.
 
-Current external blocker is direct evidence, not inference:
+Direct blocker:
 
 - GitHub Actions secret `CLOUDFLARE_ACCOUNT_ID`: **missing**;
 - GitHub Actions secret `CLOUDFLARE_API_TOKEN`: **missing**.
 
-Therefore no account-owned stable origin exists yet and no claim about stable public behavior has been established.
+No account-owned stable origin therefore exists yet. Do not substitute temporary Cloudflare deployments or move the product to another hosting architecture merely to bypass this boundary.
 
-Do not substitute another temporary deployment for these missing credentials.
+The frozen candidate uses Cloudflare Worker + SQLite Durable Object `MatchRoom`; switching platforms before the friend test would be a product/authority migration, not a deployment shortcut.
 
-Current mandatory ladder:
+## Mandatory external evidence ladder
 
-1. frozen candidate Foundation remains green;
-2. configure the two permanent Cloudflare GitHub Actions secrets without exposing them in chat/source/logs;
-3. retrigger the same frozen candidate through the repo-native retry marker;
-4. account-owned authenticated normal deployment must succeed;
-5. canonical workers.dev origin + exact public SHA/class provenance must pass;
-6. public runtime/multiplayer smoke must pass;
-7. actual in-game copied invite must pass with a clean second browser;
-8. same origin and SHA must pass a later `Stable Origin Recheck (NO REDEPLOY)`;
-9. Owner and a real friend must complete real-human create/copy/open/join/action/reconnect use;
-10. only the Owner's report of successful real-human use closes this P0 milestone.
+1. configure the two permanent Cloudflare GitHub Actions secrets outside chat/source/logs;
+2. retrigger the exact frozen candidate;
+3. authenticated account-owned normal deployment succeeds;
+4. canonical `tysiac-the-game.<account>.workers.dev` root origin is established;
+5. exact public product SHA + deploy-class provenance passes;
+6. public runtime/multiplayer smoke passes;
+7. the exact in-game copied invite passes the same-session join/private-state/action/reconnect contract over HTTPS;
+8. the **same origin and same SHA** later pass `Stable Origin Recheck (NO REDEPLOY)`;
+9. Owner + real friend perform create → copy → open → join → shared action → reconnect in real use;
+10. only real-human success closes this P0 milestone.
 
-Automation cannot complete the real-human gate by itself.
+Automation cannot complete step 9 by itself.
 
-## Current recovery safeguards
+## Protected foundation
 
-- `Stable Multiplayer Deploy` — account-owned normal deploy only;
-- manual or auditable declarative stable deployment request, both resolving one exact immutable candidate SHA;
-- separate stable retry marker that cannot change candidate identity;
-- `Temporary Preview (EXPIRES — DO NOT SHARE)` — bounded diagnostics only;
-- exact public build provenance (`buildSha`, `deployClass`);
-- `public-provenance-smoke.mjs`;
-- `public-share-link-smoke.mjs`, which clicks the real copy-link UI and uses the exact emitted URL in a clean second browser;
-- canonical friend origin restricted to the root `tysiac-the-game.<account>.workers.dev` target for the current recovery;
-- `Stable Origin Recheck (NO REDEPLOY)` for later elapsed-time evidence;
-- machine-gated stable retry and no-redeploy contracts in Foundation;
-- cancellation of superseded Foundation PR runs;
-- frozen external candidate ref separate from continuing technical-debt work.
-
-These are safeguards, not proof that the stable deployment or real-human test has already succeeded.
-
-## Game / authority foundation
-
-Historical and current evidence remains strong for:
+Current evidence is strong for:
 
 - deterministic pure TypeScript core;
 - canonical legality/reducer path;
-- per-seat projection/privacy boundary;
 - scoped domain events;
+- per-seat projection/privacy;
 - Worker + SQLite Durable Object `MatchRoom`;
 - hibernating WebSockets and reconnect;
-- private opaque seat capabilities separate from shareable room code;
-- seat tokens generated from 32 random bytes and persisted only as hashes;
-- public room snapshots excluding private seat credentials and hidden cards;
+- private opaque seat capabilities separate from room code;
+- seat-token hashing/persistence boundaries;
+- public snapshots excluding private credentials and hidden cards;
 - same-origin browser WebSocket upgrade enforcement;
-- same domain command model for humans and bots.
+- shared command model for humans and bots;
+- Run05 tactile/living-hand, spatial handoff, deal/talon/exchange/marriage/trick presentation mechanics.
 
-Current heads must keep those gates green. Historical PASS does not automatically certify new commits.
+This is protected evidence, not a ban on later redesign. After Owner testing, presentation and even broader implementation choices may change aggressively when evidence justifies it.
 
-## Evidence tracks
+## Work discipline while P0 is blocked
 
-### Game truth
+Do **not** manufacture momentum by polishing unrelated areas.
 
-Rules, legality, scoring, strategic bot credibility and authentic Tysiąc gameplay use source/reference evidence, explicit reversible pins, executable scenarios/invariants/simulations and knowledgeable-player feedback.
+Allowed before external access is restored:
 
-The Owner is not the exact-rules oracle.
+- fix a concrete defect that threatens the frozen deployment/test path;
+- maintain evidence/documentation when live truth materially changes;
+- bounded cleanup only when it removes a demonstrated risk without changing the frozen candidate.
 
-### Experience truth
+Default pause:
 
-The Owner is primary judge for visual hierarchy/composition, mouse/touch feel, card materiality/feedback, perceived motion/pacing, desktop/mobile ergonomics, onboarding and professional presentation quality.
+- broad CSS consolidation;
+- blind visual redesign;
+- speculative new features;
+- architecture migration;
+- additional local deployment harness layers with no identified missing claim.
 
-Automation may protect measurable mechanics. It cannot certify taste or fun.
+The reason is product strategy: the next high-value information should come from real external use and then from Owner visual/UI/UX judgement.
 
-### Operations / external truth
+## After P0 closes
 
-Questions such as `temporary or stable?`, `what SHA is live?`, `does the exact copied invite work?`, `did the same origin survive without redeploy?`, and `did a real friend actually join?` require direct operational evidence.
+The project immediately shifts back from recovery infrastructure to product development.
 
-A PASS in game truth or experience mechanics cannot substitute for an operations/external FAIL.
+Primary next evidence source becomes a broad Owner test on desktop and mobile, focused on:
 
-## Run 05 presentation state
+- physicality/materiality of cards and table;
+- visual hierarchy and readability;
+- animation/motion/pacing;
+- feedback for dealing, bidding, playing, taking tricks, marriage and scoring;
+- mouse/touch ergonomics and manipulation;
+- onboarding and clarity without excessive explanatory text;
+- overall professional feel.
 
-Run 05 is no longer an isolated experimental integration branch.
-
-The old PR #23 is closed as historical/superseded integration history. A clean continuation was reconstructed from recovered `main`, mechanically validated, and merged through PR #26. The active Run 05 presentation implementation now lives on `main`.
-
-Current Run 05 presentation includes:
-
-- larger tactile/living hand;
-- permissive manipulation separated from authoritative commit;
-- spatial play target/handoff;
-- material deal/talon/exchange/marriage flows;
-- living trick/capture presentation;
-- distinct desktop composition;
-- browser/geometry coverage for tactile, handoff, mobile touch and material-transfer mechanics.
-
-Mechanical browser evidence is substantial, but broad Owner visual approval remains pending. Blind visual redesign remains paused while the P0 external trust boundary is unresolved.
-
-### CSS debt cleanup completed so far
-
-The recovery campaign has already removed several concrete patch-on-patch or unreachable layers without moving the frozen candidate:
-
-- folded the old tactile corrective patch back into the actual tactile owner;
-- removed obsolete `run04-mobile-hand.css` direct-card layout;
-- moved the persistent 44px mobile interaction minimum into `touch.css` with sufficient specificity to survive later visual compression;
-- removed unreachable old direct-child hand rules from `touch.css`;
-- removed unreachable direct-card blocks from `visual-language-02.css`;
-- repeatedly defended mobile 10-card exchange geometry, touch hit centres, permissive/living hand and authoritative handoff through full Foundation runs.
-
-The easy dead-selector phase is now largely exhausted. Current active cascade contains real overlapping ownership rather than obviously unreachable rules. In particular:
-
-- `run04-tactile-hand.css` remains a live mechanics owner for hand slots, drag ghost, commit zone and 10-card interaction behavior;
-- `run04-scene-compression.css` still affects live intermediate viewport composition;
-- Run05 intentionally overrides those layers in bounded mobile/desktop presentation regions.
-
-Do not continue deleting Run04 files merely because their names are historical. Further consolidation requires an explicit ownership design plus fresh browser/Owner evidence.
-
-## Technical debt priority
-
-### P0
-
-- permanent Cloudflare account credentials are not yet configured in GitHub Actions;
-- stable non-temporary friend origin therefore does not yet exist;
-- public stable provenance/runtime/copied-invite evidence pending;
-- later no-redeploy evidence pending;
-- real-human friend test pending.
-
-### P1
-
-- active CSS ownership is still distributed across visual-language, Run04 and Run05 layers. Obvious dead selectors have been removed; remaining consolidation is architectural and must be bounded rather than treated as deletion cleanup;
-- Durable Object rooms currently have no explicit expiry/cleanup policy and can remain in persistent storage indefinitely. This does not block the bounded friend test, but must be resolved before broader/public usage. Do not introduce room expiry into the frozen candidate without an explicit lifecycle contract because room-invite longevity is a product behavior;
-- historical/donor PRs from Run02/Run03/Run04 should be closed as superseded while preserving their branches/history;
-- keep stale historical docs from competing with current authority;
-- keep deployment paths unambiguous and machine-gated.
-
-## Claim discipline
-
-Good:
-
-- `Foundation frozen candidate: PASS`;
-- `stable candidate identity checkout: PASS`;
-- `permanent Cloudflare credentials: missing / blocker`;
-- `account-owned non-temporary deploy: not yet performed`;
-- `exact copied invite on stable origin: pending`;
-- `same origin later recheck: pending`;
-- `real-human friend test: pending`.
-
-Bad:
-
-- `everything verified`;
-- `stable` because a temporary URL responds now;
-- `friend-ready` because automation is green;
-- `safe` without naming the security/privacy property actually checked;
-- `deployed` when execution stopped before upload.
-
-Contradictory evidence is an automatic blocker. A critical Owner requirement cannot be outvoted by unrelated green checks.
+The Owner is not expected to play through the entire game or validate exact Tysiąc rules. The purpose is to expose experience problems automation cannot judge. Larger visual/product changes should then be prioritized from that evidence.
 
 ## Immediate direction
 
-1. keep frozen candidate `52450baa04f22646474bf4676f70b2df5ba6812f` unchanged;
-2. complete the one-time permanent Cloudflare account setup by configuring the two required GitHub Actions secrets outside chat;
-3. retrigger the exact same frozen candidate through the stable retry marker and continue through canonical-origin/provenance/public/copied-invite gates;
-4. perform later same-origin/same-SHA no-redeploy evidence;
-5. complete the real Owner+friend multiplayer test;
-6. meanwhile archive superseded donor PRs and continue only bounded technical-debt work that does not alter the frozen candidate;
-7. treat further CSS consolidation as a real ownership/refactor problem, not dead-code deletion;
-8. after external trust is restored, resume broad Owner-led visual iteration and controlled presentation consolidation.
+1. keep `52450baa04f22646474bf4676f70b2df5ba6812f` frozen;
+2. obtain/configure the one-time account-owned Cloudflare credentials;
+3. rerun Stable Multiplayer Deploy on that exact SHA and classify each resulting claim separately;
+4. if public gates pass, preserve the same origin/SHA for elapsed-time no-redeploy recheck;
+5. only then ask the Owner to spend attention on the real friend session;
+6. after that real-human gate, move decisively into broad Owner-led experience testing rather than extending recovery infrastructure.
+
+The recovery is successful only when it returns the project to trustworthy product iteration. The deployment system is a means to that end, not the project direction.
