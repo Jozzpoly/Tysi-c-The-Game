@@ -101,11 +101,15 @@ button:active:not(:disabled) {
 /*
  * Responsive composition may extend above the coarse-pointer breakpoint, but
  * primary controls still keep the defended finger-sized height contract.
+ *
+ * This file is intentionally imported before later presentation layers. The
+ * app-shell prefix makes the interaction invariant outrank those later visual
+ * compression rules without relying on import order or !important.
  */
 @media (max-width: 760px) {
-  .topbar-actions button,
-  .topbar-actions .rules-trigger,
-  .decision-card button {
+  .app-shell .topbar-actions button,
+  .app-shell .topbar-actions .rules-trigger,
+  .app-shell .decision-card button {
     min-height: 44px;
   }
 }
