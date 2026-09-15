@@ -116,15 +116,17 @@
   }
 
   /* One lower player territory. It remains part of the live scene rather than a
-   * detached HUD, but no longer spans the entire desktop just because space exists. */
+   * detached HUD, but no longer spans the entire desktop just because space exists.
+   * Keep this ancestor untransformed: carried cards use viewport-fixed geometry,
+   * and a transformed hand territory would create a conflicting containing block. */
   .hand-area {
-    left: 50%;
-    right: auto;
+    left: max(48px, calc(50% - 540px));
+    right: max(48px, calc(50% - 540px));
     bottom: 4px;
-    width: min(1080px, calc(100% - 96px));
+    width: auto;
     min-height: 180px;
     padding: 18px 18px 4px;
-    transform: translateX(-50%);
+    transform: none;
     border-radius: 42% 42% 22px 22px / 18% 18% 22px 22px;
     background:
       radial-gradient(ellipse at 50% 100%, #0d3928b8 0%, #061d14b8 48%, transparent 76%),
