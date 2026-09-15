@@ -1,29 +1,44 @@
 # Run 05 — Physical Table V2
 
-## Why this exists
+Date updated: 2026-09-15
+Status: **presentation implementation advanced; P0 external-readiness recovery currently takes precedence**
 
-Friend Candidate 1 proved that the rules/core, authoritative projection, remote room, reconnect, first-play flow and full-match completion can form a usable game. Run 05 is not a polish pass over FC1. It is an experimental replacement of the presentation language while FC1 remains frozen at `snapshot/friend-candidate-01`.
+## Current hold
 
-Owner intent is stronger than “more animation”: cards should become the main material and interaction language of the game. Important state changes should increasingly be understood from where physical card objects are, where they move, what pile they join, and how the table reacts — with text acting as support rather than the primary explanation.
+Run 05 produced substantial physical-table work, but its next Owner/friend evidence loop was contaminated by the 2026-09-15 friend-link incident.
+
+Do not interpret the presentation work as failed. The failure is the external deployment/readiness gate: an intentionally temporary public preview was incorrectly treated as satisfying the Owner's hard requirement for a durable friend link.
+
+Until `docs/INCIDENT_2026-09-15_FRIEND_LINK.md` is closed:
+
+- preserve existing Run 05 presentation work;
+- keep core/authority/browser gates green;
+- do not resume broad blind visual polish;
+- repair the stable public path, exact copied-invite evidence and live project authority first;
+- after the real Owner+friend path works, resume Owner-led visual/interaction evaluation and bounded presentation debt cleanup.
+
+## Why Run 05 exists
+
+The earlier Friend Candidate proved that the rules/core, authoritative projection, remote room, reconnect, first-play flow and full-match completion could form a usable game foundation. Run 05 is not a polish pass over that historical candidate. It is an experimental replacement of the presentation language.
+
+Owner intent is stronger than “more animation”: cards should become the main material and interaction language. Important state changes should increasingly be understood from where physical card objects are, where they move, what pile they join, and how the table reacts, with text acting as support rather than the primary explanation.
 
 ## Non-negotiable direction
 
-- Mobile first for the next discovery cycle. Desktop remains first-class long-term but may use a different composition.
+- Desktop and mobile are both first-class targets; their compositions may differ.
 - The player's hand is a major territory, not a footer strip.
 - A card should retain identity and causal continuity while moving between meaningful spatial zones.
-- Winning a trick means the three cards visibly converge and join the winner's persistent captured pile.
-- Captured cards remain spatially represented at their owner instead of collapsing into a tiny abstract counter.
-- Physicality is controlled, fast and legible. It does not require a generic rigid-body physics engine.
-- More freedom must not create accidental plays. Manipulation, play intent and authoritative acceptance remain separate concepts.
-- Core rules and authoritative projection remain the source of truth. Presentation can be replaced aggressively without duplicating game truth.
+- Winning a trick means the cards visibly converge toward the actual winner/captured territory.
+- Captured ownership should remain spatially legible rather than collapsing immediately into an abstract counter.
+- Physicality is controlled, fast and legible; it does not require a generic rigid-body engine.
+- Freedom must not create accidental plays. Manipulation, play intent and authoritative acceptance remain separate concepts.
+- Core rules and authoritative projection remain source of truth. Presentation may be replaced aggressively without duplicating game truth.
 
-## Presentation model we are moving toward
+## Presentation model
 
-Every important card presentation should be explainable as a transition between spatial zones:
+Important card presentation should be explainable as transitions between meaningful zones, for example:
 
 `deck -> hand -> table -> captured pile`
-
-and later:
 
 `deck -> talon -> declarer hand`
 
@@ -31,103 +46,118 @@ and later:
 
 `hand -> marriage presentation -> trick`
 
-The presentation layer may know visual position, rotation, scale, z-order, target zone and motion state. It must not own legality, scoring or canonical ownership.
+Presentation may own geometry, rotation, scale, z-order, target zone, motion phase and motion provenance. It must not own legality, scoring or canonical ownership.
 
-A useful conceptual card state is:
+A useful conceptual card-presentation state remains:
 
-- canonical card id
-- canonical owner/visibility from projection
-- presentation zone
-- current geometry
-- target geometry
-- interaction phase (resting / held / carried / target-ready / authoritative-handoff / collecting / settled)
-- provenance/reason for motion (deal, local play, remote play, talon pickup, exchange, trick capture, reset)
+- canonical card id;
+- canonical owner/visibility from projection;
+- presentation zone;
+- current/target geometry;
+- interaction phase such as resting / held / carried / target-ready / authoritative-handoff / collecting / settled;
+- reason/provenance for motion such as deal, play, talon, exchange, marriage, trick capture or reset.
 
-This is a direction, not a final data model. Do not prematurely build a generic scene graph before bounded experiments prove the need.
+This remains a conceptual direction, not permission to build a generic scene graph without evidence.
 
-## Run 05 bounded sequence
+## Implemented Run 05 slices
 
-### P0 — preserve the evidence boundary
+### Physical hand / tactile manipulation
 
-- FC1 stays frozen.
-- Run05 uses its own branch and draft PR.
-- Existing Foundation gates must continue protecting core/remote/full-match behavior.
-- New presentation tests defend measurable continuity and geometry, not subjective “fun”.
+Run 05 materially enlarged and animated the hand, while keeping card manipulation separate from authoritative command acceptance.
 
-### P1 — Physical Table proof
+Browser evidence covers permissive handling, living hand geometry, mobile touch behavior and authoritative handoff.
 
-Prove on a 390×844 mobile viewport that:
+### Spatial play target
 
-1. the hand occupies materially more of the usable screen and cards are substantially easier to read/touch/manipulate;
-2. the three cards of a completed trick converge toward the actual winner pile, not a hard-coded generic direction;
-3. each seat has a persistent visible captured pile whose growth matches authoritative consequence timing;
-4. initiative remains attached to the winning seat/pile;
-5. no card escapes the viewport and no canonical consequence appears before the consequence stage.
+Play intent is expressed spatially rather than only by distance. A card can be carried toward a receptive table target; release and authoritative acceptance remain distinct.
 
-This is the first implementation target.
+### Material talon and exchange
 
-### P2 — Spatial play target
+Talon/exchange flows gained visible card identity and directional transfer rather than instantaneous state replacement.
 
-Replace the current distance-only throw acceptance with a real table drop region:
+### Dealing / hand reset
 
-- lifting a card away from the hand expresses play intent;
-- entering the table target provides feed-forward;
-- releasing outside the accepted target returns the card;
-- only an authoritative legal command completes the handoff;
-- reorder remains possible without accidental play.
+New-hand presentation gained controlled material deal behavior rather than simple instantaneous appearance.
 
-### P3 — Materialized talon and exchange
+### Marriage / trump embodiment
 
-- revealed talon exists as three physical cards on the table;
-- auction winner receives those exact visible cards into the hand;
-- two exchange cards leave the declarer's hand separately and travel to the correct opponent territories;
-- opponent hand/card-count presentation reacts to receipt.
+Marriage presentation uses the actual card system and motion language rather than only another explanatory block.
 
-### P4 — Dealing and hand reset
+### Living trick / captured ownership
 
-- new-hand start is represented by a fast controlled deal rather than an instantaneous spawned hand;
-- the deal may compress/batch for speed but preserves direction and ownership;
-- hand-to-hand reset never replays incorrectly on reconnect/static snapshots.
+Trick resolution now has observable lifecycle stages and persistent captured-pile consequence. Important sequence:
 
-### P5 — Marriage and trump embodiment
+`arrival -> resolve -> collect -> consequence -> settled`
 
-Explore a spatial K+Q marriage cue that uses the real cards and table state rather than another explanatory panel. Preserve fast play and accessibility.
+### Desktop composition
 
-### P6 — desktop composition
+Desktop gained its own wider composition rather than simply scaling the mobile layout.
 
-After mobile physical language is credible, design desktop as its own composition rather than simply enlarging the mobile table.
-
-## What we explicitly do not do yet
-
-- generic Box2D/rigid-body simulation for all cards;
-- arbitrary freeform card placement that can desynchronize from canonical zones;
-- final visual identity/art pass;
-- large rewrite of rules/core/worker;
-- optimization for every rare rule before the common physical language works;
-- automation that tries to judge taste, delight or realism.
+A real regression was discovered here: transform-based centering of `.hand-area` created a containing block that displaced viewport-fixed carried-card geometry. The repair removed that transform dependency, and authoritative-handoff browser coverage now protects the carry-center/target contract.
 
 ## Evidence standard
 
-A physical interaction is not “done” because CSS exists.
+A physical interaction is not done because CSS or animation exists.
 
-For each bounded slice we want some combination of:
+Use combinations of:
 
 - deterministic browser rehearsal;
-- geometry assertions (viewport containment, destination convergence, hit regions);
+- geometry assertions;
 - authoritative revision/identity assertions;
 - screenshots at meaningful lifecycle stages;
-- Owner visual/feel test when the slice is mature enough.
+- Owner visual/feel evidence when mature enough.
 
-Automation should answer questions such as “did the exact card remain singular and end at the authoritative target?” — not “does this feel good?”.
+Automation should answer questions such as `did the exact card remain singular and reach the authoritative target?`, not `does this feel good?`.
 
-## P1 exit criteria
+## Owner evidence boundary
 
-P1 is successful only if Owner evidence shows an obvious qualitative step over FC1 in the following sense:
+Current automation demonstrates significant mechanical presentation behavior. It does **not** establish that the Owner likes the current visual hierarchy, table density, card aesthetics, motion feel or overall product impression.
 
-- hand reads as a primary game surface;
-- trick capture is understandable without reading the consequence text;
-- captured ownership persists spatially;
-- the result still feels fast enough to play repeatedly;
-- mobile interaction remains stable and no gameplay gate regresses.
+The next broad visual direction should come from real Owner evidence, not another speculative polish cycle.
 
-If those conditions are not met, revise or discard the P1 presentation without touching the frozen FC1 baseline.
+## Technical debt discovered during Run 05
+
+### Layered CSS cascade
+
+`src/main.tsx` currently loads a long history of visual-language, Run04 and Run05 stylesheets. This has enabled fast experimentation but now creates real ownership/cascade debt:
+
+- later patches can silently override earlier assumptions;
+- fixed/absolute/transform containing-block behavior can cross concern boundaries;
+- responsive rules are distributed across historical layers;
+- it is harder to know whether a rule is current design or obsolete donor residue.
+
+This debt is **real**, but the repair must be bounded. Do not replace all presentation CSS at once.
+
+After the P0 friend/deployment path is mechanically healthy:
+
+1. inventory duplicated/high-risk selectors and media queries;
+2. identify which Run04 layers are genuinely still authoritative for Run05;
+3. consolidate one concern at a time into current Run05-owned modules;
+4. delete superseded rules only after browser/geometry equivalence or deliberate Owner-approved change;
+5. rerun Foundation and inspect fresh desktop/mobile screenshots after each meaningful consolidation.
+
+### Historical naming / donor layers
+
+Run04 files that remain imported are implementation donors, not current roadmap authority. Their names should eventually stop being the primary organization mechanism once behavior is consolidated.
+
+## What Run 05 still does not justify
+
+- final visual identity/art direction;
+- generic Box2D/rigid-body card simulation;
+- arbitrary freeform card placement that can desynchronize canonical zones;
+- broad rules/core rewrite;
+- declaring Owner visual acceptance from screenshots/tests alone;
+- declaring friend readiness from a temporary public preview;
+- treating a successful public smoke as proof of persistence.
+
+## Current next sequence
+
+1. regain green Foundation on the complete recovery head;
+2. establish and prove the account-owned stable multiplayer origin;
+3. later recheck the same origin/SHA without redeploying;
+4. complete the real Owner+friend test;
+5. resume Owner visual/interaction testing on that stable surface;
+6. turn Owner findings into bounded presentation changes;
+7. begin controlled CSS/cascade consolidation while preserving/measuring behavior.
+
+Run 05 remains the active presentation experiment, but external truth is now a hard gate rather than something presentation automation can imply.
