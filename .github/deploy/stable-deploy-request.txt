@@ -1,3 +1,3 @@
-retry requested: 2026-09-15T17:11Z
+retry requested: 2026-09-15T17:21Z
 candidate: 52450baa04f22646474bf4676f70b2df5ba6812f
-reason: retry persistent account-owned stable multiplayer deployment with verified Cloudflare account-token preflight
+reason: retry persistent account-owned stable multiplayer deployment after Owner corrected CLOUDFLARE_API_TOKEN
