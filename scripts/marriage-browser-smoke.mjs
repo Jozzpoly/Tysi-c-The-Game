@@ -178,6 +178,7 @@ async function inspectActive(session) {
     };
     const layer = document.querySelector('.marriage-material-layer');
     const cards = [...document.querySelectorAll('.marriage-material-card')];
+    const cue = document.querySelector('.marriage-trump-cue');
     const played = document.querySelector('.played.is-marriage-materializing');
     const playedCard = played?.querySelector(':scope > .card');
     const partnerSlot = document.querySelector('.hand-slot.is-marriage-materializing');
@@ -194,7 +195,9 @@ async function inspectActive(session) {
       playedIdentity: layer?.getAttribute('data-marriage-played') ?? '',
       partnerIdentity: layer?.getAttribute('data-marriage-partner') ?? '',
       suit: layer?.getAttribute('data-marriage-suit') ?? '',
-      cueVisible: visible(document.querySelector('.marriage-trump-cue')),
+      cuePresent: Boolean(cue),
+      cueSuit: cue?.getAttribute('data-marriage-trump') ?? '',
+      cueVisible: visible(cue),
       playedTargetHidden: Boolean(playedCard) && getComputedStyle(playedCard).visibility === 'hidden',
       partnerTargetHidden: Boolean(partnerCard) && getComputedStyle(partnerCard).visibility === 'hidden',
       trumpTargetReceiving: trumpStatus?.classList.contains('is-marriage-receiving') ?? false,
@@ -259,7 +262,7 @@ async function runViewport(label, width, height, mobile) {
     await sleep(120);
 
     const pair = await inspectActive(session);
-    if (pair.state !== 'active' || !pair.layer || pair.materialCount !== 2 || pair.visibleMaterialCards !== 2 || !pair.cueVisible) {
+    if (pair.state !== 'active' || !pair.layer || pair.materialCount !== 2 || pair.visibleMaterialCards !== 2 || !pair.cuePresent || pair.cueSuit !== pair.suit) {
       throw new Error(`${label}: marriage pair did not materialize ${JSON.stringify(pair)}`);
     }
     if (new Set(pair.roles).size !== 2 || !pair.roles.includes('played') || !pair.roles.includes('partner')) {
