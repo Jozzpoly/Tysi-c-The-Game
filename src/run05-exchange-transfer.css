@@ -8,14 +8,27 @@
   pointer-events: none;
 }
 
+/* Material ownership is represented by React-owned marker portals inside the
+ * authoritative target. This avoids racing className updates on GameTable DOM. */
+.exchange-receiving-marker,
+.exchange-materializing-marker {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
 /* Canonical post-exchange state already contains the received object. Keep its
  * real geometry, but do not draw it until the transfer representation arrives. */
+.hand-slot:has(> .exchange-materializing-marker) > .card,
 .hand-slot.is-exchange-materializing > .card {
   visibility: hidden !important;
 }
 
 /* Opponent counts update authoritatively before presentation completes. Hide the
  * newly arrived physical back so there is still only one visible card object. */
+[data-seat-anchor]:has(> .exchange-receiving-marker) .card-backs i:last-child,
 .is-exchange-receiving .card-backs i:last-child {
   visibility: hidden;
 }
