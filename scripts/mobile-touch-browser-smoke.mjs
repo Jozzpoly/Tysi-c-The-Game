@@ -123,26 +123,35 @@ async function touchAt(session, x, y) {
 }
 
 async function dragTouch(session, from, to, steps = 8) {
-  await cdp(session, 'Input.dispatchTouchEvent', {
-    type: 'touchStart',
-    touchPoints: [{ x: from.x, y: from.y, radiusX: 7, radiusY: 7, force: 1 }],
-  });
-  await sleep(32);
+  const pointerId = `touch-drag-${Date.now()}-${Math.round(from.x)}-${Math.round(from.y)}`;
+  const moves = [];
   for (let step = 1; step <= steps; step += 1) {
     const ratio = step / steps;
-    await cdp(session, 'Input.dispatchTouchEvent', {
-      type: 'touchMove',
-      touchPoints: [{
-        x: from.x + (to.x - from.x) * ratio,
-        y: from.y + (to.y - from.y) * ratio,
-        radiusX: 7,
-        radiusY: 7,
-        force: 1,
-      }],
+    moves.push({
+      type: 'pointerMove',
+      duration: 20,
+      x: Math.round(from.x + (to.x - from.x) * ratio),
+      y: Math.round(from.y + (to.y - from.y) * ratio),
+      origin: 'viewport',
     });
-    await sleep(20);
   }
-  await cdp(session, 'Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  await webdriver(`/session/${session}/actions`, {
+    method: 'POST',
+    body: JSON.stringify({
+      actions: [{
+        type: 'pointer',
+        id: pointerId,
+        parameters: { pointerType: 'touch' },
+        actions: [
+          { type: 'pointerMove', duration: 0, x: Math.round(from.x), y: Math.round(from.y), origin: 'viewport' },
+          { type: 'pointerDown', button: 0 },
+          { type: 'pause', duration: 32 },
+          ...moves,
+          { type: 'pointerUp', button: 0 },
+        ],
+      }],
+    }),
+  });
 }
 
 async function uiState(session) {
