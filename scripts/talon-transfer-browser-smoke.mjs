@@ -433,13 +433,21 @@ async function runDeclarerViewport(label, width, height, mobile) {
     }
     await screenshot(session, `${label}-physical-exchange-two-cards`);
 
-    await waitFor(`${label}: exchange material active`, () => execute(session, `return Boolean(document.querySelector('.material-exchange-state.is-active'));`), 1_500);
-    await waitFor(`${label}: two exchange cards`, async () => (await inspectExchangeTransfer(session)).transfers === 2, 500);
-    await sleep(90);
-    const exchangeFlight = await inspectExchangeTransfer(session);
-    if (exchangeFlight.state !== 'active' || exchangeFlight.transfers !== 2 || exchangeFlight.faces !== 2 || exchangeFlight.backs !== 0) {
-      throw new Error(`${label}: declarer must see exactly two known outgoing card faces ${JSON.stringify(exchangeFlight)}`);
-    }
+    const exchangeFlight = await waitFor(`${label}: complete declarer exchange flight`, async () => {
+      const state = await inspectExchangeTransfer(session);
+      return state.state === 'active'
+        && state.transfers === 2
+        && state.faces === 2
+        && state.backs === 0
+        && state.knownCards.length === 2
+        && new Set(state.knownCards).size === 2
+        && state.receivingAnchors === 2
+        && state.hiddenRecipientBacks === 2
+        && state.enabledHandCards === 0
+        && state.decisionHeading !== 'Ile ostatecznie grasz?'
+        ? state
+        : false;
+    }, 1_500);
     if (exchangeFlight.knownCards.length !== 2 || new Set(exchangeFlight.knownCards).size !== 2) {
       throw new Error(`${label}: declarer transfer lost exact outgoing identities ${JSON.stringify(exchangeFlight)}`);
     }
@@ -500,10 +508,20 @@ async function runDefenderPrivacyViewport(label, width, height, mobile) {
       return marker?.getAttribute('data-talon-material-state') === 'settled' && talon && getComputedStyle(talon).display === 'none';
     `), 2_000);
 
-    await waitFor(`${label}: private exchange material active`, () => execute(session, `return Boolean(document.querySelector('.material-exchange-state.is-active'));`), 5_000);
-    await waitFor(`${label}: private exchange cards`, async () => (await inspectExchangeTransfer(session)).transfers === 2, 500);
-    await sleep(80);
-    const privateFlight = await inspectExchangeTransfer(session);
+    const privateFlight = await waitFor(`${label}: complete private exchange flight`, async () => {
+      const state = await inspectExchangeTransfer(session);
+      return state.state === 'active'
+        && state.transfers === 2
+        && state.faces === 0
+        && state.backs === 2
+        && state.knownCards.length === 1
+        && state.materialSlots.length === 1
+        && state.hiddenMaterialTargets === 1
+        && state.receivingAnchors === 2
+        && state.hiddenRecipientBacks === 1
+        ? state
+        : false;
+    }, 5_000);
     if (privateFlight.state !== 'active' || privateFlight.transfers !== 2 || privateFlight.faces !== 0 || privateFlight.backs !== 2) {
       throw new Error(`${label}: defender saw exchange card faces ${JSON.stringify(privateFlight)}`);
     }
