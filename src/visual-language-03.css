@@ -319,22 +319,6 @@ body {
   pointer-events: auto;
 }
 
-.hand > .card {
-  transform-origin: 50% 100%;
-  box-shadow: 0 12px 24px #0005;
-}
-
-.hand > .card:hover:not(:disabled),
-.hand > .card:focus-visible,
-.hand > .card.selected {
-  transform: translateY(-14px);
-}
-
-.hand > .card:disabled {
-  opacity: 1;
-  filter: saturate(.88) brightness(.97);
-}
-
 .footer { display: none; }
 
 @media (max-width: 760px) {
@@ -392,12 +376,6 @@ body {
     grid-template-columns: repeat(var(--hand-spread-count), minmax(0, var(--hand-card-step))) var(--hand-card-width);
     column-gap: 0;
     padding: 3px 4px 2px;
-  }
-
-  .hand > .card:hover:not(:disabled),
-  .hand > .card:focus-visible,
-  .hand > .card.selected {
-    transform: translateY(-10px);
   }
 }
 
