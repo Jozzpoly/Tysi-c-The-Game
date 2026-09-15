@@ -147,19 +147,40 @@ async function dragNextExchangeCard(session, targetIndex, mobile) {
 
 async function inspectExchangeDraft(session) {
   return execute(session, `
+    const rectData = (rect) => rect ? ({
+      left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom,
+      width: rect.width, height: rect.height,
+      centerX: rect.left + rect.width / 2,
+      centerY: rect.top + rect.height / 2,
+    }) : null;
     const staged = [...document.querySelectorAll('.hand-slot.is-exchange-staged')].map((slot) => {
       const card = slot.querySelector(':scope > .card');
       const rect = card?.getBoundingClientRect();
+      const slotRect = slot.getBoundingClientRect();
       const recipient = slot.getAttribute('data-exchange-recipient') ?? '';
       const target = document.querySelector('[data-exchange-target-seat="' + recipient + '"]');
       const targetRect = target?.getBoundingClientRect();
+      const anchor = document.querySelector('[data-exchange-stage-seat="' + recipient + '"]');
+      const anchorRect = anchor?.getBoundingClientRect();
       const centerX = rect ? rect.left + rect.width / 2 : null;
       const centerY = rect ? rect.top + rect.height / 2 : null;
+      const slotStyle = getComputedStyle(slot);
+      const cardStyle = card ? getComputedStyle(card) : null;
       return {
         card: slot.getAttribute('data-card'),
         recipient,
         centerX,
         centerY,
+        stageXInline: slot.style.getPropertyValue('--exchange-stage-x'),
+        stageYInline: slot.style.getPropertyValue('--exchange-stage-y'),
+        computedTranslate: slotStyle.translate,
+        computedScale: slotStyle.scale,
+        computedTransform: slotStyle.transform,
+        cardTransform: cardStyle?.transform ?? null,
+        slotRect: rectData(slotRect),
+        cardRect: rectData(rect),
+        targetRect: rectData(targetRect),
+        anchorRect: rectData(anchorRect),
         insideRecipient: Boolean(rect && targetRect
           && centerX >= targetRect.left && centerX <= targetRect.right
           && centerY >= targetRect.top && centerY <= targetRect.bottom),
@@ -169,6 +190,7 @@ async function inspectExchangeDraft(session) {
       seat: target.getAttribute('data-exchange-target-seat'),
       assignedCard: target.getAttribute('data-exchange-assigned-card') ?? '',
       hot: target.classList.contains('is-exchange-hot'),
+      rect: rectData(target.getBoundingClientRect()),
     }));
     return {
       staged,
