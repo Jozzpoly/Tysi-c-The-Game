@@ -1,7 +1,16 @@
-import { readFile } from 'node:fs/promises';
+import { access, readFile } from 'node:fs/promises';
 
 async function text(path) {
   return readFile(path, 'utf8');
+}
+
+async function exists(path) {
+  try {
+    await access(path);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function requireMatch(label, source, pattern) {
@@ -16,20 +25,26 @@ const [
   stable,
   temporary,
   recheck,
+  coreWorkflow,
   temporaryDeploy,
   wrangler,
   worker,
   deploymentDoc,
   incident,
+  executionState,
+  legacyStaticPreviewExists,
 ] = await Promise.all([
   text('.github/workflows/deploy-foundation.yml'),
   text('.github/workflows/temporary-foundation.yml'),
   text('.github/workflows/stable-origin-recheck.yml'),
+  text('.github/workflows/core.yml'),
   text('scripts/temporary-deploy.mjs'),
   text('wrangler.jsonc'),
   text('worker/index.ts'),
   text('docs/DEPLOYMENT.md'),
   text('docs/INCIDENT_2026-09-15_FRIEND_LINK.md'),
+  text('docs/EXECUTION_STATE.md'),
+  exists('.github/workflows/friend-preview-pages.yml'),
 ]);
 
 requireMatch('stable workflow', stable, /^name: Stable Multiplayer Deploy$/mu);
@@ -70,6 +85,13 @@ requireMatch('stable recheck workflow', recheck, /public-share-link-smoke\.mjs/u
 forbidMatch('stable recheck workflow', recheck, /wrangler\s+deploy/u);
 forbidMatch('stable recheck workflow', recheck, /cloudflare\/wrangler-action/u);
 
+requireMatch('Foundation concurrency', coreWorkflow, /cancel-in-progress:\s*true/u);
+requireMatch('Foundation concurrency', coreWorkflow, /github\.event\.pull_request\.number\s*\|\|\s*github\.ref/u);
+
+if (legacyStaticPreviewExists) {
+  throw new Error('legacy static friend-preview workflow must remain retired; it cannot provide multiplayer authority');
+}
+
 requireMatch('wrangler config', wrangler, /"workers_dev":\s*true/u);
 requireMatch('wrangler config', wrangler, /"TYSIAC_BUILD_SHA":\s*"dev-unpinned"/u);
 requireMatch('wrangler config', wrangler, /"TYSIAC_DEPLOY_CLASS":\s*"local"/u);
@@ -84,6 +106,9 @@ requireMatch('deployment authority', deploymentDoc, /Long-horizon availability/u
 requireMatch('deployment authority', deploymentDoc, /Real-human friend gate/u);
 
 requireMatch('incident authority', incident, /FAIL \/ NOT COMPLETE \/ P0 BLOCKER/u);
-requireMatch('incident authority', incident, /Automated smoke tests are necessary but are not sufficient for PASS/u);
+requireMatch('incident authority', incident, /Automation is necessary but is not sufficient/iu);
+requireMatch('incident authority', incident, /contradictory lifecycle evidence was known/iu);
+requireMatch('execution authority', executionState, /Friend-link incident OPEN \/ P0 BLOCKER/u);
+requireMatch('execution authority', executionState, /Operations \/ external truth/u);
 
 console.log('deployment contract smoke: PASS');
