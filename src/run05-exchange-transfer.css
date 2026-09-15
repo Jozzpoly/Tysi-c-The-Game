@@ -72,8 +72,9 @@
 }
 
 /* Owner-test correction: exchange intent is spatial, not selection-order based.
- * Each opponent is the physical drop territory and also the staging geometry.
- * There is deliberately no second hidden coordinate system for the handoff. */
+ * Each opponent remains the generous drop territory. After release, the staged
+ * card is positioned from the recipient's real .card-backs geometry instead of
+ * inventing a second coordinate system for the handoff. */
 .exchange-mode .opponent.exchange-drop-target {
   position: relative;
   isolation: isolate;
@@ -131,27 +132,9 @@
   opacity: .72;
 }
 
-/* Geometry-only child. Its rect intentionally equals the recipient territory,
- * so the same spatial object that accepts the drop also determines where the
- * staged card must live. */
-.exchange-card-stage-anchor {
-  position: absolute;
-  z-index: 0;
-  inset: 0;
-  width: auto;
-  height: auto;
-  aspect-ratio: auto;
-  transform: none;
-  border: 0;
-  border-radius: inherit;
-  background: transparent;
-  box-shadow: none;
-  pointer-events: none;
-}
-
 /* The drag itself is the physical motion. Once released over a recipient, the
- * underlying card must immediately occupy that exact territory instead of doing
- * a second synthetic flight from the hand. */
+ * underlying card must immediately occupy that recipient's physical hand area
+ * instead of doing a second synthetic flight from the declarer's hand. */
 .exchange-mode .tactile-hand > .hand-slot.is-exchange-staged {
   z-index: 1180;
   transform: none !important;
@@ -215,41 +198,5 @@
       rotate(var(--exchange-flight-rotate));
     filter: brightness(1) drop-shadow(0 3px 7px #0004);
     opacity: .98;
-  }
-}
-
-/* Desktop composition already owns absolute opponent territories. Exchange mode
- * must not collapse those seats back into normal document flow. */
-@media (min-width: 960px) and (min-height: 720px) {
-  .exchange-mode .opponent.exchange-drop-target {
-    position: absolute;
-  }
-}
-
-@media (pointer: coarse), (max-width: 620px) {
-  .exchange-mode .opponent.exchange-drop-target {
-    min-height: 80px;
-    outline-offset: 3px;
-  }
-
-  .exchange-mode .tactile-hand > .hand-slot.is-exchange-staged {
-    scale: .84 !important;
-  }
-
-  .exchange-mode .opponent.exchange-drop-target::after {
-    bottom: -14px;
-    font-size: .58rem;
-    padding: 2px 6px;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .exchange-transfer-card {
-    animation: none !important;
-  }
-
-  .exchange-mode .opponent.exchange-drop-target,
-  .exchange-mode .tactile-hand > .hand-slot.is-exchange-staged {
-    transition: none !important;
   }
 }
