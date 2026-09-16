@@ -30,6 +30,31 @@
   animation: none !important;
 }
 
+/* Wide Run05 desktop composition absolutely positions opponents by DOM
+ * :first-child/:last-child. `order` cannot affect that layout, so viewer-relative
+ * topology must own the actual lateral anchor here as well. */
+@media (min-width: 960px) and (min-height: 720px) {
+  .opponents > .opponent[data-view-position='left'] {
+    left: 0;
+    right: auto;
+    transform: rotate(-.5deg);
+  }
+
+  .opponents > .opponent[data-view-position='right'] {
+    left: auto;
+    right: 0;
+    transform: rotate(.5deg);
+  }
+
+  .opponents > .opponent[data-view-position='left'] > .captured-pile {
+    rotate: 3deg;
+  }
+
+  .opponents > .opponent[data-view-position='right'] > .captured-pile {
+    rotate: -3deg;
+  }
+}
+
 @media (max-width: 760px) {
   .trick .played[data-view-position='left'] {
     left: 4%;
@@ -37,5 +62,15 @@
 
   .trick .played[data-view-position='right'] {
     right: 4%;
+  }
+
+  /* Mobile remains grid/auto-flow, so order is the physical left/right owner.
+   * Keep pile tilt aligned with the viewer-relative side rather than DOM order. */
+  .opponents > .opponent[data-view-position='left'] > .captured-pile {
+    rotate: 3deg;
+  }
+
+  .opponents > .opponent[data-view-position='right'] > .captured-pile {
+    rotate: -3deg;
   }
 }
