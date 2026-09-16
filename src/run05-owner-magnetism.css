@@ -1,17 +1,24 @@
-/* Owner-test correction: carried cards should feel attracted to valid destinations
- * before the pointer reaches the strict visual target. Geometry/acceptance remain
- * owned by the existing interaction adapters; this layer only renders the pull. */
+/* Owner-test correction: the carried card should become visibly owned by a valid
+ * destination before release. Interaction layers still own acceptance and game
+ * commands; this final presentation layer only renders the reversible pull. */
 .app-shell .tactile-card-float:not(.pending-handoff) {
   translate: var(--owner-card-magnet-x, 0px) var(--owner-card-magnet-y, 0px);
+  will-change: translate;
 }
 
-.app-shell[data-owner-card-magnet-strength]:not([data-owner-card-magnet-strength='0.000'])
+.app-shell[data-owner-card-magnet-mode='cue']
   .tactile-card-float:not(.pending-handoff) {
   filter: brightness(1.025) !important;
+}
+
+.app-shell[data-owner-card-magnet-mode='takeover']
+  .tactile-card-float:not(.pending-handoff) {
+  filter: brightness(1.055) saturate(1.025) !important;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .app-shell .tactile-card-float:not(.pending-handoff) {
     translate: 0 0 !important;
+    will-change: auto;
   }
 }
