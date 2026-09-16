@@ -2,6 +2,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App.js';
 import { installOwnerMagnetismBridge } from './presentation/ownerMagnetismBridge.js';
+import { installSeatPresentationBridge } from './presentation/seatPresentationBridge.js';
 import './touch.css';
 import './visual-language.css';
 import './visual-language-02.css';
@@ -20,8 +21,10 @@ import './run05-deal.css';
 import './run05-marriage.css';
 import './run05-desktop-composition.css';
 import './run05-owner-magnetism.css';
+import './run05-seat-topology.css';
 
 installOwnerMagnetismBridge();
+installSeatPresentationBridge();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
