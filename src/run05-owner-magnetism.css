@@ -1,7 +1,7 @@
 /* Owner-test correction: the carried card should become visibly owned by a valid
  * destination before release. Interaction layers still own acceptance and game
  * commands; this final presentation layer only renders the reversible pull. */
-.app-shell .tactile-card-float:not(.pending-handoff) {
+.app-shell .tactile-card-float {
   translate: var(--owner-card-magnet-x, 0px) var(--owner-card-magnet-y, 0px);
   will-change: translate;
 }
@@ -17,7 +17,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .app-shell .tactile-card-float:not(.pending-handoff) {
+  .app-shell .tactile-card-float {
     translate: 0 0 !important;
     will-change: auto;
   }
