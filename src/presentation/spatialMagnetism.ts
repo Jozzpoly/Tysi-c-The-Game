@@ -109,10 +109,11 @@ function centerDistanceSquared(point: SpatialPoint, rect: SpatialRect) {
 }
 
 /**
- * Prefer an already captured target while the pointer remains in its wider
- * release field. Otherwise choose the nearest target whose enter field contains
- * the point. This prevents edge flicker and avoids first-DOM-node bias when two
- * generous fields overlap.
+ * Canonical occupancy wins over hysteresis. This matters when two generous
+ * magnetic fields overlap: carrying a card visibly into another player's real
+ * territory must switch targets immediately rather than remain stuck to the
+ * previously latched recipient. Outside canonical rectangles, the preferred
+ * target still receives the wider release field that prevents edge flicker.
  */
 export function chooseMagneticTarget<T>(
   point: SpatialPoint,
@@ -123,6 +124,11 @@ export function chooseMagneticTarget<T>(
     releasePaddingPx: number;
   },
 ): T | null {
+  const canonical = targets
+    .filter((target) => pointInsideRect(point, target.rect))
+    .sort((a, b) => centerDistanceSquared(point, a.rect) - centerDistanceSquared(point, b.rect));
+  if (canonical[0]) return canonical[0].id;
+
   if (options.preferredId !== null) {
     const preferred = targets.find((target) => Object.is(target.id, options.preferredId));
     if (preferred && magneticCapture(point, preferred.rect, {
