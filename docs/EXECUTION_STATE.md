@@ -1,7 +1,7 @@
 # Execution state — live truth
 
-Date: 2026-09-15
-Status: **Run 05 recovery. Account-owned stable origin + automated public friend flow PASS; elapsed-time no-redeploy + real-human Owner/friend gates remain open.**
+Date: 2026-09-16
+Status: **Run 05 recovery. Account-owned stable origin + automated public friend flow + elapsed-time no-redeploy recheck PASS; only the real-human Owner/friend gate remains open.**
 
 ## Strategic intent
 
@@ -40,7 +40,7 @@ Historical Run01–Run04 material remains useful donor/history only where it doe
 
 **Friend-link incident OPEN / P0 BLOCKER**
 
-The original readiness claim remains invalidated: the old temporary Cloudflare preview never proved durable friend readiness. Recovery has now crossed the stable-public automation boundary, but P0 remains open until the later no-redeploy evidence point and the required real-human Owner+friend session are complete.
+The original readiness claim remains invalidated: the old temporary Cloudflare preview never proved durable friend readiness. Recovery has now crossed the stable-public automation boundary **and** the elapsed-time persistence boundary. P0 remains open only because the required real-human Owner+friend session has not yet been demonstrated.
 
 ### Frozen external candidate
 
@@ -50,7 +50,7 @@ The product candidate remains immutable:
 - SHA: `52450baa04f22646474bf4676f70b2df5ba6812f`;
 - Foundation #672: PASS on that exact SHA.
 
-Later harness/docs/operations work on `main` does not move the product candidate.
+Later presentation, harness, docs and operations work on `main` does not move the product candidate. Current `main` is presentation-wise ahead of the frozen stable candidate; do not mistake the stable friend-gate build for the latest UX state.
 
 ### Stable public deployment — PASS
 
@@ -78,11 +78,28 @@ Demonstrated in that run:
 
 The successful Cloudflare deployment version was `757f437f-f3fd-4f01-8570-d4185193047b`.
 
-**Evidence boundary:** this closes stable mechanism, canonical origin, public provenance, public multiplayer, copied-invite composition and short-window repeatability. It does not prove long-horizon availability and it does not replace a real-human friend test.
+### Elapsed-time stable-origin recheck — PASS
+
+`Stable Origin Recheck (NO REDEPLOY)` run #1 (`35098811180`) completed successfully on 2026-09-16 from current-main validation-harness SHA `473137700d80a2d584f8ec82bbe8ad207ba0f269`.
+
+It did **not** deploy a replacement. Against the existing canonical origin it demonstrated:
+
+- exact served product SHA remained `52450baa04f22646474bf4676f70b2df5ba6812f`;
+- `deployClass: stable` remained correct;
+- public provenance smoke: PASS;
+- public multiplayer join/sync/reconnect: PASS;
+- exact copied friend invite over HTTPS: PASS;
+- distinct private hands: PASS;
+- synchronized legal action: PASS;
+- friend reconnect and restored revision: PASS.
+
+The evidence point was recorded at approximately `2026-09-16T12:57:27Z`, many hours after the stable deployment and without redeployment.
+
+**Evidence boundary:** stable mechanism, canonical origin, exact-build provenance, public multiplayer, copied-invite composition, short-window repeatability and meaningful elapsed-time persistence are now defended by automation. None of this substitutes for a real second human using the product naturally.
 
 ### Local exact-invite evidence — closed at this layer
 
-PR #43 / Foundation #718 remains useful supporting evidence for the exact copied-invite session contract on loopback, but it is no longer the strongest external evidence. Stable run #6 exercised that contract publicly over HTTPS against the account-owned origin.
+PR #43 / Foundation #718 remains useful supporting evidence for the exact copied-invite session contract on loopback, but it is no longer the strongest external evidence. Stable run #6 and no-redeploy recheck #1 exercised that contract publicly over HTTPS against the account-owned origin.
 
 Further local rehearsal is not active P0 work unless a concrete new gap appears.
 
@@ -97,15 +114,15 @@ Already PASS:
 5. exact public product SHA + stable deploy-class provenance;
 6. public runtime/multiplayer smoke;
 7. exact in-game copied invite carrying join/private-state/action/reconnect over HTTPS;
-8. short-window no-redeploy repeatability after 60 seconds.
+8. short-window no-redeploy repeatability after 60 seconds;
+9. meaningful elapsed-time `Stable Origin Recheck (NO REDEPLOY)` against the same canonical origin and frozen product SHA.
 
 Still open:
 
-9. the **same canonical origin and same frozen SHA** must later pass `Stable Origin Recheck (NO REDEPLOY)` after meaningful elapsed time, without publishing a replacement;
 10. Owner + real friend perform create → copy → open → join → shared action → reconnect in real use;
-11. only the real-human success plus preserved elapsed-time evidence closes this P0 milestone.
+11. that real-human success closes this P0 milestone while the automated evidence above remains preserved.
 
-Automation cannot complete the real-human gate by itself. A fresh redeploy would not count as persistence evidence, so do not redeploy this candidate merely to check availability.
+Automation cannot complete the real-human gate by itself. Keep the frozen stable candidate untouched until that session is complete; replacing it first would change the thing being tested.
 
 ## Protected foundation
 
@@ -128,13 +145,14 @@ This is protected evidence, not a ban on later redesign. After Owner testing, pr
 
 ## Work discipline while P0 remains open
 
-The infrastructure recovery is no longer the main workstream. Do not manufacture further deployment machinery now that the intended stable path works.
+The infrastructure recovery is no longer the main workstream. Do not manufacture further deployment machinery now that the intended stable path and its elapsed-time persistence work.
 
 Allowed / high-value now:
 
-- preserve the current canonical origin without redeploying so elapsed-time evidence remains meaningful;
+- preserve the frozen stable candidate until the real-human gate is complete;
 - run the bounded real Owner+friend session through the actual UI;
-- later trigger the existing no-redeploy recheck against the same origin/SHA;
+- use current-main browser evidence to catch objective pre-test breakage, but leave qualitative presentation judgement for Owner evidence;
+- use a temporary current-main preview for the latest visual/UX Owner pass when explicitly launched with its required public-preview/Cloudflare confirmations;
 - record concrete product/experience defects exposed by real use;
 - maintain evidence/documentation when live truth materially changes.
 
@@ -155,9 +173,9 @@ These debts are intentionally deferred, not forgotten.
 
 ## Owner test direction
 
-The stable base URL is now valid for a bounded real test. The Owner does not need to validate exact Tysiąc rules or finish a match.
+The stable base URL is valid for the bounded real-human friend gate, but it intentionally serves the frozen candidate rather than the latest presentation work. The Owner does not need to validate exact Tysiąc rules or finish a match.
 
-Primary experience evidence:
+Primary experience evidence for the latest presentation build:
 
 - physicality/materiality of cards and table;
 - visual hierarchy and readability;
@@ -171,10 +189,10 @@ For the real-human friend gate specifically: open the stable root, create a duo 
 
 ## Immediate direction
 
-1. keep product SHA `52450baa04f22646474bf4676f70b2df5ba6812f` frozen;
-2. keep `https://tysiac-the-game.jozzpoly.workers.dev` untouched — no redeploy for persistence checking;
-3. perform the real-human Owner+friend session when convenient and capture only concrete failures/experience feedback;
-4. after meaningful elapsed time, trigger `Stable Origin Recheck (NO REDEPLOY)` against that exact origin + frozen SHA;
-5. once both remaining gates pass, close the friend-link P0 and move decisively into broad Owner-led desktop/mobile experience iteration.
+1. keep product SHA `52450baa04f22646474bf4676f70b2df5ba6812f` frozen on `https://tysiac-the-game.jozzpoly.workers.dev` until the real-human friend gate completes;
+2. perform the real-human Owner+friend session when convenient and capture only concrete failures/experience feedback;
+3. do not spend more project attention proving persistence unless new evidence contradicts the successful no-redeploy recheck;
+4. for latest visual/UX Owner testing, prefer the existing temporary-preview path from current `main` rather than replacing the frozen stable candidate;
+5. after the human gate passes, close friend-link P0 and move decisively into broad Owner-led desktop/mobile experience iteration on the latest product state.
 
 The deployment system has now done its job. The project direction returns to the actual game.
