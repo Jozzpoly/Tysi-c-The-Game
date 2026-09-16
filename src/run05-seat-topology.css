@@ -1,0 +1,41 @@
+/* Run05 Owner evidence: screen left/right belongs to viewer-relative seat topology,
+ * never to raw seat-id sort order. This layer intentionally loads after the
+ * historical trick/opponent positioning rules and overrides only spatial role. */
+.opponents > .opponent[data-view-position='left'] {
+  order: 0;
+}
+
+.opponents > .opponent[data-view-position='right'] {
+  order: 1;
+}
+
+.trick .played[data-view-position='left'] {
+  left: 8%;
+  right: auto;
+  top: 3px;
+  bottom: auto;
+}
+
+.trick .played[data-view-position='right'] {
+  left: auto;
+  right: 8%;
+  top: 3px;
+  bottom: auto;
+}
+
+/* Ordinary opponent plays now use the geometry-driven material arrival bridge.
+ * The old 22px keyframes are deliberately suppressed once topology is known. */
+.trick .played[data-view-position='left'].is-fresh-arrival,
+.trick .played[data-view-position='right'].is-fresh-arrival {
+  animation: none !important;
+}
+
+@media (max-width: 760px) {
+  .trick .played[data-view-position='left'] {
+    left: 4%;
+  }
+
+  .trick .played[data-view-position='right'] {
+    right: 4%;
+  }
+}
