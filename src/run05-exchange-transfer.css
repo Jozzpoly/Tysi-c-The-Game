@@ -127,19 +127,23 @@
   background: #dcca8809;
 }
 
+/* Once the physical face is visibly sitting with the recipient's backs, another
+ * textual status label competes with the object and makes the state feel like UI
+ * bookkeeping. The card itself is the assignment signal. */
 .exchange-mode .opponent.exchange-drop-target.has-exchange-card::after {
-  content: 'Karta przypisana';
-  opacity: .72;
+  content: '';
+  opacity: 0;
 }
 
 /* The drag itself is the physical motion. Once released over a recipient, the
  * underlying card must immediately occupy that recipient's physical hand area
- * instead of doing a second synthetic flight from the declarer's hand. */
+ * instead of doing a second synthetic flight from the declarer's hand. Size it
+ * closer to that compact opponent hand without changing staging authority. */
 .exchange-mode .tactile-hand > .hand-slot.is-exchange-staged {
   z-index: 1180;
   transform: none !important;
   translate: var(--exchange-stage-x, 0px) var(--exchange-stage-y, 0px) !important;
-  scale: .78 !important;
+  scale: .66 !important;
   transition: none !important;
   cursor: grab;
 }
@@ -149,8 +153,8 @@
 .exchange-mode .tactile-hand > .hand-slot.is-exchange-staged:focus-within > .card {
   border-color: #f3db8e;
   box-shadow:
-    0 18px 30px #0007,
-    0 0 0 2px #f3d7778c,
+    0 12px 22px #0007,
+    0 0 0 1px #f3d77778,
     inset 0 0 0 1px #fff;
   opacity: 1;
 }
@@ -216,7 +220,7 @@
   }
 
   .exchange-mode .tactile-hand > .hand-slot.is-exchange-staged {
-    scale: .84 !important;
+    scale: .70 !important;
   }
 
   .exchange-mode .opponent.exchange-drop-target::after {
