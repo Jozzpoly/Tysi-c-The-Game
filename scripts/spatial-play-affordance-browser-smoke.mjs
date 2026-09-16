@@ -229,7 +229,7 @@ async function runViewport(label, width, height, mobile) {
         && state.ghostReady
         && state.ownerMode === 'takeover'
         && state.ownerTarget === 'table'
-        && state.ownerMagnitude >= ${MIN_TAKEOVER_PX}
+        && state.ownerMagnitude >= MIN_TAKEOVER_PX
         ? state
         : false;
     }, 2_000);
@@ -243,7 +243,7 @@ async function runViewport(label, width, height, mobile) {
       || !accepted.acceptedSelectorMatches
       || accepted.ownerMode !== 'takeover'
       || accepted.ownerTarget !== 'table'
-      || accepted.ownerMagnitude < ${MIN_TAKEOVER_PX}
+      || accepted.ownerMagnitude < MIN_TAKEOVER_PX
       || accepted.surfaceOpacity < .75
       || accepted.cueOpacity < .65
       || !accepted.cueContent.toLowerCase().includes('puść')) {
@@ -274,7 +274,7 @@ async function runViewport(label, width, height, mobile) {
         && state.ghostReady
         && state.ownerMode === 'takeover'
         && state.ownerTarget === 'table'
-        && state.ownerMagnitude >= ${MIN_TAKEOVER_PX}
+        && state.ownerMagnitude >= MIN_TAKEOVER_PX
         ? state
         : false;
     }, 2_000);
