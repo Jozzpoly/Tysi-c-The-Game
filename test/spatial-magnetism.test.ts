@@ -9,23 +9,32 @@ import {
 const RECT = { left: 100, right: 200, top: 100, bottom: 180 };
 
 describe('spatial magnetism', () => {
-  it('keeps canonical geometry strict while allowing an intentionally generous enter field', () => {
-    const point = { x: -120, y: 140 };
-    expect(pointInsideRect(point, RECT)).toBe(false);
-    expect(magneticCapture(point, RECT, {
+  it('keeps canonical geometry strict while making the natural hand-to-target approach generous', () => {
+    const belowTarget = { x: 150, y: 400 };
+    expect(pointInsideRect(belowTarget, RECT)).toBe(false);
+    expect(magneticCapture(belowTarget, RECT, {
       latched: false,
       enterPaddingPx: 20,
       releasePaddingPx: 36,
     })).toBe(true);
-    expect(magneticCapture({ x: -140, y: 140 }, RECT, {
+
+    // The same long-range distance at the side is deliberately not captured:
+    // assistance is directional from the player's hand below the target rather
+    // than one giant symmetric hitbox around it.
+    expect(magneticCapture({ x: -120, y: 140 }, RECT, {
+      latched: false,
+      enterPaddingPx: 20,
+      releasePaddingPx: 36,
+    })).toBe(false);
+    expect(magneticCapture({ x: 150, y: 441 }, RECT, {
       latched: false,
       enterPaddingPx: 20,
       releasePaddingPx: 36,
     })).toBe(false);
   });
 
-  it('uses a wider release field after capture to avoid edge flicker', () => {
-    const point = { x: -180, y: 140 };
+  it('uses a wider release field after capture to avoid edge flicker on approach', () => {
+    const point = { x: 150, y: 500 };
     expect(magneticCapture(point, RECT, {
       latched: false,
       enterPaddingPx: 20,
@@ -39,8 +48,8 @@ describe('spatial magnetism', () => {
   });
 
   it('starts visual attraction continuously at long range and strengthens on approach', () => {
-    const outside = magneticOffsetToRect({ x: -270, y: 140 }, RECT, 24, 10);
-    const boundary = magneticOffsetToRect({ x: -250, y: 140 }, RECT, 24, 10);
+    const outside = magneticOffsetToRect({ x: -321, y: 140 }, RECT, 24, 10);
+    const boundary = magneticOffsetToRect({ x: -319, y: 140 }, RECT, 24, 10);
     const closer = magneticOffsetToRect({ x: 20, y: 140 }, RECT, 24, 10);
 
     expect(outside).toEqual({ x: 0, y: 0, strength: 0 });
