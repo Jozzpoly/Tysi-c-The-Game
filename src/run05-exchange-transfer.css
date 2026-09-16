@@ -138,12 +138,12 @@
 /* The drag itself is the physical motion. Once released over a recipient, the
  * underlying card must immediately occupy that recipient's physical hand area
  * instead of doing a second synthetic flight from the declarer's hand. Size it
- * like a member of that compact opponent hand rather than a second full hand card. */
+ * closer to that compact opponent hand without changing staging authority. */
 .exchange-mode .tactile-hand > .hand-slot.is-exchange-staged {
   z-index: 1180;
   transform: none !important;
   translate: var(--exchange-stage-x, 0px) var(--exchange-stage-y, 0px) !important;
-  scale: .58 !important;
+  scale: .66 !important;
   transition: none !important;
   cursor: grab;
 }
@@ -220,7 +220,7 @@
   }
 
   .exchange-mode .tactile-hand > .hand-slot.is-exchange-staged {
-    scale: .62 !important;
+    scale: .70 !important;
   }
 
   .exchange-mode .opponent.exchange-drop-target::after {
