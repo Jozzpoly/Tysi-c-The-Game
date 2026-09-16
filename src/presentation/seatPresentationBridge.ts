@@ -43,13 +43,6 @@ function animateOpponentPlay(shell: HTMLElement, played: HTMLElement, seat: Seat
     return;
   }
 
-  played.dataset.materialPlayArrival = 'active';
-  const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
-  if (reduced) {
-    played.dataset.materialPlayArrival = 'complete';
-    return;
-  }
-
   const sourceRect = source.getBoundingClientRect();
   const targetRect = card.getBoundingClientRect();
   const sourceX = sourceRect.left + sourceRect.width / 2;
@@ -58,6 +51,17 @@ function animateOpponentPlay(shell: HTMLElement, played: HTMLElement, seat: Seat
   const targetY = targetRect.top + targetRect.height / 2;
   const dx = sourceX - targetX;
   const dy = sourceY - targetY;
+  played.dataset.materialPlayArrival = 'active';
+  played.dataset.materialPlaySourceSeat = String(seat);
+  played.dataset.materialPlayDx = dx.toFixed(2);
+  played.dataset.materialPlayDy = dy.toFixed(2);
+
+  const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+  if (reduced) {
+    played.dataset.materialPlayArrival = 'complete';
+    return;
+  }
+
   const position = played.dataset.viewPosition;
   const startRotate = position === 'left' ? -7 : 7;
   const sourceScale = Math.max(.58, Math.min(.82, sourceRect.width / Math.max(1, targetRect.width)));
