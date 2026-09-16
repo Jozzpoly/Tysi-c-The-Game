@@ -7,6 +7,7 @@ const TAKEOVER_FRACTION = 0.48;
 const MOUSE_TAKEOVER_MAX_PX = 86;
 const TOUCH_TAKEOVER_MAX_PX = 104;
 const FOLLOW_RATE = 0.42;
+const RELEASE_FOLLOW_RATE = 0.34;
 const SETTLE_EPSILON_PX = 0.25;
 
 type PointerSample = {
@@ -26,6 +27,7 @@ let latestPointer: PointerSample | null = null;
 let frameId: number | null = null;
 let renderedX = 0;
 let renderedY = 0;
+let releasing = false;
 
 function reducedMotion() {
   return window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
@@ -34,6 +36,7 @@ function reducedMotion() {
 function clearMagnet(shell: HTMLElement | null) {
   renderedX = 0;
   renderedY = 0;
+  releasing = false;
   if (!shell) return;
   shell.style.removeProperty('--owner-card-magnet-x');
   shell.style.removeProperty('--owner-card-magnet-y');
@@ -114,11 +117,40 @@ function desiredMagnet(
     : { x: 0, y: 0, target: '', mode: 'return' };
 }
 
+function writeRenderedState(shell: HTMLElement, target: string, mode: string, desiredDistance: number) {
+  shell.style.setProperty('--owner-card-magnet-x', `${renderedX.toFixed(2)}px`);
+  shell.style.setProperty('--owner-card-magnet-y', `${renderedY.toFixed(2)}px`);
+  shell.dataset.ownerCardMagnetTarget = target;
+  shell.dataset.ownerCardMagnetMode = mode;
+  const renderedDistance = Math.hypot(renderedX, renderedY);
+  const scale = Math.max(1, desiredDistance, MOUSE_TAKEOVER_MAX_PX);
+  shell.dataset.ownerCardMagnetStrength = Math.min(1, renderedDistance / scale).toFixed(3);
+}
+
 function renderOwnerMagnetism() {
   frameId = null;
   const shell = document.querySelector<HTMLElement>('.app-shell');
-  const floating = shell?.querySelector<HTMLElement>('.tactile-card-float:not(.pending-handoff)');
-  if (!shell || !floating || !latestPointer) {
+  if (!shell) {
+    clearMagnet(null);
+    return;
+  }
+
+  // On release, keep the currently rendered offset alive for the first physical
+  // handoff frame and decay it toward zero. Pending-handoff therefore starts at
+  // the exact visible takeover position instead of snapping back toward pointer.
+  if (releasing) {
+    renderedX += (0 - renderedX) * RELEASE_FOLLOW_RATE;
+    renderedY += (0 - renderedY) * RELEASE_FOLLOW_RATE;
+    if (Math.abs(renderedX) < SETTLE_EPSILON_PX) renderedX = 0;
+    if (Math.abs(renderedY) < SETTLE_EPSILON_PX) renderedY = 0;
+    writeRenderedState(shell, '', 'release', MOUSE_TAKEOVER_MAX_PX);
+    if (renderedX !== 0 || renderedY !== 0) frameId = window.requestAnimationFrame(renderOwnerMagnetism);
+    else clearMagnet(shell);
+    return;
+  }
+
+  const floating = shell.querySelector<HTMLElement>('.tactile-card-float:not(.pending-handoff)');
+  if (!floating || !latestPointer) {
     clearMagnet(shell);
     return;
   }
@@ -130,14 +162,12 @@ function renderOwnerMagnetism() {
   if (Math.abs(renderedX) < SETTLE_EPSILON_PX && Math.abs(desired.x) < SETTLE_EPSILON_PX) renderedX = 0;
   if (Math.abs(renderedY) < SETTLE_EPSILON_PX && Math.abs(desired.y) < SETTLE_EPSILON_PX) renderedY = 0;
 
-  shell.style.setProperty('--owner-card-magnet-x', `${renderedX.toFixed(2)}px`);
-  shell.style.setProperty('--owner-card-magnet-y', `${renderedY.toFixed(2)}px`);
-  shell.dataset.ownerCardMagnetTarget = desired.target;
-  shell.dataset.ownerCardMagnetMode = desired.mode || (renderedX || renderedY ? 'return' : '');
-  const renderedDistance = Math.hypot(renderedX, renderedY);
-  const desiredDistance = Math.hypot(desired.x, desired.y);
-  const scale = Math.max(1, desiredDistance, MOUSE_TAKEOVER_MAX_PX);
-  shell.dataset.ownerCardMagnetStrength = Math.min(1, renderedDistance / scale).toFixed(3);
+  writeRenderedState(
+    shell,
+    desired.target,
+    desired.mode || (renderedX || renderedY ? 'return' : ''),
+    Math.hypot(desired.x, desired.y),
+  );
 
   const unsettled = Math.abs(desired.x - renderedX) > SETTLE_EPSILON_PX
     || Math.abs(desired.y - renderedY) > SETTLE_EPSILON_PX;
@@ -146,17 +176,20 @@ function renderOwnerMagnetism() {
 }
 
 function scheduleOwnerMagnetism(event: PointerEvent) {
+  releasing = false;
   latestPointer = { x: event.clientX, y: event.clientY, pointerType: event.pointerType };
   if (frameId === null) frameId = window.requestAnimationFrame(renderOwnerMagnetism);
 }
 
 function finishOwnerMagnetism() {
   latestPointer = null;
+  releasing = renderedX !== 0 || renderedY !== 0;
   if (frameId !== null) {
     window.cancelAnimationFrame(frameId);
     frameId = null;
   }
-  clearMagnet(document.querySelector<HTMLElement>('.app-shell'));
+  if (releasing) frameId = window.requestAnimationFrame(renderOwnerMagnetism);
+  else clearMagnet(document.querySelector<HTMLElement>('.app-shell'));
 }
 
 /**
