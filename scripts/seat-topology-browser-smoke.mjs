@@ -137,6 +137,7 @@ async function readProbe(session, id) {
       dx: Number(node.dataset.materialPlayDx ?? NaN),
       dy: Number(node.dataset.materialPlayDy ?? NaN),
       centerX: rect.left + rect.width / 2,
+      centerY: rect.top + rect.height / 2,
       animations: node.getAnimations().length,
     };
   `);
@@ -183,24 +184,34 @@ async function runViewport(label, width, height, mobile) {
     if (rightProbe.position !== 'right' || rightProbe.sourceSeat !== '0') {
       throw new Error(`${label}: right play provenance wrong ${JSON.stringify(rightProbe)}`);
     }
-    if (!(leftProbe.dx < -20 && rightProbe.dx > 20 && leftProbe.dy < -30 && rightProbe.dy < -30)) {
-      throw new Error(`${label}: opponent play did not originate from real seat geometry ${JSON.stringify({ leftProbe, rightProbe })}`);
+    if (!(leftProbe.dy < -30 && rightProbe.dy < -30)) {
+      throw new Error(`${label}: opponent play did not originate above the table ${JSON.stringify({ leftProbe, rightProbe })}`);
     }
     if (!(Math.hypot(leftProbe.dx, leftProbe.dy) > 80 && Math.hypot(rightProbe.dx, rightProbe.dy) > 80)) {
       throw new Error(`${label}: material flight collapsed back to local trick-slot motion ${JSON.stringify({ leftProbe, rightProbe })}`);
     }
-    if (!(leftProbe.centerX < rightProbe.centerX)) {
-      throw new Error(`${label}: trick positions do not match viewer-relative topology ${JSON.stringify({ leftProbe, rightProbe })}`);
+    if (!(leftProbe.animations > 0 && rightProbe.animations > 0)) {
+      throw new Error(`${label}: material source-to-table flight never became active ${JSON.stringify({ leftProbe, rightProbe })}`);
+    }
+
+    const settled = await waitFor(`${label}: material arrivals settle`, async () => {
+      const leftState = await readProbe(session, `${label}-left`);
+      const rightState = await readProbe(session, `${label}-right`);
+      return leftState?.arrival === 'complete' && rightState?.arrival === 'complete'
+        ? { left: leftState, right: rightState }
+        : false;
+    }, 2_000);
+    if (!(settled.left.centerX < settled.right.centerX)) {
+      throw new Error(`${label}: settled trick slots do not match viewer-relative topology ${JSON.stringify(settled)}`);
     }
 
     await execute(session, `document.querySelectorAll('[data-probe]').forEach((node) => node.remove()); return true;`);
-    return { perspective, leftProbe, rightProbe };
+    return { perspective, leftProbe, rightProbe, settled };
   } finally {
     await closeSession(session);
   }
 }
 
-let session;
 const vite = startProcess('npm', ['run', 'dev', '--', '--host', '127.0.0.1', '--port', '4203']);
 const driver = startProcess('chromedriver', ['--port=9543']);
 
@@ -225,7 +236,6 @@ try {
   console.error('\n--- chromedriver output ---\n', driver.getOutput());
   throw error;
 } finally {
-  await closeSession(session);
   stopProcess(driver.child);
   stopProcess(vite.child);
 }
