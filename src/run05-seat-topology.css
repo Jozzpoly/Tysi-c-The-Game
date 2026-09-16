@@ -9,6 +9,22 @@
   order: 1;
 }
 
+/* Run05 spatial affordance temporarily made trick children `position: relative`
+ * only to establish z-index ownership. That silently destroyed the older
+ * seat-shaped trick slots. Once a canonical viewer-relative position exists,
+ * restore actual spatial slots here rather than relying on flow order. */
+.trick .played[data-view-position] {
+  position: absolute;
+  z-index: 1;
+}
+
+.trick .played[data-view-position='self'] {
+  left: 50%;
+  right: auto;
+  top: auto;
+  bottom: 0;
+}
+
 .trick .played[data-view-position='left'] {
   left: 8%;
   right: auto;
