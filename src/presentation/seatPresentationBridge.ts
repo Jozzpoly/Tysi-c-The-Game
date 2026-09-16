@@ -23,15 +23,17 @@ function sourceNodeForSeat(shell: HTMLElement, seat: Seat): HTMLElement | null {
     ?? anchor;
 }
 
-function marriageOwnsFreshCard(shell: HTMLElement, card: string) {
-  return [...shell.querySelectorAll<HTMLElement>('[data-marriage-material-state="active"]')]
-    .some((node) => node.dataset.marriageMaterialCard === card);
+function marriageOwnsFreshCard(played: HTMLElement, card: string) {
+  if (played.classList.contains('is-marriage-materializing')) return true;
+  return Boolean(document.querySelector<HTMLElement>(
+    `.marriage-material-layer[data-marriage-played="${card}"]`,
+  ));
 }
 
 function animateOpponentPlay(shell: HTMLElement, played: HTMLElement, seat: Seat) {
   if (played.dataset.materialPlayArrival) return;
   const cardId = played.dataset.card ?? '';
-  if (!cardId || marriageOwnsFreshCard(shell, cardId)) {
+  if (!cardId || marriageOwnsFreshCard(played, cardId)) {
     played.dataset.materialPlayArrival = 'delegated';
     return;
   }
