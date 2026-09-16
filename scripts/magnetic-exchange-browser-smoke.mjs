@@ -303,7 +303,7 @@ async function runViewport(label, width, height, mobile) {
       const state = await inspectTakeover(session, `seat-${drag.seat}`);
       return state?.mode === 'takeover'
         && state.target === `seat-${drag.seat}`
-        && state.magnitude >= ${MIN_TAKEOVER_PX}
+        && state.magnitude >= MIN_TAKEOVER_PX
         ? state
         : false;
     }, 2_000);
@@ -332,7 +332,7 @@ async function runViewport(label, width, height, mobile) {
       const state = await inspectTakeover(session, `seat-${drag.seat}`);
       return state?.mode === 'takeover'
         && state.target === `seat-${drag.seat}`
-        && state.magnitude >= ${MIN_TAKEOVER_PX}
+        && state.magnitude >= MIN_TAKEOVER_PX
         ? state
         : false;
     }, 2_000);
