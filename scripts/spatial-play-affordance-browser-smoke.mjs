@@ -4,6 +4,7 @@ import { spawn } from 'node:child_process';
 const BASE_URL = 'http://127.0.0.1:4195';
 const WEBDRIVER = 'http://127.0.0.1:9535';
 const OUTPUT = 'artifacts/browser';
+const MIN_TAKEOVER_PX = 18;
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 async function waitFor(label, probe, timeoutMs = 12_000) {
@@ -138,10 +139,13 @@ async function affordanceState(session, card) {
     const hand = document.querySelector('.tactile-hand');
     const ghost = document.querySelector('.tactile-card-float[data-card-id="${card}"]:not(.pending-handoff)');
     const trick = document.querySelector('.trick');
-    if (!hand || !ghost || !trick) return null;
+    const shell = document.querySelector('.app-shell');
+    if (!hand || !ghost || !trick || !shell) return null;
     const surface = getComputedStyle(trick, '::before');
     const cue = getComputedStyle(trick, '::after');
     const legacy = document.querySelector('.tactile-commit-zone');
+    const ownerX = Number.parseFloat(shell.style.getPropertyValue('--owner-card-magnet-x')) || 0;
+    const ownerY = Number.parseFloat(shell.style.getPropertyValue('--owner-card-magnet-y')) || 0;
     return {
       phase: hand.dataset.gesturePhase ?? '',
       surfaceOpacity: Number(surface.opacity),
@@ -154,6 +158,10 @@ async function affordanceState(session, card) {
       magnetOffsetX: Number(ghost.dataset.magnetOffsetX ?? 0),
       magnetOffsetY: Number(ghost.dataset.magnetOffsetY ?? 0),
       acceptedSelectorMatches: Boolean(document.querySelector('.app-shell:has(.tactile-card-float.commit-ready:not(.pending-handoff))')),
+      ownerMode: shell.getAttribute('data-owner-card-magnet-mode') ?? '',
+      ownerTarget: shell.getAttribute('data-owner-card-magnet-target') ?? '',
+      ownerMagnitude: Math.hypot(ownerX, ownerY),
+      sourceStillInHand: Boolean(document.querySelector('.hand-slot[data-card="${card}"]')),
     };
   `);
 }
@@ -213,9 +221,19 @@ async function runViewport(label, width, height, mobile) {
       throw new Error(`${label}: magnetic probe accidentally entered canonical table geometry`);
     }
 
-    // Gesture truth and CSS feedback have different clocks. Let the browser finish
-    // the short visual transition, then assert the resulting computed surface.
-    await sleep(220);
+    // Gesture truth and presentation have different clocks. Wait for the rAF
+    // bridge and short CSS surface transition, then require a visible takeover.
+    const takeover = await waitFor(`${label}: table takeover`, async () => {
+      const state = await affordanceState(session, playable.card);
+      return state?.phase === 'accepted'
+        && state.ghostReady
+        && state.ownerMode === 'takeover'
+        && state.ownerTarget === 'table'
+        && state.ownerMagnitude >= ${MIN_TAKEOVER_PX}
+        ? state
+        : false;
+    }, 2_000);
+    await sleep(180);
     const accepted = await affordanceState(session, playable.card);
     if (!accepted
       || accepted.phase !== 'accepted'
@@ -223,12 +241,43 @@ async function runViewport(label, width, height, mobile) {
       || accepted.magnetStrength <= 0
       || accepted.magnetOffsetY <= 0
       || !accepted.acceptedSelectorMatches
+      || accepted.ownerMode !== 'takeover'
+      || accepted.ownerTarget !== 'table'
+      || accepted.ownerMagnitude < ${MIN_TAKEOVER_PX}
       || accepted.surfaceOpacity < .75
       || accepted.cueOpacity < .65
       || !accepted.cueContent.toLowerCase().includes('puść')) {
-      throw new Error(`${label}: magnetic accepted surface disagrees with gesture ${JSON.stringify({ acceptedGesture, accepted })}`);
+      throw new Error(`${label}: magnetic accepted surface disagrees with gesture ${JSON.stringify({ acceptedGesture, takeover, accepted })}`);
     }
-    await screenshot(session, `${label}-spatial-play-magnetic-accepted`);
+    await screenshot(session, `${label}-spatial-play-magnetic-takeover`);
+
+    // Retreat without releasing. Acceptance and the new visual ownership must
+    // both unwind while the canonical card remains in the player's hand.
+    await moveTouch(session, magneticEdge, outside);
+    const reversed = await waitFor(`${label}: table takeover reversal`, async () => {
+      const state = await affordanceState(session, playable.card);
+      return state?.phase === 'held'
+        && !state.ghostReady
+        && state.ownerMagnitude < 1.5
+        && state.sourceStillInHand
+        ? state
+        : false;
+    }, 2_000);
+    await screenshot(session, `${label}-spatial-play-magnetic-reversed`);
+
+    // Re-enter with the same held card. No stale bridge state may be required for
+    // the second capture; TactileHand truth must drive takeover again.
+    await moveTouch(session, outside, magneticEdge);
+    const retakeover = await waitFor(`${label}: table retakeover`, async () => {
+      const state = await affordanceState(session, playable.card);
+      return state?.phase === 'accepted'
+        && state.ghostReady
+        && state.ownerMode === 'takeover'
+        && state.ownerTarget === 'table'
+        && state.ownerMagnitude >= ${MIN_TAKEOVER_PX}
+        ? state
+        : false;
+    }, 2_000);
 
     await touch(session, 'touchEnd', []);
     await waitFor(`${label}: magnetic release committed`, () => execute(session, `
@@ -242,7 +291,10 @@ async function runViewport(label, width, height, mobile) {
       magneticOutsideByPx: playable.zone.top - magneticEdge.y,
       available,
       acceptedGesture,
+      takeover,
       accepted,
+      reversed,
+      retakeover,
       committedOutsideCanonical: true,
     };
   } finally {
