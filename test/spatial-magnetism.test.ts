@@ -81,7 +81,7 @@ describe('spatial magnetism', () => {
       releasePaddingPx: 30,
     })).toBe('right');
 
-    expect(chooseMagneticTarget({ x: 500, y: 60 }, targets, {
+    expect(chooseMagneticTarget({ x: 501, y: 60 }, targets, {
       preferredId: 'right',
       enterPaddingPx: 18,
       releasePaddingPx: 30,
