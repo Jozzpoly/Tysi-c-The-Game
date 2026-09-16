@@ -63,7 +63,7 @@ describe('spatial magnetism', () => {
     expect(assisted.strength).toBeGreaterThan(0);
   });
 
-  it('retains a captured target, then chooses the nearest target when free', () => {
+  it('retains a captured target in overlap but canonical occupancy can switch it', () => {
     const targets = [
       { id: 'left', rect: { left: 20, right: 100, top: 20, bottom: 100 } },
       { id: 'right', rect: { left: 120, right: 200, top: 20, bottom: 100 } },
@@ -77,6 +77,12 @@ describe('spatial magnetism', () => {
 
     expect(chooseMagneticTarget({ x: 112, y: 60 }, targets, {
       preferredId: 'right',
+      enterPaddingPx: 18,
+      releasePaddingPx: 30,
+    })).toBe('right');
+
+    expect(chooseMagneticTarget({ x: 150, y: 60 }, targets, {
+      preferredId: 'left',
       enterPaddingPx: 18,
       releasePaddingPx: 30,
     })).toBe('right');
