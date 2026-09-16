@@ -25,6 +25,23 @@ function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
 }
 
+function targetSpan(rect: SpatialRect) {
+  return Math.max(0, rect.right - rect.left, rect.bottom - rect.top);
+}
+
+function capturePadding(rect: SpatialRect, requestedPaddingPx: number, latched: boolean) {
+  const span = targetSpan(rect);
+  const floor = latched ? 300 : 230;
+  const proportional = span * (latched ? 0.85 : 0.65);
+  const cap = latched ? 380 : 300;
+  return Math.max(0, requestedPaddingPx, Math.min(cap, Math.max(floor, proportional)));
+}
+
+function attractionField(rect: SpatialRect, requestedPaddingPx: number) {
+  const span = targetSpan(rect);
+  return Math.max(1, requestedPaddingPx, Math.min(480, Math.max(360, span * 0.95)));
+}
+
 export function pointInsideRect(point: SpatialPoint, rect: SpatialRect, paddingPx = 0) {
   return point.x >= rect.left - paddingPx
     && point.x <= rect.right + paddingPx
@@ -33,23 +50,26 @@ export function pointInsideRect(point: SpatialPoint, rect: SpatialRect, paddingP
 }
 
 /**
- * A magnetic target is easier to enter than a strict hit rectangle, and harder
- * to accidentally leave once captured. The caller owns the `latched` bit so
- * this remains pure geometry rather than hidden interaction state.
+ * A magnetic target is intentionally much easier to enter than its strict hit
+ * rectangle. The assistance field scales with the physical target so a carried
+ * card can be released on a clear approach instead of requiring pixel-accurate
+ * travel all the way to the destination. A captured target keeps a wider field
+ * to prevent left/right flicker while the player is still moving.
  */
 export function magneticCapture(
   point: SpatialPoint,
   rect: SpatialRect,
   options: { latched: boolean; enterPaddingPx: number; releasePaddingPx: number },
 ) {
-  const padding = options.latched ? options.releasePaddingPx : options.enterPaddingPx;
-  return pointInsideRect(point, rect, Math.max(0, padding));
+  const requested = options.latched ? options.releasePaddingPx : options.enterPaddingPx;
+  return pointInsideRect(point, rect, capturePadding(rect, requested, options.latched));
 }
 
 /**
- * Return a small visual pull toward the nearest point of the canonical target.
- * The canonical rectangle itself never moves: assistance exists only while the
- * pointer/card centre is just outside it, and smoothly reaches zero at its edge.
+ * Return a continuous visual pull toward the nearest point of the canonical
+ * target. Attraction begins well before acceptance, is almost imperceptible at
+ * the outside edge, and strengthens smoothly on approach. The canonical target
+ * never moves; this is presentation assistance only.
  */
 export function magneticOffsetToRect(
   point: SpatialPoint,
@@ -64,14 +84,14 @@ export function magneticOffsetToRect(
   const dx = nearestX - point.x;
   const dy = nearestY - point.y;
   const distance = Math.hypot(dx, dy);
-  const field = Math.max(1, fieldPaddingPx);
+  const field = attractionField(rect, fieldPaddingPx);
   if (distance > field || distance < 0.001) return { x: 0, y: 0, strength: 0 };
 
   const strength = 1 - distance / field;
-  const pullDistance = Math.min(
-    Math.max(0, maxPullPx),
-    distance * (0.25 + 0.35 * strength),
-  );
+  const easedStrength = strength * strength * (3 - 2 * strength);
+  const targetScaledPull = Math.min(36, targetSpan(rect) * 0.1);
+  const effectiveMaxPull = Math.max(0, maxPullPx, targetScaledPull);
+  const pullDistance = Math.min(distance, effectiveMaxPull * easedStrength);
   const scale = pullDistance / distance;
   return {
     x: dx * scale,
