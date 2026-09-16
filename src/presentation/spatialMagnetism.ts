@@ -29,17 +29,17 @@ function targetSpan(rect: SpatialRect) {
   return Math.max(0, rect.right - rect.left, rect.bottom - rect.top);
 }
 
-function capturePadding(rect: SpatialRect, requestedPaddingPx: number, latched: boolean) {
+function approachPadding(rect: SpatialRect, requestedPaddingPx: number, latched: boolean) {
   const span = targetSpan(rect);
-  const floor = latched ? 300 : 230;
-  const proportional = span * (latched ? 0.85 : 0.65);
-  const cap = latched ? 380 : 300;
-  return Math.max(0, requestedPaddingPx, Math.min(cap, Math.max(floor, proportional)));
+  if (span >= 300) {
+    return Math.max(requestedPaddingPx, latched ? 180 : 120);
+  }
+  return Math.max(requestedPaddingPx, latched ? 340 : 260);
 }
 
 function attractionField(rect: SpatialRect, requestedPaddingPx: number) {
   const span = targetSpan(rect);
-  return Math.max(1, requestedPaddingPx, Math.min(480, Math.max(360, span * 0.95)));
+  return Math.max(1, requestedPaddingPx, Math.min(620, Math.max(420, span * 1.05)));
 }
 
 export function pointInsideRect(point: SpatialPoint, rect: SpatialRect, paddingPx = 0) {
@@ -50,19 +50,22 @@ export function pointInsideRect(point: SpatialPoint, rect: SpatialRect, paddingP
 }
 
 /**
- * A magnetic target is intentionally much easier to enter than its strict hit
- * rectangle. The assistance field scales with the physical target so a carried
- * card can be released on a clear approach instead of requiring pixel-accurate
- * travel all the way to the destination. A captured target keeps a wider field
- * to prevent left/right flicker while the player is still moving.
+ * A carried card approaches both the trick and exchange recipients from the
+ * player's hand below them. Make that natural approach forgiving while keeping
+ * the top/side boundaries tight. This avoids turning a large part of the screen
+ * into one symmetric hitbox or letting neighbouring exchange targets fight.
  */
 export function magneticCapture(
   point: SpatialPoint,
   rect: SpatialRect,
   options: { latched: boolean; enterPaddingPx: number; releasePaddingPx: number },
 ) {
-  const requested = options.latched ? options.releasePaddingPx : options.enterPaddingPx;
-  return pointInsideRect(point, rect, capturePadding(rect, requested, options.latched));
+  const requested = Math.max(0, options.latched ? options.releasePaddingPx : options.enterPaddingPx);
+  const bottomPadding = approachPadding(rect, requested, options.latched);
+  return point.x >= rect.left - requested
+    && point.x <= rect.right + requested
+    && point.y >= rect.top - requested
+    && point.y <= rect.bottom + bottomPadding;
 }
 
 /**
@@ -110,7 +113,7 @@ function centerDistanceSquared(point: SpatialPoint, rect: SpatialRect) {
 
 /**
  * Canonical occupancy wins over hysteresis. This matters when two generous
- * magnetic fields overlap: carrying a card visibly into another player's real
+ * approach fields overlap: carrying a card visibly into another player's real
  * territory must switch targets immediately rather than remain stuck to the
  * previously latched recipient. Outside canonical rectangles, the preferred
  * target still receives the wider release field that prevents edge flicker.
