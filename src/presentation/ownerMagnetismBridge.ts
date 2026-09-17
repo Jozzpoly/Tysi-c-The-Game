@@ -30,6 +30,7 @@ let renderedX = 0;
 let renderedY = 0;
 let releasing = false;
 let truthVerificationFrames = 0;
+let truthObserver: MutationObserver | null = null;
 
 function reducedMotion() {
   return window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
@@ -176,13 +177,20 @@ function renderOwnerMagnetism() {
     || Math.abs(desired.y - renderedY) > SETTLE_EPSILON_PX;
   // The document capture listener can run before React publishes the gesture
   // state produced by the same pointer sample. Re-read presentation truth for
-  // two follow-up frames even when the current offset appears settled; if React
-  // has changed commit-ready/exchange target, the normal return/takeover loop
-  // then continues until the visual card converges on that authoritative truth.
+  // two follow-up frames even when the current offset appears settled. The
+  // MutationObserver below is the durable wake-up path when React publishes
+  // that truth later than those immediate verification frames.
   const verifyAgain = truthVerificationFrames > 0;
   if (verifyAgain) truthVerificationFrames -= 1;
   if (unsettled || verifyAgain) frameId = window.requestAnimationFrame(renderOwnerMagnetism);
   else if (!desired.target && renderedX === 0 && renderedY === 0) clearMagnet(shell);
+}
+
+function scheduleTruthRefresh() {
+  if (releasing) return;
+  if (!latestPointer && renderedX === 0 && renderedY === 0) return;
+  truthVerificationFrames = Math.max(truthVerificationFrames, 1);
+  if (frameId === null) frameId = window.requestAnimationFrame(renderOwnerMagnetism);
 }
 
 function scheduleOwnerMagnetism(event: PointerEvent) {
@@ -213,4 +221,16 @@ export function installOwnerMagnetismBridge() {
   document.addEventListener('pointermove', scheduleOwnerMagnetism, { capture: true, passive: true });
   document.addEventListener('pointerup', finishOwnerMagnetism, { capture: true, passive: true });
   document.addEventListener('pointercancel', finishOwnerMagnetism, { capture: true, passive: true });
+
+  // React owns the acceptance/hysteresis truth and can publish it after the
+  // capture-phase pointer listener has already sampled the DOM. Wake the
+  // presentation renderer when those specific truth attributes/classes change
+  // instead of relying on an arbitrary number of follow-up animation frames.
+  truthObserver?.disconnect();
+  truthObserver = new MutationObserver(scheduleTruthRefresh);
+  truthObserver.observe(document.documentElement, {
+    subtree: true,
+    attributes: true,
+    attributeFilter: ['class', 'data-exchange-magnet-seat'],
+  });
 }
