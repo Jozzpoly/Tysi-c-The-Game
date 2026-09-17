@@ -9,6 +9,7 @@ const TOUCH_TAKEOVER_MAX_PX = 104;
 const FOLLOW_RATE = 0.42;
 const RELEASE_FOLLOW_RATE = 0.34;
 const SETTLE_EPSILON_PX = 0.25;
+const TRUTH_VERIFICATION_FRAMES = 2;
 
 type PointerSample = {
   x: number;
@@ -28,6 +29,7 @@ let frameId: number | null = null;
 let renderedX = 0;
 let renderedY = 0;
 let releasing = false;
+let truthVerificationFrames = 0;
 
 function reducedMotion() {
   return window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
@@ -37,6 +39,7 @@ function clearMagnet(shell: HTMLElement | null) {
   renderedX = 0;
   renderedY = 0;
   releasing = false;
+  truthVerificationFrames = 0;
   if (!shell) return;
   shell.style.removeProperty('--owner-card-magnet-x');
   shell.style.removeProperty('--owner-card-magnet-y');
@@ -171,18 +174,27 @@ function renderOwnerMagnetism() {
 
   const unsettled = Math.abs(desired.x - renderedX) > SETTLE_EPSILON_PX
     || Math.abs(desired.y - renderedY) > SETTLE_EPSILON_PX;
-  if (unsettled) frameId = window.requestAnimationFrame(renderOwnerMagnetism);
+  // The document capture listener can run before React publishes the gesture
+  // state produced by the same pointer sample. Re-read presentation truth for
+  // two follow-up frames even when the current offset appears settled; if React
+  // has changed commit-ready/exchange target, the normal return/takeover loop
+  // then continues until the visual card converges on that authoritative truth.
+  const verifyAgain = truthVerificationFrames > 0;
+  if (verifyAgain) truthVerificationFrames -= 1;
+  if (unsettled || verifyAgain) frameId = window.requestAnimationFrame(renderOwnerMagnetism);
   else if (!desired.target && renderedX === 0 && renderedY === 0) clearMagnet(shell);
 }
 
 function scheduleOwnerMagnetism(event: PointerEvent) {
   releasing = false;
   latestPointer = { x: event.clientX, y: event.clientY, pointerType: event.pointerType };
+  truthVerificationFrames = TRUTH_VERIFICATION_FRAMES;
   if (frameId === null) frameId = window.requestAnimationFrame(renderOwnerMagnetism);
 }
 
 function finishOwnerMagnetism() {
   latestPointer = null;
+  truthVerificationFrames = 0;
   releasing = renderedX !== 0 || renderedY !== 0;
   if (frameId !== null) {
     window.cancelAnimationFrame(frameId);
