@@ -308,11 +308,39 @@ async function takeDecision(session, current, counters, mobile) {
       return document.querySelectorAll('.hand-slot.is-exchange-staged').length === 1;
     `), 1_000);
     await dragNextExchangeCard(session, 1, mobile);
-    await waitFor('exchange physical commit', () => execute(session, `
-      const state = document.querySelector('.material-exchange-state')?.getAttribute('data-exchange-material-state');
-      const heading = document.querySelector('.decision-card h2')?.textContent?.trim() ?? '';
-      return state === 'active' || state === 'settled' || heading === 'Ile ostatecznie grasz?';
-    `), 2_000);
+
+    await waitFor('exchange physical handoff accepted', async () => {
+      const progress = await execute(session, `
+        const staged = document.querySelectorAll('.hand-slot.is-exchange-staged').length;
+        const shell = document.querySelector('.app-shell');
+        const submitting = shell?.getAttribute('data-exchange-submitting') === 'true';
+        const material = document.querySelector('.material-exchange-state')?.getAttribute('data-exchange-material-state') ?? '';
+        const heading = document.querySelector('.decision-card h2')?.textContent?.trim() ?? '';
+        const handCards = document.querySelectorAll('.hand .card').length;
+        const connection = document.querySelector('.connection-banner')?.textContent?.trim() ?? '';
+        return { staged, submitting, material, heading, handCards, connection };
+      `);
+      if (progress.staged >= 2 || progress.submitting || progress.material === 'active' || progress.material === 'settled' || progress.heading === 'Ile ostatecznie grasz?') {
+        return progress;
+      }
+      throw new Error(JSON.stringify(progress));
+    }, 5_000);
+
+    await waitFor('exchange authoritative commit', async () => {
+      const progress = await execute(session, `
+        const material = document.querySelector('.material-exchange-state')?.getAttribute('data-exchange-material-state') ?? '';
+        const heading = document.querySelector('.decision-card h2')?.textContent?.trim() ?? '';
+        const handCards = document.querySelectorAll('.hand .card').length;
+        const connection = document.querySelector('.connection-banner')?.textContent?.trim() ?? '';
+        const submitting = document.querySelector('.app-shell')?.getAttribute('data-exchange-submitting') === 'true';
+        return { material, heading, handCards, connection, submitting };
+      `);
+      if (progress.material === 'active' || progress.material === 'settled' || progress.heading === 'Ile ostatecznie grasz?') {
+        return progress;
+      }
+      throw new Error(JSON.stringify(progress));
+    }, 10_000);
+
     counters.exchanges += 1;
     return 'exchange';
   }
