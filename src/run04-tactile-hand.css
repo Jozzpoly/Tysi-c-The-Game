@@ -81,6 +81,20 @@
     inset 0 0 0 1px #fff;
 }
 
+/* During a constrained play, keep legal cards fully present and softly push
+ * currently illegal alternatives into the background. Do not grey the whole
+ * hand in waiting/auction phases; TactileHand only adds this class when there
+ * is a real legal-vs-illegal choice. */
+.tactile-hand .hand-slot.is-unavailable > .card:disabled {
+  opacity: .72;
+  filter: saturate(.72) brightness(.80);
+  border-color: color-mix(in srgb, var(--card-edge, #e2d9c7) 74%, #625f58);
+  box-shadow:
+    0 6px 13px #00038,
+    0 1px 1px #0004,
+    inset 0 0 0 1px #ffffff75;
+}
+
 .tactile-hand .hand-slot:hover > .card,
 .tactile-hand .hand-slot.is-held > .card,
 .tactile-hand .hand-slot:focus-within > .card {
