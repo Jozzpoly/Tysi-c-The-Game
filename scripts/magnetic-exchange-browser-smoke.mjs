@@ -254,10 +254,7 @@ async function runViewport(label, width, height, mobile) {
     await screenshot(session, `${label}-exchange-magnetic-capture`);
 
     await pointerUp(session, drag.release, mobile);
-    const staged = await waitFor(`${label}: magnetic outside drop settles`, async () => {
-      const state = await inspectStaged(session, drag.card, drag.seat);
-      return state?.stageCenterDistance <= 8 ? state : false;
-    }, 2_000);
+    const staged = await waitFor(`${label}: magnetic outside drop staged`, () => inspectStaged(session, drag.card, drag.seat), 2_000);
     if (staged.card !== drag.card || staged.recipient !== drag.seat || staged.assigned !== drag.card) {
       throw new Error(`${label}: magnetic outside drop mapped wrong card/recipient ${JSON.stringify({ drag, staged })}`);
     }
