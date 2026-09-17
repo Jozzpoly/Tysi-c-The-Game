@@ -1,6 +1,7 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App.js';
+import { installPerformanceProbe } from './performance/performanceProbe.js';
 import { installOwnerMagnetismBridge } from './presentation/ownerMagnetismBridge.js';
 import { installSeatPresentationBridge } from './presentation/seatPresentationBridge.js';
 import './touch.css';
@@ -23,6 +24,7 @@ import './run05-desktop-composition.css';
 import './run05-owner-magnetism.css';
 import './run05-seat-topology.css';
 
+installPerformanceProbe();
 installOwnerMagnetismBridge();
 installSeatPresentationBridge();
 
