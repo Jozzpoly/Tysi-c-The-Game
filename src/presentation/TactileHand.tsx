@@ -59,6 +59,7 @@ interface DragLayoutSnapshot {
   sourceIndex: number;
   centers: number[];
   pointerToSourceCenterX: number;
+  playRect: DOMRect | null;
 }
 
 type FloatingCardProps =
@@ -369,6 +370,7 @@ export function TactileHand({
       sourceIndex,
       centers,
       pointerToSourceCenterX: sourceCenterX - event.clientX,
+      playRect,
     };
     latestPreview.current = null;
     stableTarget.current = sourceIndex;
@@ -391,7 +393,7 @@ export function TactileHand({
 
   function moveDrag(event: ReactPointerEvent<HTMLDivElement>) {
     if (!drag || event.pointerId !== drag.pointerId) return;
-    const playRect = readPlayZoneRect();
+    const playRect = dragLayout.current?.playRect ?? null;
     const cardCenterX = event.clientX - drag.offsetX + drag.width / 2;
     const cardCenterY = event.clientY - drag.offsetY + drag.height / 2;
     const cardCenter = { x: cardCenterX, y: cardCenterY };
