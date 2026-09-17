@@ -140,13 +140,10 @@
  * instead of doing a second synthetic flight from the declarer's hand. Size it
  * closer to that compact opponent hand without changing staging authority. */
 .exchange-mode .tactile-hand > .hand-slot.is-exchange-staged {
-  --exchange-stage-scale: .66;
   z-index: 1180;
   transform: none !important;
-  /* These are the final-state anchors. WAAPI temporarily overrides the normal
-   * individual transform properties while the physical card travels there. */
-  translate: var(--exchange-stage-x, 0px) var(--exchange-stage-y, 0px);
-  scale: var(--exchange-stage-scale);
+  translate: var(--exchange-stage-x, 0px) var(--exchange-stage-y, 0px) !important;
+  scale: .66 !important;
   transition: none !important;
   cursor: grab;
 }
@@ -223,7 +220,7 @@
   }
 
   .exchange-mode .tactile-hand > .hand-slot.is-exchange-staged {
-    --exchange-stage-scale: .70;
+    scale: .70 !important;
   }
 
   .exchange-mode .opponent.exchange-drop-target::after {
