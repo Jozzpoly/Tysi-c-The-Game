@@ -140,11 +140,14 @@
  * instead of doing a second synthetic flight from the declarer's hand. Size it
  * closer to that compact opponent hand without changing staging authority. */
 .exchange-mode .tactile-hand > .hand-slot.is-exchange-staged {
+  --exchange-stage-scale: .66;
   z-index: 1180;
   transform: none !important;
   translate: var(--exchange-stage-x, 0px) var(--exchange-stage-y, 0px) !important;
-  scale: .66 !important;
-  transition: none !important;
+  scale: var(--exchange-stage-scale) !important;
+  transition:
+    translate 240ms cubic-bezier(.16,.74,.18,1),
+    scale 260ms cubic-bezier(.16,.74,.18,1) !important;
   cursor: grab;
 }
 
@@ -220,7 +223,7 @@
   }
 
   .exchange-mode .tactile-hand > .hand-slot.is-exchange-staged {
-    scale: .70 !important;
+    --exchange-stage-scale: .70;
   }
 
   .exchange-mode .opponent.exchange-drop-target::after {
