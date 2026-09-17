@@ -246,8 +246,10 @@ export function GameTable({ projection, seatNames, events = [], message = '', on
       const card = slot.dataset.card as CardId | undefined;
       const seat = card ? expected.get(card) : undefined;
       if (seat !== undefined && slot.dataset.exchangeRecipient === String(seat)) continue;
-      exchangeStageAnimations.current.get(card ?? '' as CardId)?.cancel();
-      if (card) exchangeStageAnimations.current.delete(card);
+      if (card) {
+        exchangeStageAnimations.current.get(card)?.cancel();
+        exchangeStageAnimations.current.delete(card);
+      }
       slot.classList.remove('is-exchange-staged');
       delete slot.dataset.exchangeRecipient;
       slot.style.removeProperty('--exchange-stage-x');
