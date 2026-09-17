@@ -429,13 +429,17 @@ async function runDeclarerViewport(label, width, height, mobile) {
     await screenshot(session, `${label}-physical-exchange-first-card`);
 
     const secondDrop = await dragNextExchangeCard(session, 1, mobile);
+    let lastSecondDraft = null;
     const secondDraft = await waitFor(`${label}: second physical recipient settles`, async () => {
       const state = await inspectExchangeDraft(session);
+      lastSecondDraft = state;
       return state.staged.length === 2
         && state.staged.every((entry) => entry.insideRecipient && entry.atRecipientHand)
         ? state
         : false;
-    }, 1_200);
+    }, 1_200).catch((error) => {
+      throw new Error(`${label}: second physical recipient settles failed; last state ${JSON.stringify(lastSecondDraft)}; ${error instanceof Error ? error.message : String(error)}`);
+    });
     const recipientMap = new Map(secondDraft.staged.map((entry) => [entry.recipient, entry.card]));
     if (recipientMap.get(firstDrop.seat) !== firstDrop.card || recipientMap.get(secondDrop.seat) !== secondDrop.card) {
       throw new Error(`${label}: two-card exchange mapping does not match spatial recipients ${JSON.stringify({ firstDrop, secondDrop, secondDraft })}`);
