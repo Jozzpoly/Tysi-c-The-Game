@@ -14,6 +14,16 @@ Status: **Finalization mode. Latest main is Owner-tested and close to acceptable
 
 Historical Run01–Run04 material and old experiment branches are donor/history only unless explicitly reactivated.
 
+## Truth tracks
+
+Keep three different kinds of evidence separate:
+
+1. **Game truth** — rules, legality, scoring and bot behavior.
+2. **Experience truth** — visual, physical, motion, UI/UX and responsiveness quality.
+3. **Operations / external truth** — the exact deployed build, copied-link behavior, multiplayer/privacy/reconnect behavior and real-world availability.
+
+A PASS on one track does not silently promote another.
+
 ## Finalization target
 
 The project is no longer in open-ended feature development. The temporary project is considered ready to close when:
@@ -109,6 +119,12 @@ It currently preserves the historical recovery candidate:
 That build remains valuable persistence/recovery evidence but is **not the final product candidate anymore**. Do not spend Owner/friend attention testing that old presentation build now.
 
 The real-human friend gate is intentionally deferred until the post-performance final candidate is selected and deployed to the same stable origin. Stable deployment must still use exact immutable product SHA + current validation-harness evidence per `docs/DEPLOYMENT.md`.
+
+### Friend-link incident OPEN / P0 BLOCKER
+
+This incident status remains open **only because the required real-human Owner + friend evidence has not yet happened**. Automated recovery/persistence evidence is strong; this heading is retained as an explicit release safety contract, not as a claim that copied links are currently known broken.
+
+The bounded real-human gate is deliberately deferred until after the final mobile-performance candidate is Owner-approved and promoted to the canonical stable origin. The final session must still demonstrate create → exact copied invite → friend join → at least one shared legal action → refresh/reconnect. Until that happens, automation cannot close the incident or the final release gate.
 
 ## Protected foundation
 
