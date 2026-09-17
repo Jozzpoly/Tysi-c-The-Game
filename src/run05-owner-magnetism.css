@@ -1,18 +1,8 @@
 /* Owner-test correction: carried cards should feel attracted to valid destinations
  * before the pointer reaches the strict visual target. Geometry/acceptance remain
- * owned by the existing interaction adapters; this layer only renders the pull.
- *
- * While a card is actively carried, React's exact inline left/top geometry is
- * sampled once per animation frame by ownerMagnetismBridge and replayed through
- * compositor-friendly `translate`. Pending authoritative handoff deliberately
- * stays on the established left/top + WAAPI path. */
-.app-shell .tactile-card-float.is-compositor-drag:not(.pending-handoff) {
-  left: 0 !important;
-  top: 0 !important;
-  translate:
-    calc(var(--owner-card-drag-x, 0px) + var(--owner-card-magnet-x, 0px))
-    calc(var(--owner-card-drag-y, 0px) + var(--owner-card-magnet-y, 0px));
-  will-change: translate, transform;
+ * owned by the existing interaction adapters; this layer only renders the pull. */
+.app-shell .tactile-card-float:not(.pending-handoff) {
+  translate: var(--owner-card-magnet-x, 0px) var(--owner-card-magnet-y, 0px);
 }
 
 .app-shell[data-owner-card-magnet-strength]:not([data-owner-card-magnet-strength='0.000'])
@@ -21,7 +11,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .app-shell .tactile-card-float.is-compositor-drag:not(.pending-handoff) {
-    translate: var(--owner-card-drag-x, 0px) var(--owner-card-drag-y, 0px) !important;
+  .app-shell .tactile-card-float:not(.pending-handoff) {
+    translate: 0 0 !important;
   }
 }
