@@ -226,17 +226,28 @@ export function GameTable({ projection, seatNames, events = [], message = '', on
   }
 
   useLayoutEffect(() => {
-    const clearStagedGeometry = () => {
-      for (const slot of document.querySelectorAll<HTMLElement>('.hand-slot.is-exchange-staged')) {
-        slot.classList.remove('is-exchange-staged');
-        delete slot.dataset.exchangeRecipient;
-        slot.style.removeProperty('--exchange-stage-x');
-        slot.style.removeProperty('--exchange-stage-y');
+    const expected = new Map<CardId, Seat>();
+    if (exchangeMode) {
+      for (const seat of opponentSeats) {
+        const card = exchangeDraft[seat];
+        if (card) expected.set(card, seat);
       }
-    };
+    }
 
-    clearStagedGeometry();
-    if (!exchangeMode) return clearStagedGeometry;
+    // Preserve already-staged cards across the second assignment. Clearing and
+    // rebuilding every staged slot made the first physical card re-enter from the
+    // hand when the draft changed, which reads as a UI reset rather than ownership.
+    for (const slot of document.querySelectorAll<HTMLElement>('.hand-slot.is-exchange-staged')) {
+      const card = slot.dataset.card as CardId | undefined;
+      const seat = card ? expected.get(card) : undefined;
+      if (seat !== undefined && slot.dataset.exchangeRecipient === String(seat)) continue;
+      slot.classList.remove('is-exchange-staged');
+      delete slot.dataset.exchangeRecipient;
+      slot.style.removeProperty('--exchange-stage-x');
+      slot.style.removeProperty('--exchange-stage-y');
+    }
+
+    if (!exchangeMode) return;
 
     for (const seat of opponentSeats) {
       const card = exchangeDraft[seat];
@@ -245,6 +256,7 @@ export function GameTable({ projection, seatNames, events = [], message = '', on
       const cardNode = slot?.querySelector<HTMLElement>(':scope > .card');
       const stageTarget = document.querySelector<HTMLElement>(`[data-exchange-target-seat="${seat}"] .card-backs`);
       if (!slot || !cardNode || !stageTarget) continue;
+      if (slot.classList.contains('is-exchange-staged') && slot.dataset.exchangeRecipient === String(seat)) continue;
 
       // The tactile hand starts its generic return-to-hand animation before this
       // parent sees pointer-up. Once the drop is accepted by a recipient, cancel
@@ -261,8 +273,6 @@ export function GameTable({ projection, seatNames, events = [], message = '', on
       slot.dataset.exchangeRecipient = String(seat);
       slot.classList.add('is-exchange-staged');
     }
-
-    return clearStagedGeometry;
   }, [exchangeDraft, exchangeMode, view.revision]);
 
   useEffect(() => {
@@ -277,7 +287,7 @@ export function GameTable({ projection, seatNames, events = [], message = '', on
     const timer = window.setTimeout(() => {
       setExchangeSubmitting(true);
       void onCommand(command);
-    }, 180);
+    }, 300);
     return () => window.clearTimeout(timer);
   }, [exchangeDraft, exchangeMode, exchangeSubmitting, exchanges, onCommand]);
 
