@@ -145,9 +145,7 @@
   transform: none !important;
   translate: var(--exchange-stage-x, 0px) var(--exchange-stage-y, 0px) !important;
   scale: var(--exchange-stage-scale) !important;
-  transition:
-    translate 240ms cubic-bezier(.16,.74,.18,1),
-    scale 260ms cubic-bezier(.16,.74,.18,1) !important;
+  transition: none !important;
   cursor: grab;
 }
 
