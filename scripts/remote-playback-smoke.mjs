@@ -222,8 +222,14 @@ try {
   const secondEntry = firstEntryForRevision(trace, secondRevision);
   if (!firstEntry || !secondEntry) throw new Error('missing timestamped revision entries');
   const spacingMs = secondEntry.t - firstEntry.t;
-  if (spacingMs < 350) {
+  // Release cadence must remain material rather than collapsing revisions into an
+  // unreadable burst, but it must also not regress to the old ~480 ms ordinary
+  // playback that the mobile Owner pass perceived as sluggish.
+  if (spacingMs < 250) {
     throw new Error(`authoritative revisions collapsed too quickly: ${spacingMs.toFixed(1)}ms\ntrace=${JSON.stringify(trace)}`);
+  }
+  if (spacingMs > 420) {
+    throw new Error(`ordinary remote playback regressed to sluggish cadence: ${spacingMs.toFixed(1)}ms\ntrace=${JSON.stringify(trace)}`);
   }
   if (!firstEntry.connection.includes('ruchy przy stole') || firstEntry.enabledActions !== 0) {
     throw new Error(`first paced frame was not visibly locked: ${JSON.stringify(firstEntry)}`);

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { GameEvent } from '../src/core/index.js';
 import {
+  DEAL_PRESENTATION_MS,
   MARRIAGE_PRESENTATION_MS,
   NORMAL_PRESENTATION_MS,
   TRICK_COMPLETION_PRESENTATION_MS,
@@ -61,7 +62,14 @@ describe('Run 04 trick presentation planning', () => {
     });
   });
 
-  it('preserves the existing marriage pacing until P4 deliberately changes sensory timing', () => {
+  it('pins the responsive final-friend-build cadence while leaving material deal room intact', () => {
+    expect(NORMAL_PRESENTATION_MS).toBe(300);
+    expect(MARRIAGE_PRESENTATION_MS).toBe(500);
+    expect(TRICK_COMPLETION_PRESENTATION_MS).toBe(720);
+    expect(DEAL_PRESENTATION_MS).toBe(620);
+  });
+
+  it('uses the deliberate marriage pacing for sensory readability', () => {
     const marriage: GameEvent[] = [
       { type: 'marriage-declared', audience: 'public', seat: 0, suit: 'hearts', points: 100 },
       { type: 'card-played', audience: 'public', seat: 0, card: 'hearts:K' },
