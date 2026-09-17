@@ -143,8 +143,10 @@
   --exchange-stage-scale: .66;
   z-index: 1180;
   transform: none !important;
-  translate: var(--exchange-stage-x, 0px) var(--exchange-stage-y, 0px) !important;
-  scale: var(--exchange-stage-scale) !important;
+  /* These are the final-state anchors. WAAPI temporarily overrides the normal
+   * individual transform properties while the physical card travels there. */
+  translate: var(--exchange-stage-x, 0px) var(--exchange-stage-y, 0px);
+  scale: var(--exchange-stage-scale);
   transition: none !important;
   cursor: grab;
 }
