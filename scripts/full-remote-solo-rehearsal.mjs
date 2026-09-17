@@ -303,6 +303,7 @@ async function takeDecision(session, current, counters, mobile) {
   }
 
   if (heading === 'Oddaj po jednej karcie') {
+    const exchangeRevision = current.revision;
     await dragNextExchangeCard(session, 0, mobile);
     await waitFor('exchange physical assignment 1', () => execute(session, `
       return document.querySelectorAll('.hand-slot.is-exchange-staged').length === 1;
@@ -328,17 +329,25 @@ async function takeDecision(session, current, counters, mobile) {
 
     await waitFor('exchange authoritative commit', async () => {
       const progress = await execute(session, `
+        const revText = [...document.querySelectorAll('.footer span')]
+          .map((node) => node.textContent?.trim() ?? '')
+          .find((text) => /^rev \\d+$/.test(text));
+        const revision = revText ? Number(revText.slice(4)) : null;
         const material = document.querySelector('.material-exchange-state')?.getAttribute('data-exchange-material-state') ?? '';
         const heading = document.querySelector('.decision-card h2')?.textContent?.trim() ?? '';
         const handCards = document.querySelectorAll('.hand .card').length;
         const connection = document.querySelector('.connection-banner')?.textContent?.trim() ?? '';
         const submitting = document.querySelector('.app-shell')?.getAttribute('data-exchange-submitting') === 'true';
-        return { material, heading, handCards, connection, submitting };
+        return { revision, material, heading, handCards, connection, submitting };
       `);
-      if (progress.material === 'active' || progress.material === 'settled' || progress.heading === 'Ile ostatecznie grasz?') {
+      const durableAuthorityProgress = exchangeRevision !== null
+        && progress.revision !== null
+        && progress.revision > exchangeRevision
+        && progress.heading !== 'Oddaj po jednej karcie';
+      if (progress.material === 'active' || progress.material === 'settled' || progress.heading === 'Ile ostatecznie grasz?' || durableAuthorityProgress) {
         return progress;
       }
-      throw new Error(JSON.stringify(progress));
+      throw new Error(JSON.stringify({ exchangeRevision, ...progress }));
     }, 10_000);
 
     counters.exchanges += 1;
