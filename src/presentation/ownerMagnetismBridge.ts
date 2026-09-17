@@ -41,6 +41,28 @@ function clearMagnet(shell: HTMLElement | null) {
   delete shell.dataset.ownerCardMagnetTarget;
 }
 
+function enableCompositorDrag(floating: HTMLElement) {
+  // React still owns the exact drag position through its inline left/top values.
+  // Sample those once per visual frame, then let CSS move the active ghost using
+  // the compositor-friendly individual `translate` property. The inline values
+  // remain intact so pointer-up can drop the class and hand the exact same
+  // geometry to the existing pending-handoff path without conversion.
+  const left = floating.style.left;
+  const top = floating.style.top;
+  if (!left || !top) return;
+  floating.style.setProperty('--owner-card-drag-x', left);
+  floating.style.setProperty('--owner-card-drag-y', top);
+  floating.classList.add('is-compositor-drag');
+}
+
+function disableCompositorDrag(shell: HTMLElement | null) {
+  const floating = shell?.querySelector<HTMLElement>('.tactile-card-float.is-compositor-drag');
+  if (!floating) return;
+  floating.classList.remove('is-compositor-drag');
+  floating.style.removeProperty('--owner-card-drag-x');
+  floating.style.removeProperty('--owner-card-drag-y');
+}
+
 function applyMagnet(
   shell: HTMLElement,
   point: { x: number; y: number },
@@ -66,6 +88,8 @@ function renderOwnerMagnetism() {
     clearMagnet(shell);
     return;
   }
+
+  enableCompositorDrag(floating);
 
   const point = { x: sample.x, y: sample.y };
   const coarse = sample.pointerType === 'touch' || sample.pointerType === 'pen';
@@ -119,6 +143,7 @@ function finishOwnerMagnetism() {
   }
   clearGeometryCache();
   const shell = shellNode();
+  disableCompositorDrag(shell);
   clearMagnet(shell);
   cachedShell = null;
 }
