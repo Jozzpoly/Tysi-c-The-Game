@@ -413,10 +413,14 @@ async function runDeclarerViewport(label, width, height, mobile) {
     await screenshot(session, `${label}-physical-exchange-ready`);
 
     const firstDrop = await dragNextExchangeCard(session, 0, mobile);
-    const firstDraft = await waitFor(`${label}: first physical recipient assignment`, async () => {
+    const firstDraft = await waitFor(`${label}: first physical recipient settles`, async () => {
       const state = await inspectExchangeDraft(session);
-      return state.staged.length === 1 ? state : false;
-    }, 1_000);
+      return state.staged.length === 1
+        && state.staged[0].insideRecipient
+        && state.staged[0].atRecipientHand
+        ? state
+        : false;
+    }, 1_200);
     if (firstDraft.hasLegacyConfirm) throw new Error(`${label}: physical assignment exposed legacy confirmation ${JSON.stringify(firstDraft)}`);
     if (firstDraft.staged[0].recipient !== firstDrop.seat || firstDraft.staged[0].card !== firstDrop.card || !firstDraft.staged[0].insideRecipient || !firstDraft.staged[0].atRecipientHand) {
       throw new Error(`${label}: first recipient was not derived from spatial drop target and staged at its physical hand ${JSON.stringify({ firstDrop, firstDraft })}`);
@@ -425,10 +429,13 @@ async function runDeclarerViewport(label, width, height, mobile) {
     await screenshot(session, `${label}-physical-exchange-first-card`);
 
     const secondDrop = await dragNextExchangeCard(session, 1, mobile);
-    const secondDraft = await waitFor(`${label}: second physical recipient assignment`, async () => {
+    const secondDraft = await waitFor(`${label}: second physical recipient settles`, async () => {
       const state = await inspectExchangeDraft(session);
-      return state.staged.length === 2 ? state : false;
-    }, 170);
+      return state.staged.length === 2
+        && state.staged.every((entry) => entry.insideRecipient && entry.atRecipientHand)
+        ? state
+        : false;
+    }, 360);
     const recipientMap = new Map(secondDraft.staged.map((entry) => [entry.recipient, entry.card]));
     if (recipientMap.get(firstDrop.seat) !== firstDrop.card || recipientMap.get(secondDrop.seat) !== secondDrop.card) {
       throw new Error(`${label}: two-card exchange mapping does not match spatial recipients ${JSON.stringify({ firstDrop, secondDrop, secondDraft })}`);
