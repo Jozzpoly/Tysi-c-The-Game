@@ -284,11 +284,34 @@ export function GameTable({ projection, seatNames, events = [], message = '', on
     const command = exchanges.find((candidate) => candidate.give.every(({ to, card }) => exchangeDraft[to] === card));
     if (!command) return;
 
-    const timer = window.setTimeout(() => {
-      setExchangeSubmitting(true);
-      void onCommand(command);
-    }, 420);
-    return () => window.clearTimeout(timer);
+    let cancelled = false;
+    let dwellTimer: number | null = null;
+    const frame = window.requestAnimationFrame(() => {
+      const stagedSlots = [firstCard, secondCard]
+        .map((card) => document.querySelector<HTMLElement>(`.hand-slot.is-exchange-staged[data-card="${card}"]`))
+        .filter((slot): slot is HTMLElement => Boolean(slot));
+      const activeAnimations = stagedSlots
+        .flatMap((slot) => slot.getAnimations())
+        .filter((animation) => animation.playState === 'running');
+
+      // Authority follows the material event instead of racing a device-specific
+      // timeout. Once both cards have physically settled, leave a short readable
+      // beat and only then commit the exchange.
+      void Promise.allSettled(activeAnimations.map((animation) => animation.finished)).then(() => {
+        if (cancelled) return;
+        dwellTimer = window.setTimeout(() => {
+          if (cancelled) return;
+          setExchangeSubmitting(true);
+          void onCommand(command);
+        }, 180);
+      });
+    });
+
+    return () => {
+      cancelled = true;
+      window.cancelAnimationFrame(frame);
+      if (dwellTimer !== null) window.clearTimeout(dwellTimer);
+    };
   }, [exchangeDraft, exchangeMode, exchangeSubmitting, exchanges, onCommand]);
 
   function playCard(card: CardId, marriage = false) {
