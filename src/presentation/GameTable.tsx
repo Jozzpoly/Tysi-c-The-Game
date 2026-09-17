@@ -265,31 +265,50 @@ export function GameTable({ projection, seatNames, events = [], message = '', on
       const cardNode = slot?.querySelector<HTMLElement>(':scope > .card');
       const stageTarget = document.querySelector<HTMLElement>(`[data-exchange-target-seat="${seat}"] .card-backs`);
       if (!slot || !cardNode || !stageTarget) continue;
-      if (slot.classList.contains('is-exchange-staged') && slot.dataset.exchangeRecipient === String(seat)) continue;
 
-      // The tactile hand starts its generic return-to-hand animation before this
-      // parent sees pointer-up. Once the drop is accepted by a recipient, cancel
-      // that return first so staging measures the card's true hand geometry.
-      slot.getAnimations().forEach((animation) => animation.cancel());
+      const alreadyStaged = slot.classList.contains('is-exchange-staged')
+        && slot.dataset.exchangeRecipient === String(seat);
+      const computed = getComputedStyle(slot);
+      const translateParts = computed.translate === 'none'
+        ? []
+        : computed.translate.split(/\s+/).map((part) => Number.parseFloat(part));
+      const currentTranslateX = Number.isFinite(translateParts[0]) ? translateParts[0]! : 0;
+      const currentTranslateY = Number.isFinite(translateParts[1]) ? translateParts[1]! : 0;
+      const currentScale = Number.isFinite(Number.parseFloat(computed.scale))
+        ? Number.parseFloat(computed.scale)
+        : 1;
+
+      // The tactile hand starts its generic return-to-hand animation before the
+      // parent sees pointer-up. Capture the visible geometry first, then cancel
+      // any old stage/return motion so the next animation starts from that truth.
       const source = cardNode.getBoundingClientRect();
+      exchangeStageAnimations.current.get(card)?.cancel();
+      exchangeStageAnimations.current.delete(card);
+      if (!alreadyStaged) {
+        slot.getAnimations().forEach((animation) => animation.cancel());
+      }
+
       const target = stageTarget.getBoundingClientRect();
       const sourceX = source.left + source.width / 2;
       const sourceY = source.top + source.height / 2;
       const targetX = target.left + target.width / 2;
       const targetY = target.top + target.height / 2;
-      const stageX = targetX - sourceX;
-      const stageY = targetY - sourceY;
+      const stageX = currentTranslateX + targetX - sourceX;
+      const stageY = currentTranslateY + targetY - sourceY;
+      const coarse = window.matchMedia?.('(pointer: coarse), (max-width: 620px)').matches ?? false;
+      const finalScale = coarse ? .70 : .66;
+
       slot.style.setProperty('--exchange-stage-x', `${stageX}px`);
       slot.style.setProperty('--exchange-stage-y', `${stageY}px`);
       slot.dataset.exchangeRecipient = String(seat);
       slot.classList.add('is-exchange-staged');
 
-      if (!prefersReducedMotion) {
-        const coarse = window.matchMedia?.('(pointer: coarse), (max-width: 620px)').matches ?? false;
-        const finalScale = coarse ? .70 : .66;
+      const needsMotion = Math.hypot(targetX - sourceX, targetY - sourceY) > .5
+        || Math.abs(currentScale - finalScale) > .005;
+      if (!prefersReducedMotion && needsMotion) {
         const animation = slot.animate(
           [
-            { translate: '0px 0px', scale: '1', offset: 0 },
+            { translate: `${currentTranslateX}px ${currentTranslateY}px`, scale: String(currentScale), offset: 0 },
             { translate: `${stageX}px ${stageY}px`, scale: String(finalScale), offset: 1 },
           ],
           {
