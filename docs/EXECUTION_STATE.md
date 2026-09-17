@@ -1,198 +1,175 @@
 # Execution state — live truth
 
-Date: 2026-09-16
-Status: **Run 05 recovery. Account-owned stable origin + automated public friend flow + elapsed-time no-redeploy recheck PASS; only the real-human Owner/friend gate remains open.**
+Date: 2026-09-17
+Status: **Finalization mode. Latest main is Owner-tested and close to acceptable; mobile performance/responsiveness is the remaining product-quality blocker before final stable promotion and the real friend session.**
 
-## Strategic intent
+## Current authority
 
-Tysiąc is not an infrastructure exercise. The target is a high-quality browser card-table product for desktop and mobile that can be trusted enough to use naturally with real people.
+1. this file — compact live project truth;
+2. `docs/PERFORMANCE_CAMPAIGN.md` — bounded final performance campaign;
+3. `docs/DEPLOYMENT.md` — deployment/evidence contract;
+4. `docs/INCIDENT_2026-09-15_FRIEND_LINK.md` — historical friend-link recovery;
+5. `AGENTS.md` — claim/evidence discipline;
+6. `docs/RUN05_PHYSICAL_TABLE_V2.md` — presentation direction/history.
 
-The project must preserve three distinct truth tracks:
+Historical Run01–Run04 material and old experiment branches are donor/history only unless explicitly reactivated.
 
-- **game truth** — correct rules, legality, scoring and bot behaviour;
-- **experience truth** — card/table physicality, visual hierarchy, motion, feedback, UI/UX and overall feel;
-- **Operations / external truth** — what exact build is live, whether the share link really works, whether the origin persists, and whether a real second human can use it.
+## Finalization target
 
-The Owner is the primary authority for experience truth, not the exact-rules oracle and not a substitute for operational evidence. Broad visual polishing should be driven by Owner testing rather than blind screenshot iteration.
+The project is no longer in open-ended feature development. The temporary project is considered ready to close when:
 
-## Current authority order
+- solo and duo + bot are usable on desktop and mobile;
+- copied room invite, private hands, shared actions and reconnect work in real use;
+- presentation is sufficiently clear and pleasant for casual play;
+- mobile no longer feels materially laggy/under-responsive;
+- one exact final SHA is promoted to the account-owned stable origin;
+- Owner + real friend complete one bounded real session: create → copy link → join → shared action → reconnect;
+- the final state/evidence is recorded and the project is frozen.
 
-1. this file for compact live state;
-2. `docs/INCIDENT_2026-09-15_FRIEND_LINK.md` for the friend-link recovery history and evidence failure;
-3. `docs/DEPLOYMENT.md` for deployment/evidence contracts;
-4. `AGENTS.md` for claim discipline;
-5. `docs/RUN05_PHYSICAL_TABLE_V2.md` for the integrated presentation direction.
+Non-blocking polish and speculative systems do not prevent closure.
 
-Historical Run01–Run04 material remains useful donor/history only where it does not conflict with current live truth.
+## Current main / release candidate baseline
 
-## Current product target
+Current `main`:
 
-- 3-player auction Tysiąc first;
-- solo = human + 2 bots;
-- duo = 2 humans + bot;
-- trio = 3 humans;
-- private room by link/code without mandatory accounts;
-- desktop and mobile are equal product targets;
-- reconnect/background lifecycle is normal product behaviour;
-- presentation may evolve aggressively after real Owner evidence while core authority/privacy boundaries remain protected.
+`7c5d9d2b2e31d5e2ee5f8772e3d4664daac546ec`
 
-## P0 — friend-link recovery
+This includes PR #55, `Release: tighten table cadence for final friend build`.
 
-**Friend-link incident OPEN / P0 BLOCKER**
+Evidence:
 
-The original readiness claim remains invalidated: the old temporary Cloudflare preview never proved durable friend readiness. Recovery has now crossed the stable-public automation boundary **and** the elapsed-time persistence boundary. P0 remains open only because the required real-human Owner+friend session has not yet been demonstrated.
+- PR #55 head `48228ea7f79b6195847b742cd96bbc243d5d15fe` — Foundation #799 FULL GREEN;
+- post-merge main `7c5d9d2b...` — Foundation #800 FULL GREEN;
+- ordinary remote playback spacing measured ~285.4–285.7 ms after the cadence pass, down from the prior ~480 ms class;
+- full remote solo rehearsals desktop + mobile PASS;
+- reconnect exercised in both full rehearsals;
+- no open pull requests after #55 merge.
 
-### Frozen external candidate
+Cadence currently keeps the full physical deal duration at 620 ms because the 21-card deal animation still needs that envelope. Frequent table flow was shortened instead of blindly accelerating every transition.
 
-The product candidate remains immutable:
+## Final Owner Preview #16 — PASS at the automated boundary
 
-- ref: `friend-candidate/run05-2026-09-15`;
-- SHA: `52450baa04f22646474bf4676f70b2df5ba6812f`;
-- Foundation #672: PASS on that exact SHA.
+Temporary Preview run:
 
-Later presentation, harness, docs and operations work on `main` does not move the product candidate. Current `main` is presentation-wise ahead of the frozen stable candidate; do not mistake the stable friend-gate build for the latest UX state.
+- workflow run: `35229545651` / Preview #16;
+- exact SHA: `7c5d9d2b2e31d5e2ee5f8772e3d4664daac546ec`;
+- temporary URL used for Owner testing: `https://tysiac-the-game.similar-metal.workers.dev`;
+- deploy class: `temporary`;
+- complete Foundation before publishing: PASS;
+- public provenance exact SHA: PASS;
+- public desktop/mobile MatchRoom behavior: PASS;
+- copied invite session: PASS;
+- distinct/disjoint private hands: PASS;
+- synchronized legal action: PASS;
+- friend-browser reconnect in automation: PASS.
 
-### Stable public deployment — PASS
+The temporary URL is bounded evidence only and may expire. It is not the final friend URL.
 
-Stable Multiplayer Deploy #6 (`35002263980`) completed successfully from validation-harness SHA `deb668081717effee5965a8e3423e051aed0d1c2` while deploying the unchanged frozen product SHA `52450baa04f22646474bf4676f70b2df5ba6812f`.
+## Owner evidence — 2026-09-17
 
-Canonical account-owned origin:
+Owner tested real multiplayer using **desktop + mobile + bot** and recorded both perspectives.
+
+Owner verdict:
+
+> `w sumie jest już całkiem spoko`
+>
+> `najwiekszym problemem że na mobilce laguje, mohło by być też bardziej responsywnie`
+>
+> `ogolnie taki stan jest już bliski bycia okej i do zakonczenia tymczasowego projektu`
+
+This changes project priority decisively:
+
+- broad feature/presentation expansion: **STOP**;
+- stabilization/documentation/cleanup: **NOW**;
+- mobile performance + responsiveness campaign: **NEXT / primary engineering work**;
+- final Owner confirmation: after performance candidate;
+- stable promotion + real friend gate: only after that confirmation;
+- project freeze: immediately after successful final friend gate and closeout evidence.
+
+The Owner is not expected to validate exact Tysiąc rules. Automated game-truth evidence remains responsible for rules/legality/scoring regressions; Owner testing is primarily experience and real-use evidence.
+
+## Magnetic takeover experiment — intentionally closed
+
+PR #54 (`Run05: make magnetic card takeover visible and reversible`) was closed without merge after repeated executable failure in the table-takeover reversal contract.
+
+The experiment produced useful harness fixes and diagnosis but was not allowed to block release. Current main therefore retains the already-qualified spatial/magnetic affordance behavior, not the stronger reversible visual takeover experiment.
+
+Do not reopen this before project closure unless Owner evidence shows it is genuinely release-blocking.
+
+## Stable origin / historical recovery candidate
+
+Canonical account-owned origin remains:
 
 `https://tysiac-the-game.jozzpoly.workers.dev`
 
-Demonstrated in that run:
+It currently preserves the historical recovery candidate:
 
-- Cloudflare account token preflight: PASS / active account token;
-- complete Foundation + deployment-contract gate on the exact frozen product SHA: PASS;
-- authenticated normal Wrangler deployment: PASS;
-- owned-account deployment registration: PASS;
-- canonical non-versioned workers.dev root: PASS;
-- public provenance reports exact frozen product SHA and `deployClass: stable`: PASS;
-- public multiplayer join/sync/reconnect: PASS;
-- exact real in-game copied friend invite over HTTPS: PASS;
-- clean second-browser join: PASS;
-- distinct/disjoint private human hands: PASS;
-- legal shared human action synchronization: PASS;
-- friend reconnect through the same room-only copied URL with private credential restored locally: PASS;
-- second provenance/multiplayer/copied-invite pass after a 60-second wait without another deployment: PASS.
+`52450baa04f22646474bf4676f70b2df5ba6812f`
 
-The successful Cloudflare deployment version was `757f437f-f3fd-4f01-8570-d4185193047b`.
+That build remains valuable persistence/recovery evidence but is **not the final product candidate anymore**. Do not spend Owner/friend attention testing that old presentation build now.
 
-### Elapsed-time stable-origin recheck — PASS
-
-`Stable Origin Recheck (NO REDEPLOY)` run #1 (`35098811180`) completed successfully on 2026-09-16 from current-main validation-harness SHA `473137700d80a2d584f8ec82bbe8ad207ba0f269`.
-
-It did **not** deploy a replacement. Against the existing canonical origin it demonstrated:
-
-- exact served product SHA remained `52450baa04f22646474bf4676f70b2df5ba6812f`;
-- `deployClass: stable` remained correct;
-- public provenance smoke: PASS;
-- public multiplayer join/sync/reconnect: PASS;
-- exact copied friend invite over HTTPS: PASS;
-- distinct private hands: PASS;
-- synchronized legal action: PASS;
-- friend reconnect and restored revision: PASS.
-
-The evidence point was recorded at approximately `2026-09-16T12:57:27Z`, many hours after the stable deployment and without redeployment.
-
-**Evidence boundary:** stable mechanism, canonical origin, exact-build provenance, public multiplayer, copied-invite composition, short-window repeatability and meaningful elapsed-time persistence are now defended by automation. None of this substitutes for a real second human using the product naturally.
-
-### Local exact-invite evidence — closed at this layer
-
-PR #43 / Foundation #718 remains useful supporting evidence for the exact copied-invite session contract on loopback, but it is no longer the strongest external evidence. Stable run #6 and no-redeploy recheck #1 exercised that contract publicly over HTTPS against the account-owned origin.
-
-Further local rehearsal is not active P0 work unless a concrete new gap appears.
-
-## Remaining mandatory external evidence
-
-Already PASS:
-
-1. permanent account-owned Cloudflare credentials;
-2. exact frozen candidate identity;
-3. authenticated account-owned stable deployment;
-4. canonical `tysiac-the-game.jozzpoly.workers.dev` origin;
-5. exact public product SHA + stable deploy-class provenance;
-6. public runtime/multiplayer smoke;
-7. exact in-game copied invite carrying join/private-state/action/reconnect over HTTPS;
-8. short-window no-redeploy repeatability after 60 seconds;
-9. meaningful elapsed-time `Stable Origin Recheck (NO REDEPLOY)` against the same canonical origin and frozen product SHA.
-
-Still open:
-
-10. Owner + real friend perform create → copy → open → join → shared action → reconnect in real use;
-11. that real-human success closes this P0 milestone while the automated evidence above remains preserved.
-
-Automation cannot complete the real-human gate by itself. Keep the frozen stable candidate untouched until that session is complete; replacing it first would change the thing being tested.
+The real-human friend gate is intentionally deferred until the post-performance final candidate is selected and deployed to the same stable origin. Stable deployment must still use exact immutable product SHA + current validation-harness evidence per `docs/DEPLOYMENT.md`.
 
 ## Protected foundation
 
-Current evidence is strong for:
+Strong current evidence exists for:
 
 - deterministic pure TypeScript core;
 - canonical legality/reducer path;
-- scoped domain events;
+- scoped events and scoring tests;
 - per-seat projection/privacy;
 - Worker + SQLite Durable Object `MatchRoom`;
 - hibernating WebSockets and reconnect;
-- private opaque seat capabilities separate from room code;
-- seat-token hashing/persistence boundaries;
-- public snapshots excluding private credentials and hidden cards;
-- same-origin browser WebSocket upgrade enforcement;
-- shared command model for humans and bots;
-- Run05 tactile/living-hand, spatial handoff, deal/talon/exchange/marriage/trick presentation mechanics.
+- opaque private seat credentials separate from room code;
+- same-origin WebSocket path;
+- shared human/bot command model;
+- exact copied-invite flow;
+- desktop/mobile browser scenarios;
+- physical deal/talon/exchange/marriage/trick presentation;
+- viewer-relative opponent seat topology;
+- causal opponent-card motion;
+- tactile/permissive hand and authoritative handoff behavior.
 
-This is protected evidence, not a ban on later redesign. After Owner testing, presentation and even broader implementation choices may change aggressively when evidence justifies it.
+Final performance work may change implementation details, but must not silently weaken these boundaries.
 
-## Work discipline while P0 remains open
+## Active blocker
 
-The infrastructure recovery is no longer the main workstream. Do not manufacture further deployment machinery now that the intended stable path and its elapsed-time persistence work.
+### P0 experience blocker — mobile performance / responsiveness
 
-Allowed / high-value now:
+Owner reports real mobile lag and insufficient responsiveness even after the cadence improvement.
 
-- preserve the frozen stable candidate until the real-human gate is complete;
-- run the bounded real Owner+friend session through the actual UI;
-- use current-main browser evidence to catch objective pre-test breakage, but leave qualitative presentation judgement for Owner evidence;
-- use a temporary current-main preview for the latest visual/UX Owner pass when explicitly launched with its required public-preview/Cloudflare confirmations;
-- record concrete product/experience defects exposed by real use;
-- maintain evidence/documentation when live truth materially changes.
+Two Owner recordings exist from the same real multiplayer session:
 
-Default defer:
+- desktop recording: ~176.7 s, 1918×906, fixed 30 FPS capture;
+- mobile recording: ~174.4 s, 576×1280, variable-frame-rate capture.
 
-- more local deployment harness layers without an identified missing claim;
-- hosting migration;
-- speculative infrastructure work;
-- blind broad CSS redesign before Owner evidence.
+The mobile recording contains highly variable frame timestamps, but many of the largest timestamp gaps occur while the image is effectively static. Therefore **screen-recording timestamps are not valid browser-FPS proof**. They justify investigation but do not identify the runtime bottleneck.
 
-## Preserved deferred debts — not current P0 work
+The performance campaign must instrument the running game on the actual phone before making broad visual compromises.
 
-- active CSS ownership is still distributed across visual-language, Run04 and Run05 layers; consolidate only from evidence rather than filename-driven cleanup;
-- Durable Object rooms still have no explicit expiry/cleanup policy; acceptable for this bounded friend test, but must be resolved before broader/public usage;
-- stale historical docs/branches remain lower value than the live product loop.
+## Deferred / non-blocking debts
 
-These debts are intentionally deferred, not forgotten.
+These do not block temporary project closure unless new evidence promotes them:
 
-## Owner test direction
+- distributed CSS ownership across historical visual layers;
+- many stale historical/experiment branches;
+- explicit Durable Object room expiry/cleanup policy;
+- Node action-version deprecation warnings;
+- Wrangler minor update availability;
+- stronger reversible magnetic takeover;
+- additional presentation polish beyond Owner's finish threshold.
 
-The stable base URL is valid for the bounded real-human friend gate, but it intentionally serves the frozen candidate rather than the latest presentation work. The Owner does not need to validate exact Tysiąc rules or finish a match.
-
-Primary experience evidence for the latest presentation build:
-
-- physicality/materiality of cards and table;
-- visual hierarchy and readability;
-- animation/motion/pacing;
-- feedback for dealing, bidding, playing, taking tricks, marriage and scoring;
-- mouse/touch ergonomics and manipulation;
-- onboarding and clarity without excessive explanatory text;
-- overall professional feel.
-
-For the real-human friend gate specifically: open the stable root, create a duo room, use the real `Kopiuj link dla znajomego`, let the friend open that exact URL in their own browser/device context, exchange at least one real legal action, and exercise refresh/reconnect.
+Branch cleanup should be conservative before freeze: delete only branches proven merged/obsolete; preserve historical branches when ancestry/value has not been checked.
 
 ## Immediate direction
 
-1. keep product SHA `52450baa04f22646474bf4676f70b2df5ba6812f` frozen on `https://tysiac-the-game.jozzpoly.workers.dev` until the real-human friend gate completes;
-2. perform the real-human Owner+friend session when convenient and capture only concrete failures/experience feedback;
-3. do not spend more project attention proving persistence unless new evidence contradicts the successful no-redeploy recheck;
-4. for latest visual/UX Owner testing, prefer the existing temporary-preview path from current `main` rather than replacing the frozen stable candidate;
-5. after the human gate passes, close friend-link P0 and move decisively into broad Owner-led desktop/mobile experience iteration on the latest product state.
+1. finish this short stabilization/documentation pass;
+2. execute `docs/PERFORMANCE_CAMPAIGN.md` as the last substantial engineering campaign;
+3. publish one new temporary preview of the exact optimized candidate;
+4. Owner performs a short desktop/mobile feel test, with mobile primary;
+5. if Owner says the result is sufficiently good, select that exact SHA as the final candidate;
+6. deploy it through `Stable Multiplayer Deploy` to the canonical account-owned origin;
+7. Owner + real friend perform one bounded create → copied invite → join → shared action → refresh/reconnect session;
+8. record final PASS/known limitations, freeze project, and stop development.
 
-The deployment system has now done its job. The project direction returns to the actual game.
+The governing principle now is **finishability**: fix measured blockers, preserve defended foundations, and refuse nonessential scope expansion.
