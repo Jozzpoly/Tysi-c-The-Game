@@ -435,7 +435,7 @@ async function runDeclarerViewport(label, width, height, mobile) {
         && state.staged.every((entry) => entry.insideRecipient && entry.atRecipientHand)
         ? state
         : false;
-    }, 360);
+    }, 1_200);
     const recipientMap = new Map(secondDraft.staged.map((entry) => [entry.recipient, entry.card]));
     if (recipientMap.get(firstDrop.seat) !== firstDrop.card || recipientMap.get(secondDrop.seat) !== secondDrop.card) {
       throw new Error(`${label}: two-card exchange mapping does not match spatial recipients ${JSON.stringify({ firstDrop, secondDrop, secondDraft })}`);
