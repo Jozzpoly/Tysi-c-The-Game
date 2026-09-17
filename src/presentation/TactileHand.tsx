@@ -286,9 +286,10 @@ export function TactileHand({
     const startRect = ghost.getBoundingClientRect();
     const distance = Math.hypot(targetRect.left - startRect.left, targetRect.top - startRect.top);
     // Keep pointer tracking immediate, then let the released card decelerate and
-    // physically settle into the authoritative table slot. The old 190–280 ms
-    // bridge read as a UI snap on coarse/mobile input even when frame pacing was healthy.
-    const duration = Math.round(Math.max(255, Math.min(370, 215 + distance * .22)));
+    // physically settle into the authoritative table slot. Stay within the 300 ms
+    // ordinary presentation frame so the next authoritative beat cannot overtake
+    // a still-flying local card.
+    const duration = Math.round(Math.max(260, Math.min(300, 225 + distance * .18)));
     const startTransform = getComputedStyle(ghost).transform;
     const settleTilt = releaseGhost.tilt * .08;
 
