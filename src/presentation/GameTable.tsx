@@ -287,7 +287,7 @@ export function GameTable({ projection, seatNames, events = [], message = '', on
     const timer = window.setTimeout(() => {
       setExchangeSubmitting(true);
       void onCommand(command);
-    }, 300);
+    }, 420);
     return () => window.clearTimeout(timer);
   }, [exchangeDraft, exchangeMode, exchangeSubmitting, exchanges, onCommand]);
 
