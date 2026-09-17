@@ -125,7 +125,19 @@ function synchronizeSeatPresentation() {
  * emitted or modified here.
  */
 export function installSeatPresentationBridge() {
-  const observer = new MutationObserver(() => synchronizeSeatPresentation());
+  let scheduledFrame: number | null = null;
+  const scheduleSynchronization = () => {
+    if (scheduledFrame !== null) return;
+    scheduledFrame = window.requestAnimationFrame(() => {
+      scheduledFrame = null;
+      synchronizeSeatPresentation();
+    });
+  };
+
+  // React can emit several relevant DOM mutations in one visual update. Collapse
+  // them into one read/write pass per frame instead of repeatedly rescanning the
+  // full table subtree in the same paint interval.
+  const observer = new MutationObserver(scheduleSynchronization);
   observer.observe(document.body, {
     subtree: true,
     childList: true,
@@ -133,5 +145,8 @@ export function installSeatPresentationBridge() {
     attributeFilter: ['class', 'data-seat', 'data-seat-anchor'],
   });
   synchronizeSeatPresentation();
-  return () => observer.disconnect();
+  return () => {
+    observer.disconnect();
+    if (scheduledFrame !== null) window.cancelAnimationFrame(scheduledFrame);
+  };
 }

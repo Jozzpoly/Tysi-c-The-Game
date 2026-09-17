@@ -1,11 +1,37 @@
-import { chooseMagneticTarget, magneticOffsetToRect } from './spatialMagnetism.js';
+import { magneticOffsetToRect } from './spatialMagnetism.js';
 
 const MOUSE_ENTER_PX = 24;
-const MOUSE_RELEASE_PX = 40;
 const TOUCH_ENTER_PX = 30;
-const TOUCH_RELEASE_PX = 48;
 
-let preferredExchangeTarget: string | null = null;
+type PointerSample = {
+  x: number;
+  y: number;
+  pointerType: string;
+};
+
+let latestPointer: PointerSample | null = null;
+let scheduledFrame: number | null = null;
+let cachedShell: HTMLElement | null = null;
+let cachedTargetKey = '';
+let cachedTargetRect: DOMRect | null = null;
+
+function shellNode() {
+  if (cachedShell?.isConnected) return cachedShell;
+  cachedShell = document.querySelector<HTMLElement>('.app-shell');
+  return cachedShell;
+}
+
+function clearGeometryCache() {
+  cachedTargetKey = '';
+  cachedTargetRect = null;
+}
+
+function targetRect(node: HTMLElement, key: string) {
+  if (cachedTargetKey === key && cachedTargetRect) return cachedTargetRect;
+  cachedTargetKey = key;
+  cachedTargetRect = node.getBoundingClientRect();
+  return cachedTargetRect;
+}
 
 function clearMagnet(shell: HTMLElement | null) {
   if (!shell) return;
@@ -29,40 +55,40 @@ function applyMagnet(
   shell.dataset.ownerCardMagnetTarget = target;
 }
 
-function updateOwnerMagnetism(event: PointerEvent) {
-  const shell = document.querySelector<HTMLElement>('.app-shell');
+function renderOwnerMagnetism() {
+  scheduledFrame = null;
+  const sample = latestPointer;
+  if (!sample) return;
+
+  const shell = shellNode();
   const floating = shell?.querySelector<HTMLElement>('.tactile-card-float:not(.pending-handoff)');
   if (!shell || !floating) {
-    preferredExchangeTarget = null;
     clearMagnet(shell);
     return;
   }
 
-  const point = { x: event.clientX, y: event.clientY };
-  const coarse = event.pointerType === 'touch' || event.pointerType === 'pen';
+  const point = { x: sample.x, y: sample.y };
+  const coarse = sample.pointerType === 'touch' || sample.pointerType === 'pen';
   const enterPaddingPx = coarse ? TOUCH_ENTER_PX : MOUSE_ENTER_PX;
-  const releasePaddingPx = coarse ? TOUCH_RELEASE_PX : MOUSE_RELEASE_PX;
 
   if (shell.classList.contains('exchange-mode')) {
-    const targets = [...shell.querySelectorAll<HTMLElement>('[data-exchange-target-seat]')]
-      .map((node) => ({ id: node.dataset.exchangeTargetSeat ?? '', rect: node.getBoundingClientRect() }))
-      .filter((target) => target.id !== '');
-    const targetId = chooseMagneticTarget(point, targets, {
-      preferredId: preferredExchangeTarget,
-      enterPaddingPx,
-      releasePaddingPx,
-    });
-    preferredExchangeTarget = targetId;
-    const target = targets.find((candidate) => candidate.id === targetId);
-    if (target) {
-      applyMagnet(shell, point, target.rect, enterPaddingPx, `seat-${target.id}`);
+    // GameTable already owns recipient hit-testing and hysteresis. Reuse that
+    // authoritative presentation choice instead of performing a second full
+    // target scan and another pair of layout reads for every pointer sample.
+    const targetId = shell.dataset.exchangeMagnetSeat ?? '';
+    if (!targetId) {
+      clearMagnet(shell);
       return;
     }
-    clearMagnet(shell);
+    const target = shell.querySelector<HTMLElement>(`[data-exchange-target-seat="${targetId}"]`);
+    if (!target) {
+      clearMagnet(shell);
+      return;
+    }
+    applyMagnet(shell, point, targetRect(target, `seat-${targetId}`), enterPaddingPx, `seat-${targetId}`);
     return;
   }
 
-  preferredExchangeTarget = null;
   const heldThrowable = shell.querySelector('.tactile-hand > .hand-slot.is-held.is-throwable');
   const trick = shell.querySelector<HTMLElement>('.trick');
   if (!heldThrowable || !trick) {
@@ -76,12 +102,25 @@ function updateOwnerMagnetism(event: PointerEvent) {
     clearMagnet(shell);
     return;
   }
-  applyMagnet(shell, point, trick.getBoundingClientRect(), enterPaddingPx, 'table');
+  applyMagnet(shell, point, targetRect(trick, 'table'), enterPaddingPx, 'table');
+}
+
+function scheduleOwnerMagnetism(event: PointerEvent) {
+  latestPointer = { x: event.clientX, y: event.clientY, pointerType: event.pointerType };
+  if (scheduledFrame !== null) return;
+  scheduledFrame = window.requestAnimationFrame(renderOwnerMagnetism);
 }
 
 function finishOwnerMagnetism() {
-  preferredExchangeTarget = null;
-  clearMagnet(document.querySelector<HTMLElement>('.app-shell'));
+  latestPointer = null;
+  if (scheduledFrame !== null) {
+    window.cancelAnimationFrame(scheduledFrame);
+    scheduledFrame = null;
+  }
+  clearGeometryCache();
+  const shell = shellNode();
+  clearMagnet(shell);
+  cachedShell = null;
 }
 
 /**
@@ -90,7 +129,7 @@ function finishOwnerMagnetism() {
  * commands or owns acceptance state.
  */
 export function installOwnerMagnetismBridge() {
-  document.addEventListener('pointermove', updateOwnerMagnetism, { capture: true, passive: true });
+  document.addEventListener('pointermove', scheduleOwnerMagnetism, { capture: true, passive: true });
   document.addEventListener('pointerup', finishOwnerMagnetism, { capture: true, passive: true });
   document.addEventListener('pointercancel', finishOwnerMagnetism, { capture: true, passive: true });
 }

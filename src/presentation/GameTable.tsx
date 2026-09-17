@@ -2,6 +2,7 @@ import {
   useEffect,
   useLayoutEffect,
   useMemo,
+  useRef,
   useState,
   type PointerEvent as ReactPointerEvent,
 } from 'react';
@@ -70,6 +71,7 @@ export function GameTable({ projection, seatNames, events = [], message = '', on
   const [confirmBomb, setConfirmBomb] = useState(false);
   const [trickCompletionStage, setTrickCompletionStage] = useState<TrickCompletionStage>('settled');
   const [trickStageRevision, setTrickStageRevision] = useState<number | null>(null);
+  const exchangeTargetRects = useRef<ReadonlyArray<{ id: Seat; rect: DOMRect }> | null>(null);
   const trickPresentation = useMemo(() => planTrickPresentation(events), [events]);
   const prefersReducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
   const displayedTrickStage: TrickCompletionStage = trickPresentation.kind === 'trick-completion' && trickStageRevision !== view.revision
@@ -83,6 +85,7 @@ export function GameTable({ projection, seatNames, events = [], message = '', on
     setExchangeHoverSeat(null);
     setExchangeSubmitting(false);
     setConfirmBomb(false);
+    exchangeTargetRects.current = null;
   }, [view.revision]);
 
   useEffect(() => {
@@ -179,14 +182,20 @@ export function GameTable({ projection, seatNames, events = [], message = '', on
     return slot?.dataset.card as CardId | undefined ?? null;
   }
 
-  function exchangeTargetAt(clientX: number, clientY: number, pointerType: string): Seat | null {
-    if (!exchangeMode) return null;
+  function readExchangeTargets() {
+    if (exchangeTargetRects.current) return exchangeTargetRects.current;
     const targets = opponentSeats.flatMap((seat) => {
       const target = document.querySelector<HTMLElement>(`[data-exchange-target-seat="${seat}"]`);
       return target ? [{ id: seat, rect: target.getBoundingClientRect() }] : [];
     });
+    exchangeTargetRects.current = targets;
+    return targets;
+  }
+
+  function exchangeTargetAt(clientX: number, clientY: number, pointerType: string): Seat | null {
+    if (!exchangeMode) return null;
     const coarse = pointerType === 'touch' || pointerType === 'pen';
-    return chooseMagneticTarget({ x: clientX, y: clientY }, targets, {
+    return chooseMagneticTarget({ x: clientX, y: clientY }, readExchangeTargets(), {
       preferredId: exchangeHoverSeat,
       enterPaddingPx: coarse ? EXCHANGE_MAGNET_TOUCH_ENTER_PX : EXCHANGE_MAGNET_MOUSE_ENTER_PX,
       releasePaddingPx: coarse ? EXCHANGE_MAGNET_TOUCH_RELEASE_PX : EXCHANGE_MAGNET_MOUSE_RELEASE_PX,
@@ -205,12 +214,14 @@ export function GameTable({ projection, seatNames, events = [], message = '', on
     if (!exchangeMode || exchangeSubmitting) return;
     const card = exchangeCardFromPointerTarget(event.target);
     if (!card || !humanCards.includes(card)) {
+      exchangeTargetRects.current = null;
       setExchangeHoverSeat(null);
       return;
     }
     const target = exchangeTargetAt(event.clientX, event.clientY, event.pointerType);
     if (target !== null) stageExchangeCard(card, target);
     else if (stagedSeatForCard(card) !== null) unstageExchangeCard(card);
+    exchangeTargetRects.current = null;
     setExchangeHoverSeat(null);
   }
 
@@ -313,9 +324,13 @@ export function GameTable({ projection, seatNames, events = [], message = '', on
       className={`app-shell ${exchangeMode ? 'exchange-mode' : ''}`}
       data-exchange-submitting={exchangeSubmitting ? 'true' : 'false'}
       data-exchange-magnet-seat={exchangeHoverSeat ?? ''}
+      onPointerDown={() => { exchangeTargetRects.current = null; }}
       onPointerMove={handleExchangePointerMove}
       onPointerUp={handleExchangePointerUp}
-      onPointerCancel={() => setExchangeHoverSeat(null)}
+      onPointerCancel={() => {
+        exchangeTargetRects.current = null;
+        setExchangeHoverSeat(null);
+      }}
     >
       <header className="topbar">
         <div>
