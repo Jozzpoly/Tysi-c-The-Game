@@ -15,7 +15,6 @@ import {
   type HandInsertionPreview,
 } from './tactileHandLayout.js';
 import {
-  TACTILE_RELEASE_MS,
   advanceTactilePointer,
   beginTactilePointer,
   classifyTactileRelease,
