@@ -10,16 +10,21 @@ export interface TrickPresentationPlan {
   durationMs: number;
 }
 
-export const NORMAL_PRESENTATION_MS = 480;
-export const MARRIAGE_PRESENTATION_MS = 680;
-export const TRICK_COMPLETION_PRESENTATION_MS = 900;
+// Final friend-build cadence: ordinary play stays safely longer than the 230 ms
+// material opponent-card flight, while removing the old extra quarter-second of
+// dead playback. Heavier events retain progressively longer causal readability.
+export const NORMAL_PRESENTATION_MS = 300;
+export const MARRIAGE_PRESENTATION_MS = 500;
+export const TRICK_COMPLETION_PRESENTATION_MS = 720;
+// Dealing is deliberately unchanged: the last staggered card completes its
+// physical flight at roughly 552 ms, so 620 ms remains the safe material gate.
 export const DEAL_PRESENTATION_MS = 620;
 
 export const TRICK_COMPLETION_TIMELINE = {
-  resolveMs: 220,
-  collectMs: 390,
-  consequenceMs: 620,
-  settleMs: 820,
+  resolveMs: 175,
+  collectMs: 310,
+  consequenceMs: 500,
+  settleMs: 650,
 } as const;
 
 function lastEventOfType<T extends GameEvent['type']>(
