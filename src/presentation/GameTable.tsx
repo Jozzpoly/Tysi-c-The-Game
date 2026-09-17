@@ -31,6 +31,8 @@ const EXCHANGE_MAGNET_MOUSE_ENTER_PX = 24;
 const EXCHANGE_MAGNET_MOUSE_RELEASE_PX = 40;
 const EXCHANGE_MAGNET_TOUCH_ENTER_PX = 30;
 const EXCHANGE_MAGNET_TOUCH_RELEASE_PX = 48;
+const EXCHANGE_STAGE_MOTION_MS = 260;
+const EXCHANGE_STAGE_DWELL_MS = 180;
 type ExchangeDraft = Partial<Record<Seat, CardId>>;
 
 export interface GameTableProps {
@@ -72,6 +74,7 @@ export function GameTable({ projection, seatNames, events = [], message = '', on
   const [trickCompletionStage, setTrickCompletionStage] = useState<TrickCompletionStage>('settled');
   const [trickStageRevision, setTrickStageRevision] = useState<number | null>(null);
   const exchangeTargetRects = useRef<ReadonlyArray<{ id: Seat; rect: DOMRect }> | null>(null);
+  const exchangeStageAnimations = useRef<Map<CardId, Animation>>(new Map());
   const trickPresentation = useMemo(() => planTrickPresentation(events), [events]);
   const prefersReducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
   const displayedTrickStage: TrickCompletionStage = trickPresentation.kind === 'trick-completion' && trickStageRevision !== view.revision
@@ -86,6 +89,8 @@ export function GameTable({ projection, seatNames, events = [], message = '', on
     setExchangeSubmitting(false);
     setConfirmBomb(false);
     exchangeTargetRects.current = null;
+    for (const animation of exchangeStageAnimations.current.values()) animation.cancel();
+    exchangeStageAnimations.current.clear();
   }, [view.revision]);
 
   useEffect(() => {
@@ -241,6 +246,8 @@ export function GameTable({ projection, seatNames, events = [], message = '', on
       const card = slot.dataset.card as CardId | undefined;
       const seat = card ? expected.get(card) : undefined;
       if (seat !== undefined && slot.dataset.exchangeRecipient === String(seat)) continue;
+      exchangeStageAnimations.current.get(card ?? '' as CardId)?.cancel();
+      if (card) exchangeStageAnimations.current.delete(card);
       slot.classList.remove('is-exchange-staged');
       delete slot.dataset.exchangeRecipient;
       slot.style.removeProperty('--exchange-stage-x');
@@ -268,10 +275,35 @@ export function GameTable({ projection, seatNames, events = [], message = '', on
       const sourceY = source.top + source.height / 2;
       const targetX = target.left + target.width / 2;
       const targetY = target.top + target.height / 2;
-      slot.style.setProperty('--exchange-stage-x', `${targetX - sourceX}px`);
-      slot.style.setProperty('--exchange-stage-y', `${targetY - sourceY}px`);
+      const stageX = targetX - sourceX;
+      const stageY = targetY - sourceY;
+      slot.style.setProperty('--exchange-stage-x', `${stageX}px`);
+      slot.style.setProperty('--exchange-stage-y', `${stageY}px`);
       slot.dataset.exchangeRecipient = String(seat);
       slot.classList.add('is-exchange-staged');
+
+      if (!prefersReducedMotion) {
+        const coarse = window.matchMedia?.('(pointer: coarse), (max-width: 620px)').matches ?? false;
+        const finalScale = coarse ? .70 : .66;
+        const animation = slot.animate(
+          [
+            { translate: '0px 0px', scale: '1', offset: 0 },
+            { translate: `${stageX}px ${stageY}px`, scale: String(finalScale), offset: 1 },
+          ],
+          {
+            duration: EXCHANGE_STAGE_MOTION_MS,
+            easing: 'cubic-bezier(.16,.74,.18,1)',
+          },
+        );
+        exchangeStageAnimations.current.set(card, animation);
+        const releaseAnimation = () => {
+          if (exchangeStageAnimations.current.get(card) === animation) {
+            exchangeStageAnimations.current.delete(card);
+          }
+        };
+        animation.addEventListener('finish', releaseAnimation, { once: true });
+        animation.addEventListener('cancel', releaseAnimation, { once: true });
+      }
     }
   }, [exchangeDraft, exchangeMode, view.revision]);
 
@@ -286,30 +318,24 @@ export function GameTable({ projection, seatNames, events = [], message = '', on
 
     let cancelled = false;
     let dwellTimer: number | null = null;
-    const frame = window.requestAnimationFrame(() => {
-      const stagedSlots = [firstCard, secondCard]
-        .map((card) => document.querySelector<HTMLElement>(`.hand-slot.is-exchange-staged[data-card="${card}"]`))
-        .filter((slot): slot is HTMLElement => Boolean(slot));
-      const activeAnimations = stagedSlots
-        .flatMap((slot) => slot.getAnimations())
-        .filter((animation) => animation.playState === 'running');
+    const stageAnimations = [firstCard, secondCard]
+      .map((card) => exchangeStageAnimations.current.get(card))
+      .filter((animation): animation is Animation => Boolean(animation));
 
-      // Authority follows the material event instead of racing a device-specific
-      // timeout. Once both cards have physically settled, leave a short readable
-      // beat and only then commit the exchange.
-      void Promise.allSettled(activeAnimations.map((animation) => animation.finished)).then(() => {
+    // Authority follows the exact WAAPI handles that created the material event.
+    // There is no second CSS/DOM timing guess: the state transition can only start
+    // after both physical cards have completed their own settle motion.
+    void Promise.allSettled(stageAnimations.map((animation) => animation.finished)).then(() => {
+      if (cancelled) return;
+      dwellTimer = window.setTimeout(() => {
         if (cancelled) return;
-        dwellTimer = window.setTimeout(() => {
-          if (cancelled) return;
-          setExchangeSubmitting(true);
-          void onCommand(command);
-        }, 180);
-      });
+        setExchangeSubmitting(true);
+        void onCommand(command);
+      }, EXCHANGE_STAGE_DWELL_MS);
     });
 
     return () => {
       cancelled = true;
-      window.cancelAnimationFrame(frame);
       if (dwellTimer !== null) window.clearTimeout(dwellTimer);
     };
   }, [exchangeDraft, exchangeMode, exchangeSubmitting, exchanges, onCommand]);
