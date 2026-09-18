@@ -251,9 +251,9 @@
   }
 
   .tactile-hand {
-    --hand-card-width: 78px !important;
+    --hand-card-width: 76px !important;
     --hand-card-height: clamp(138px, 20.5dvh, 158px);
-    --hand-card-step: clamp(38px, 10vw, 40px) !important;
+    --hand-card-step: 40px !important;
     position: relative;
     z-index: 2;
     width: calc(100% - 4px);
