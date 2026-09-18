@@ -251,12 +251,12 @@
   }
 
   .tactile-hand {
-    --hand-card-width: 80px !important;
+    --hand-card-width: 78px !important;
     --hand-card-height: clamp(138px, 20.5dvh, 158px);
-    --hand-card-step: clamp(39px, 10.5vw, 42px) !important;
+    --hand-card-step: clamp(38px, 10vw, 40px) !important;
     position: relative;
     z-index: 2;
-    width: calc(100% - 2px);
+    width: calc(100% - 12px);
     min-height: calc(var(--hand-card-height) + 12px);
     margin: 0 auto;
     padding: 10px 1px 0;
@@ -272,11 +272,11 @@
   }
 
   /* Ten cards are width-constrained by independent touch ownership. At ~372px
-   * usable width, 66px cards with 34px centre spacing are near the geometric
-   * maximum before adjacent cards begin covering one another's centres. Owner
+   * usable width, 64px cards with ~33.5px centre spacing leave a small transformed
+   * fan safety margin while staying near the geometric maximum before adjacent cards begin covering one another's centres. Owner
    * prominence therefore comes from height and fan, not fake horizontal growth. */
   .tactile-hand:has(> .hand-slot:nth-child(10)) {
-    --hand-card-width: 66px !important;
+    --hand-card-width: 64px !important;
     --hand-card-height: clamp(132px, 19.5dvh, 146px);
     display: flex;
     width: 100%;
@@ -288,21 +288,21 @@
   }
 
   .tactile-hand:has(> .hand-slot:nth-child(10)) > .hand-slot {
-    flex: 0 0 66px;
-    width: 66px;
-    min-width: 66px;
-    max-width: 66px;
+    flex: 0 0 64px;
+    width: 64px;
+    min-width: 64px;
+    max-width: 64px;
     height: var(--hand-card-height);
   }
 
   .tactile-hand:has(> .hand-slot:nth-child(10)) > .hand-slot + .hand-slot {
-    margin-left: -32px;
+    margin-left: -30.5px;
   }
 
   /* Recover the physical fan the Owner explicitly drew. Keep the synchronous
    * dense-mode transition contract from Run 05; only the settled geometry changes. */
   .tactile-hand:has(> .hand-slot:nth-child(10)) .hand-slot > .card {
-    transform: translateY(var(--fan-lift)) rotate(var(--fan-rotate));
+    transform: translateY(var(--dense-fan-lift)) rotate(var(--dense-fan-rotate));
   }
 
   .tactile-hand .hand-slot:hover > .card,
