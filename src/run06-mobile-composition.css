@@ -240,6 +240,8 @@
   }
 
   .app-shell:has(.tactile-hand > .hand-slot:nth-child(10)) .hand-area {
+    left: 1px;
+    right: 1px;
     bottom: max(32px, env(safe-area-inset-bottom));
   }
 
