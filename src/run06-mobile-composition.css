@@ -261,7 +261,7 @@
     --hand-card-step: 40px !important;
     position: relative;
     z-index: 2;
-    width: calc(100% - 4px);
+    width: 100%;
     min-height: calc(var(--hand-card-height) + 12px);
     margin: 0 auto;
     padding: 10px 1px 0;
