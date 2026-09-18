@@ -530,7 +530,7 @@ export function TactileHand({
     setDrag(null);
   }
 
-  function handleClick(event: ReactMouseEvent<HTMLButtonElement>, card: CardId) {
+  function handleClick(event: ReactMouseEvent<HTMLElement>, card: CardId) {
     if (suppressClick.current === card) {
       suppressClick.current = null;
       event.preventDefault();
@@ -618,6 +618,12 @@ export function TactileHand({
               <span className="rank" data-suit={symbol}>{rank}</span>
               <span className="suit">{symbol}</span>
             </button>
+            <span
+              className="hand-touch-target"
+              data-touch-card={card}
+              aria-hidden="true"
+              onClick={(event) => handleClick(event, card)}
+            />
           </div>
         );
       })}
