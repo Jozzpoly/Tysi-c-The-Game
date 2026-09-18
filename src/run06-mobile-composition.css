@@ -1,0 +1,327 @@
+/*
+ * Mobile Composition V2 — Owner hand-priority pass.
+ *
+ * Canonical responsive composition for the final mobile scene. Earlier Run 04/05
+ * layers still own their individual visual systems; this layer owns how those
+ * systems share a phone viewport. The primary invariant is Owner-directed:
+ * the private hand is a first-class physical territory, not a small bottom HUD.
+ */
+
+/* --- One game chrome ---------------------------------------------------------- */
+
+.topbar {
+  position: relative;
+}
+
+.topbar-title {
+  min-width: 0;
+}
+
+.topbar-title > .connection-banner {
+  position: static;
+  inset: auto;
+  transform: none;
+  max-width: min(440px, 46vw);
+  margin: 2px auto 0;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #8ca596;
+  box-shadow: none;
+  font-size: .58rem;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.topbar-title > .connection-banner.connected {
+  color: #9fc0aa;
+}
+
+.topbar-title > .connection-banner.reconnecting,
+.topbar-title > .connection-banner.loading {
+  color: #d9c67f;
+}
+
+.topbar.has-room-chrome {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+}
+
+.topbar.has-room-chrome > .topbar-title {
+  grid-column: 2;
+  grid-row: 1;
+  justify-self: center;
+  display: grid;
+  justify-items: center;
+  text-align: center;
+}
+
+.topbar.has-room-chrome > .topbar-actions {
+  grid-column: 3;
+  grid-row: 1;
+  justify-self: end;
+}
+
+.topbar.has-room-chrome > .room-exit {
+  grid-column: 1;
+  grid-row: 1;
+  justify-self: start;
+}
+
+.fullscreen-toggle {
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+}
+
+.fullscreen-toggle > span {
+  font-size: 1.12rem;
+  line-height: 1;
+}
+
+/* Larger private cards must not make an exchanged card explode over a compact
+ * opponent territory. GameTable measures the live source and exposes a bounded
+ * scale that preserves the previously qualified staged footprint. */
+.exchange-mode .tactile-hand > .hand-slot.is-exchange-staged {
+  scale: var(--exchange-stage-scale, .70) !important;
+}
+
+/* --- Mobile viewport ownership ------------------------------------------------ */
+
+@media (max-width: 760px) {
+  :root {
+    --mobile-game-vh: 100svh;
+  }
+
+  @supports (height: 100dvh) {
+    :root {
+      --mobile-game-vh: 100dvh;
+    }
+  }
+
+  body {
+    min-height: var(--mobile-game-vh);
+  }
+
+  .remote-room-active {
+    min-height: var(--mobile-game-vh);
+  }
+
+  /* RemoteRoom used to reserve a separate 42px strip for fixed controls.
+   * Those controls now live inside the real game topbar. */
+  .remote-room-active > .app-shell {
+    padding-top: 5px;
+  }
+
+  .app-shell {
+    --mobile-hand-reserve: 210px;
+    min-height: var(--mobile-game-vh);
+    padding: 5px 6px max(5px, env(safe-area-inset-bottom));
+    gap: 4px;
+  }
+
+  .app-shell:has(.tactile-hand > .hand-slot:nth-child(10)) {
+    --mobile-hand-reserve: 200px;
+  }
+
+  /* Exchange and trick are the sustained physical-play phases. They should use
+   * one viewport rather than asking the player to vertically scroll between the
+   * table and the hand. Auction/summary may still grow naturally when decisions
+   * genuinely need more room. */
+  .app-shell[data-phase='exchange'],
+  .app-shell[data-phase='trick'] {
+    height: var(--mobile-game-vh);
+    min-height: 0;
+    grid-template-rows: auto minmax(0, 1fr);
+    overflow: hidden;
+  }
+
+  .topbar {
+    min-height: 48px;
+    padding: 0 1px;
+  }
+
+  .topbar.has-room-chrome {
+    grid-template-columns: minmax(92px, 1fr) minmax(116px, auto) minmax(104px, 1fr);
+    gap: 3px;
+  }
+
+  .topbar.has-room-chrome > .topbar-title {
+    max-width: 150px;
+  }
+
+  .topbar h1 {
+    margin: 0;
+    font-size: .98rem;
+    line-height: 1.05;
+    white-space: nowrap;
+  }
+
+  .topbar-title > .connection-banner {
+    max-width: 150px;
+    margin-top: 3px;
+    font-size: .50rem;
+  }
+
+  .topbar.has-room-chrome > .room-exit {
+    max-width: 100%;
+    min-height: 44px;
+    padding: 6px 8px;
+    overflow: hidden;
+    font-size: .66rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .topbar-actions {
+    flex-wrap: nowrap;
+    gap: 3px;
+    opacity: .86;
+  }
+
+  .topbar-actions .rules-trigger {
+    padding-inline: 7px;
+    font-size: .67rem;
+  }
+
+  .fullscreen-toggle {
+    flex: 0 0 44px;
+  }
+
+  /* The table receives the remainder of the viewport. Its bottom padding is not
+   * dead space: it is the physical territory occupied by the absolutely anchored
+   * private hand. */
+  .app-shell[data-phase='exchange'] > .table,
+  .app-shell[data-phase='trick'] > .table {
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    padding: 8px 7px var(--mobile-hand-reserve);
+    gap: 4px;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+  }
+
+  .app-shell[data-phase='exchange'] .center,
+  .app-shell[data-phase='trick'] .center {
+    min-height: 0;
+    margin-top: -2px;
+    align-content: center;
+  }
+
+  .app-shell[data-phase='exchange'] .decision,
+  .app-shell[data-phase='trick'] .decision {
+    margin-top: -4px;
+  }
+
+  /* --- The private hand becomes a real lower territory ------------------------ */
+
+  .hand-area {
+    left: 4px;
+    right: 4px;
+    bottom: max(2px, env(safe-area-inset-bottom));
+    min-height: var(--mobile-hand-reserve);
+    padding: 0 0 2px;
+    align-content: end;
+    background:
+      radial-gradient(ellipse at 50% 100%, #0d3928d4 0%, transparent 68%),
+      linear-gradient(180deg, transparent 0%, #04170fb0 20%, #03110bf8 100%);
+  }
+
+  /* This information remains available, but it no longer gets its own expensive
+   * row above the most important object on the phone. */
+  .hand-heading {
+    position: absolute;
+    z-index: 0;
+    left: 8px;
+    right: 8px;
+    top: 5px;
+    width: auto;
+    margin: 0;
+    padding: 0 4px;
+    transform: none;
+    pointer-events: none;
+    opacity: .66;
+  }
+
+  .tactile-hand {
+    --hand-card-width: 80px !important;
+    --hand-card-height: clamp(138px, 20.5dvh, 158px);
+    --hand-card-step: clamp(39px, 10.5vw, 42px) !important;
+    position: relative;
+    z-index: 2;
+    width: calc(100% - 2px);
+    min-height: calc(var(--hand-card-height) + 12px);
+    margin: 0 auto;
+    padding: 10px 1px 0;
+    grid-template-columns: repeat(var(--hand-spread-count), minmax(0, var(--hand-card-step))) var(--hand-card-width);
+    align-items: end;
+  }
+
+  .tactile-hand > .hand-slot {
+    width: var(--hand-card-width);
+    min-width: var(--hand-card-width);
+    height: var(--hand-card-height);
+    aspect-ratio: auto;
+  }
+
+  /* Ten cards are width-constrained by independent touch ownership. At ~372px
+   * usable width, 66px cards with 34px centre spacing are near the geometric
+   * maximum before adjacent cards begin covering one another's centres. Owner
+   * prominence therefore comes from height and fan, not fake horizontal growth. */
+  .tactile-hand:has(> .hand-slot:nth-child(10)) {
+    --hand-card-width: 66px !important;
+    --hand-card-height: clamp(132px, 19.5dvh, 146px);
+    display: flex;
+    width: 100%;
+    min-height: calc(var(--hand-card-height) + 12px);
+    padding: 10px 0 0;
+    justify-content: center;
+    align-items: end;
+    gap: 0;
+  }
+
+  .tactile-hand:has(> .hand-slot:nth-child(10)) > .hand-slot {
+    flex: 0 0 66px;
+    width: 66px;
+    min-width: 66px;
+    max-width: 66px;
+    height: var(--hand-card-height);
+  }
+
+  .tactile-hand:has(> .hand-slot:nth-child(10)) > .hand-slot + .hand-slot {
+    margin-left: -32px;
+  }
+
+  /* Recover the physical fan the Owner explicitly drew. Keep the synchronous
+   * dense-mode transition contract from Run 05; only the settled geometry changes. */
+  .tactile-hand:has(> .hand-slot:nth-child(10)) .hand-slot > .card {
+    transform: translateY(var(--fan-lift)) rotate(var(--fan-rotate));
+  }
+
+  .tactile-hand .hand-slot:hover > .card,
+  .tactile-hand .hand-slot.is-held > .card,
+  .tactile-hand .hand-slot:focus-within > .card {
+    transform: translateY(-20px) rotate(0deg) scale(1.03);
+  }
+
+  .tactile-hand .hand-slot > .card.selected,
+  .tactile-hand .hand-slot:hover > .card.selected,
+  .tactile-hand .hand-slot:focus-within > .card.selected {
+    transform: translateY(-25px) rotate(0deg) scale(1.035);
+  }
+
+  .tactile-hand .card .rank {
+    font-size: 1.02rem;
+  }
+
+  .tactile-hand .card .suit {
+    font-size: 1.7rem;
+  }
+}
