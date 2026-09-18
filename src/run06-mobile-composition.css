@@ -81,9 +81,14 @@
   place-items: center;
 }
 
-.fullscreen-toggle > span {
-  font-size: 1.12rem;
-  line-height: 1;
+.fullscreen-icon {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 /* Larger private cards must not make an exchanged card explode over a compact
@@ -252,7 +257,7 @@
 
   .tactile-hand {
     --hand-card-width: 76px !important;
-    --hand-card-height: clamp(138px, 20.5dvh, 158px);
+    --hand-card-height: clamp(148px, 22dvh, 162px);
     --hand-card-step: 40px !important;
     position: relative;
     z-index: 2;
@@ -287,7 +292,7 @@
    * prominence therefore comes from height and fan, not fake horizontal growth. */
   .tactile-hand:has(> .hand-slot:nth-child(10)) {
     --hand-card-width: 62px !important;
-    --hand-card-height: clamp(132px, 19.5dvh, 146px);
+    --hand-card-height: clamp(152px, 22.3dvh, 164px);
     display: flex;
     width: 100%;
     min-height: calc(var(--hand-card-height) + 12px);
