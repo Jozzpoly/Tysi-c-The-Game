@@ -68,6 +68,8 @@ type FloatingCardProps =
 type SlotStyle = CSSProperties & {
   '--fan-rotate': string;
   '--fan-lift': string;
+  '--dense-fan-rotate': string;
+  '--dense-fan-lift': string;
   '--hand-index': number;
   '--hand-preview-shift-x': string;
 };
@@ -572,10 +574,17 @@ export function TactileHand({
         const offset = index - (visibleOrder.length - 1) / 2;
         const rotate = Math.max(-5.5, Math.min(5.5, offset * 1.15));
         const lift = Math.min(6, Math.abs(offset) * 1.15);
+        // Ten-card mobile exchange needs a different physical fan: a tall hand
+        // can read strongly with less angular spread and more vertical arc. Keep
+        // both geometries available so desktop and ordinary hands stay unchanged.
+        const denseRotate = Math.max(-3, Math.min(3, offset * .66));
+        const denseLift = Math.min(10, Math.abs(offset) * 2.1);
         const previewShiftX = insertionPreview?.shiftsPx[index] ?? 0;
         const slotStyle = {
           '--fan-rotate': `${rotate}deg`,
           '--fan-lift': `${lift}px`,
+          '--dense-fan-rotate': `${denseRotate}deg`,
+          '--dense-fan-lift': `${denseLift}px`,
           '--hand-index': index,
           '--hand-preview-shift-x': `${previewShiftX}px`,
         } as SlotStyle;
