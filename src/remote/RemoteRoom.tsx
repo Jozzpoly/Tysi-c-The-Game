@@ -346,11 +346,19 @@ export function RemoteRoom({ room, onLeave }: RemoteRoomProps) {
   if (presentedProjection) {
     return (
       <div className="remote-room-active">
-        <button className="room-exit ghost" onClick={onLeave}>Wróć do startu</button>
-        <div className={`connection-banner ${connection}`}>
-          Pokój {room} · {connection === 'connected' ? 'online' : 'łączenie…'}{inputLocked && connection === 'connected' ? ' · ruchy przy stole…' : ''}
-        </div>
-        <LivingGameTable projection={presentedProjection} seatNames={names} events={presentedEvents} message={message} onCommand={sendCommand} />
+        <LivingGameTable
+          projection={presentedProjection}
+          seatNames={names}
+          events={presentedEvents}
+          message={message}
+          onCommand={sendCommand}
+          chrome={{
+            backLabel: 'Wróć do startu',
+            onBack: onLeave,
+            status: `Pokój ${room} · ${connection === 'connected' ? 'online' : 'łączenie…'}${inputLocked && connection === 'connected' ? ' · ruchy przy stole…' : ''}`,
+            statusState: connection,
+          }}
+        />
       </div>
     );
   }
