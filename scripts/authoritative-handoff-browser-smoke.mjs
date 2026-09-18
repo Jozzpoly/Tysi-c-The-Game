@@ -307,12 +307,21 @@ async function runViewport(label, width, height, mobile) {
     const ghostObserved = trace.some((entry) => entry.ghost && entry.ghostVisible);
     const authorityObserved = trace.some((entry) => entry.authority === 'handoff');
     const hiddenTargetObserved = trace.some((entry) => entry.targetHandoff && !entry.targetVisible && entry.ghostVisible);
-    const completionObserved = trace.some((entry) => entry.targetComplete && entry.targetVisible && !entry.ghost);
+    // The direct final wait above is the durable completion observation: it
+    // requires the authoritative target's completion marker, visible target,
+    // absent pending ghost, and absent source card. An rAF trace is valuable for
+    // the bridge's intermediate states, but it can legitimately miss that short
+    // final marker window between animation finish and the next React render.
+    const completionTraceObserved = trace.some((entry) => entry.targetComplete && entry.targetVisible && !entry.ghost);
+    const completionObserved =
+      final.targetCard === playable.card
+      && final.targetVisible
+      && !final.sourceStillInHand;
     const duplicatedVisibleCard = trace.find((entry) => entry.ghostVisible && entry.targetVisible && entry.targetHandoff);
 
     if (!ghostObserved || !authorityObserved || !hiddenTargetObserved || !completionObserved) {
       throw new Error(`${label}: incomplete handoff evidence ${JSON.stringify({
-        ghostObserved, authorityObserved, hiddenTargetObserved, completionObserved, trace,
+        ghostObserved, authorityObserved, hiddenTargetObserved, completionObserved, completionTraceObserved, trace,
       })}`);
     }
     if (duplicatedVisibleCard) {
@@ -339,6 +348,7 @@ async function runViewport(label, width, height, mobile) {
       targetHiddenDuringBridge: hiddenTargetObserved,
       singleVisibleRepresentation: !duplicatedVisibleCard,
       authoritativeCompletion: completionObserved,
+      completionTraceObserved,
       trace,
     };
   } finally {
