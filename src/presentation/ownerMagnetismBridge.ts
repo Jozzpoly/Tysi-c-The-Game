@@ -61,8 +61,26 @@ function renderOwnerMagnetism() {
   if (!sample) return;
 
   const shell = shellNode();
-  const floating = shell?.querySelector<HTMLElement>('.tactile-card-float:not(.pending-handoff)');
-  if (!shell || !floating) {
+  // Table attraction is now owned entirely by TactileHand. Keep this bridge only
+  // for exchange, where GameTable owns recipient selection/hysteresis.
+  if (!shell || !shell.classList.contains('exchange-mode')) {
+    clearMagnet(shell);
+    return;
+  }
+
+  const floating = shell.querySelector<HTMLElement>('.tactile-card-float:not(.pending-handoff)');
+  if (!floating) {
+    clearMagnet(shell);
+    return;
+  }
+
+  const targetId = shell.dataset.exchangeMagnetSeat ?? '';
+  if (!targetId) {
+    clearMagnet(shell);
+    return;
+  }
+  const target = shell.querySelector<HTMLElement>(`[data-exchange-target-seat="${targetId}"]`);
+  if (!target) {
     clearMagnet(shell);
     return;
   }
@@ -70,42 +88,15 @@ function renderOwnerMagnetism() {
   const point = { x: sample.x, y: sample.y };
   const coarse = sample.pointerType === 'touch' || sample.pointerType === 'pen';
   const enterPaddingPx = coarse ? TOUCH_ENTER_PX : MOUSE_ENTER_PX;
-
-  if (shell.classList.contains('exchange-mode')) {
-    // GameTable already owns recipient hit-testing and hysteresis. Reuse that
-    // authoritative presentation choice instead of performing a second full
-    // target scan and another pair of layout reads for every pointer sample.
-    const targetId = shell.dataset.exchangeMagnetSeat ?? '';
-    if (!targetId) {
-      clearMagnet(shell);
-      return;
-    }
-    const target = shell.querySelector<HTMLElement>(`[data-exchange-target-seat="${targetId}"]`);
-    if (!target) {
-      clearMagnet(shell);
-      return;
-    }
-    applyMagnet(shell, point, targetRect(target, `seat-${targetId}`), enterPaddingPx, `seat-${targetId}`);
-    return;
-  }
-
-  const heldThrowable = shell.querySelector('.tactile-hand > .hand-slot.is-held.is-throwable');
-  const trick = shell.querySelector<HTMLElement>('.trick');
-  if (!heldThrowable || !trick) {
-    clearMagnet(shell);
-    return;
-  }
-
-  // TactileHand owns the accepted-zone pull. This bridge only supplies the weak
-  // earlier approach cue, so the two presentation offsets never stack.
-  if (Number(floating.dataset.magnetStrength ?? '0') > 0) {
-    clearMagnet(shell);
-    return;
-  }
-  applyMagnet(shell, point, targetRect(trick, 'table'), enterPaddingPx, 'table');
+  applyMagnet(shell, point, targetRect(target, `seat-${targetId}`), enterPaddingPx, `seat-${targetId}`);
 }
 
 function scheduleOwnerMagnetism(event: PointerEvent) {
+  // Ordinary trick dragging has its own coalesced gesture owner; avoid scheduling
+  // a second document-level frame for every pointer sample outside exchange.
+  const shell = shellNode();
+  if (!shell?.classList.contains('exchange-mode')) return;
+
   latestPointer = { x: event.clientX, y: event.clientY, pointerType: event.pointerType };
   if (scheduledFrame !== null) return;
   scheduledFrame = window.requestAnimationFrame(renderOwnerMagnetism);
@@ -124,9 +115,9 @@ function finishOwnerMagnetism() {
 }
 
 /**
- * Presentation-only bridge. It makes the already-authoritative table/exchange
- * targets physically tug the carried card before release; it never emits game
- * commands or owns acceptance state.
+ * Presentation-only exchange bridge. GameTable owns recipient acceptance and
+ * hysteresis; this module only renders the corresponding tug. Table attraction
+ * stays inside TactileHand so one gesture has one presentation owner.
  */
 export function installOwnerMagnetismBridge() {
   document.addEventListener('pointermove', scheduleOwnerMagnetism, { capture: true, passive: true });

@@ -229,14 +229,41 @@ async function clickNumericDecisionButton(session, mode) {
   return clicked;
 }
 
-async function clickFirstPlayableHandCard(session) {
-  const clicked = await execute(session, `
+async function clickFirstPlayableHandCard(session, mobile) {
+  const target = await execute(session, `
     const card = document.querySelector('.hand .card:not(:disabled)');
-    if (!card) return false;
-    card.click();
-    return true;
+    if (!card) return null;
+    const rect = card.getBoundingClientRect();
+    return {
+      x: rect.left + rect.width / 2,
+      y: rect.top + Math.min(rect.height * .32, 34),
+      label: card.getAttribute('aria-label') ?? '',
+    };
   `);
-  if (!clicked) throw new Error('No enabled hand card found');
+  if (!target) throw new Error('No enabled hand card found');
+
+  if (mobile) {
+    // Dedicated mobile-touch coverage owns real W3C touch semantics. This smoke
+    // keeps its prior semantic activation on mobile and adds physical mouse
+    // evidence specifically for the desktop parity gap found by a real player.
+    const clicked = await execute(session, `
+      const card = document.querySelector('.hand .card:not(:disabled)');
+      if (!card) return false;
+      card.click();
+      return true;
+    `);
+    if (!clicked) throw new Error('No enabled mobile hand card found');
+    return;
+  }
+
+  await cdp(session, 'Input.dispatchMouseEvent', { type: 'mouseMoved', x: target.x, y: target.y });
+  await cdp(session, 'Input.dispatchMouseEvent', {
+    type: 'mousePressed', x: target.x, y: target.y, button: 'left', buttons: 1, clickCount: 1,
+  });
+  await sleep(45);
+  await cdp(session, 'Input.dispatchMouseEvent', {
+    type: 'mouseReleased', x: target.x, y: target.y, button: 'left', buttons: 0, clickCount: 1,
+  });
 }
 
 async function inspectLayout(session) {
@@ -305,7 +332,7 @@ async function runDefenderViewport(label, width, height, mobile) {
     if (beforePlay.enabledHandCards < 1) throw new Error(`${label}: no playable human card`);
     await screenshot(session, `${label}-defender-human-turn`);
 
-    await clickFirstPlayableHandCard(session);
+    await clickFirstPlayableHandCard(session, mobile);
     await waitFor(`${label}: defender completed trick`, () => execute(session, `return document.querySelector('.trick-result')?.textContent?.includes('Lewa 1:') ?? false;`), 5_000);
     const completed = await inspectLayout(session);
     assertViewport(`${label}: defender completed trick`, completed, width);
@@ -369,7 +396,7 @@ async function runDeclarerViewport(label, width, height, mobile) {
     if (lead.enabledHandCards < 1) throw new Error(`${label}: declarer has no playable lead`);
     await screenshot(session, `${label}-declarer-lead`);
 
-    await clickFirstPlayableHandCard(session);
+    await clickFirstPlayableHandCard(session, mobile);
     await waitFor(`${label}: declarer first trick completed`, () => execute(session, `return document.querySelector('.trick-result')?.textContent?.includes('Lewa 1:') ?? false;`), 5_000);
     const completed = await inspectLayout(session);
     assertViewport(`${label}: declarer completed trick`, completed, width);

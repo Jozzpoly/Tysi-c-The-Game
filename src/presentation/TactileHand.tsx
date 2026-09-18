@@ -114,8 +114,8 @@ function FloatingCard(props: FloatingCardProps) {
   if (props.dragging) {
     const ghost = props.ghost;
     magnetStrength = ghost.magnetStrength;
-    magnetOffsetX = ghost.magnetOffsetX;
-    magnetOffsetY = ghost.magnetOffsetY;
+    magnetOffsetX = ghost.magnetOffsetX + ghost.assistOffsetX;
+    magnetOffsetY = ghost.magnetOffsetY + ghost.assistOffsetY;
     left = ghost.x - ghost.offsetX + magnetOffsetX;
     top = ghost.y - ghost.offsetY + magnetOffsetY;
     tilt = tactileCarryTiltDegrees(pointerMotionSample(ghost));
@@ -153,6 +153,7 @@ function FloatingCard(props: FloatingCardProps) {
       data-magnet-strength={magnetStrength.toFixed(3)}
       data-magnet-offset-x={magnetOffsetX.toFixed(2)}
       data-magnet-offset-y={magnetOffsetY.toFixed(2)}
+      data-magnet-assist-strength={props.dragging ? props.ghost.assistStrength.toFixed(3) : '0.000'}
       aria-hidden="true"
     >
       <span className="rank" data-suit={symbol}>{rank}</span>
@@ -182,6 +183,11 @@ export function TactileHand({
   const suppressClick = useRef<CardId | null>(null);
   const releaseTimer = useRef<number | null>(null);
   const handoffAnimation = useRef<Animation | null>(null);
+  // Pointer events can arrive substantially faster than the display can present.
+  // Keep the freshest gesture sample in a ref and publish it to React at most once
+  // per animation frame; authority/geometry semantics stay unchanged.
+  const liveDrag = useRef<TactilePointerState | null>(null);
+  const dragFrame = useRef<number | null>(null);
   const cardsKey = cards.join('|');
 
   const visibleOrder = previousHandNumber.current === handNumber
@@ -197,6 +203,8 @@ export function TactileHand({
 
   useEffect(() => () => {
     if (releaseTimer.current !== null) window.clearTimeout(releaseTimer.current);
+    if (dragFrame.current !== null) window.cancelAnimationFrame(dragFrame.current);
+    liveDrag.current = null;
     handoffAnimation.current?.cancel();
   }, []);
 
@@ -394,7 +402,7 @@ export function TactileHand({
     setInsertionPreview(null);
     event.currentTarget.setPointerCapture(event.pointerId);
     if (button instanceof HTMLButtonElement && !button.disabled) button.focus({ preventScroll: true });
-    setDrag(beginTactilePointer({
+    const initialDrag = beginTactilePointer({
       card,
       pointerId: event.pointerId,
       x: event.clientX,
@@ -405,41 +413,65 @@ export function TactileHand({
       offsetX: event.clientX - rect.left,
       offsetY: event.clientY - rect.top,
       zoneTop: playRect ? playRect.top + playRect.height / 2 : Math.max(14, handRect.top - 76),
-    }));
+    });
+    liveDrag.current = initialDrag;
+    setDrag(initialDrag);
   }
 
   function moveDrag(event: ReactPointerEvent<HTMLDivElement>) {
-    if (!drag || event.pointerId !== drag.pointerId) return;
+    const current = liveDrag.current;
+    if (!current || event.pointerId !== current.pointerId) return;
+
     const playRect = dragLayout.current?.playRect ?? null;
-    const cardCenterX = event.clientX - drag.offsetX + drag.width / 2;
-    const cardCenterY = event.clientY - drag.offsetY + drag.height / 2;
+    const cardCenterX = event.clientX - current.offsetX + current.width / 2;
+    const cardCenterY = event.clientY - current.offsetY + current.height / 2;
     const cardCenter = { x: cardCenterX, y: cardCenterY };
-    const fieldPadding = drag.throwIntent ? TABLE_MAGNET_RELEASE_PX : TABLE_MAGNET_ENTER_PX;
+    const fieldPadding = current.throwIntent ? TABLE_MAGNET_RELEASE_PX : TABLE_MAGNET_ENTER_PX;
     const inPlayZone = Boolean(playRect && magneticCapture(cardCenter, playRect, {
-      latched: drag.throwIntent,
+      latched: current.throwIntent,
       enterPaddingPx: TABLE_MAGNET_ENTER_PX,
       releasePaddingPx: TABLE_MAGNET_RELEASE_PX,
     }));
-    const magnet = playRect && inPlayZone
+    // Keep one gesture owner while preserving two different meanings:
+    // - assist: early visual attraction only;
+    // - magnet: bounded acceptance-field feedback used by the handoff contract.
+    // The old global bridge mixed these paths through a second pointer listener.
+    const acceptedMagnet = playRect && inPlayZone
       ? magneticOffsetToRect(cardCenter, playRect, fieldPadding, TABLE_MAGNET_MAX_PULL_PX)
       : { x: 0, y: 0, strength: 0 };
-    const next = advanceTactilePointer(drag, {
+    const assistMagnet = playRect && !inPlayZone
+      ? magneticOffsetToRect(
+        { x: event.clientX, y: event.clientY },
+        playRect,
+        TABLE_MAGNET_ENTER_PX,
+        TABLE_MAGNET_MAX_PULL_PX,
+      )
+      : { x: 0, y: 0, strength: 0 };
+    const next = advanceTactilePointer(current, {
       x: event.clientX,
       y: event.clientY,
       timeMs: event.timeStamp,
-      canCommit: throwableCards.has(drag.card),
+      canCommit: throwableCards.has(current.card),
       inPlayZone,
-      magnetOffsetX: magnet.x,
-      magnetOffsetY: magnet.y,
-      magnetStrength: magnet.strength,
+      magnetOffsetX: acceptedMagnet.x,
+      magnetOffsetY: acceptedMagnet.y,
+      magnetStrength: acceptedMagnet.strength,
+      assistOffsetX: assistMagnet.x,
+      assistOffsetY: assistMagnet.y,
+      assistStrength: assistMagnet.strength,
     });
 
-    if (next.moved) {
-      event.preventDefault();
-      if (next.phase === 'held') applyInsertionPreview(next);
-    }
+    liveDrag.current = next;
+    if (next.moved) event.preventDefault();
 
-    setDrag((current) => current?.pointerId === event.pointerId ? next : current);
+    if (dragFrame.current !== null) return;
+    dragFrame.current = window.requestAnimationFrame(() => {
+      dragFrame.current = null;
+      const frameDrag = liveDrag.current;
+      if (!frameDrag) return;
+      if (frameDrag.moved && frameDrag.phase === 'held') applyInsertionPreview(frameDrag);
+      setDrag(frameDrag);
+    });
   }
 
   function animateReturnToHand(state: TactilePointerState) {
@@ -449,8 +481,8 @@ export function TactileHand({
     if (reduced) return;
 
     const rect = slot.getBoundingClientRect();
-    const currentLeft = state.x - state.offsetX + state.magnetOffsetX;
-    const currentTop = state.y - state.offsetY + state.magnetOffsetY;
+    const currentLeft = state.x - state.offsetX + state.magnetOffsetX + state.assistOffsetX;
+    const currentTop = state.y - state.offsetY + state.magnetOffsetY + state.assistOffsetY;
     const dx = currentLeft - rect.left;
     const dy = currentTop - rect.top;
     const motion = tactileReturnMotion(pointerMotionSample(state));
@@ -479,29 +511,39 @@ export function TactileHand({
   }
 
   function finishDrag(event: ReactPointerEvent<HTMLDivElement>, cancelled = false) {
-    if (!drag || event.pointerId !== drag.pointerId) return;
+    const activeDrag = liveDrag.current;
+    if (!activeDrag || event.pointerId !== activeDrag.pointerId) return;
     if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+    // Preserve the final pointer sample even when pointer-up beats the scheduled
+    // render frame, so free-hand reordering cannot lose the last movement.
+    if (activeDrag.moved && activeDrag.phase === 'held') applyInsertionPreview(activeDrag);
 
-    const outcome = classifyTactileRelease(drag, {
+    const outcome = classifyTactileRelease(activeDrag, {
       cancelled,
-      canCommit: throwableCards.has(drag.card),
+      canCommit: throwableCards.has(activeDrag.card),
     });
 
-    if (drag.moved && actionableCards.has(drag.card)) {
-      suppressClick.current = drag.card;
+    // Pointer capture is allowed to retarget the browser's synthesized click to
+    // the slot instead of the nested card button. Treat a true pointer tap as
+    // the activation gesture itself, then suppress any trailing synthesized
+    // click. Keyboard/programmatic clicks still use handleClick below.
+    if ((activeDrag.moved || outcome === 'tap') && actionableCards.has(activeDrag.card)) {
+      suppressClick.current = activeDrag.card;
       window.setTimeout(() => {
-        if (suppressClick.current === drag.card) suppressClick.current = null;
+        if (suppressClick.current === activeDrag.card) suppressClick.current = null;
       }, 0);
     }
 
-    if (outcome === 'commit') {
+    if (outcome === 'tap' && actionableCards.has(activeDrag.card)) {
+      onActivate(activeDrag.card);
+    } else if (outcome === 'commit') {
       const pendingGhost: ReleaseGhost = {
-        card: drag.card,
-        left: drag.x - drag.offsetX + drag.magnetOffsetX,
-        top: drag.y - drag.offsetY + drag.magnetOffsetY,
-        width: drag.width,
-        height: drag.height,
-        tilt: tactileCarryTiltDegrees(pointerMotionSample(drag)),
+        card: activeDrag.card,
+        left: activeDrag.x - activeDrag.offsetX + activeDrag.magnetOffsetX,
+        top: activeDrag.y - activeDrag.offsetY + activeDrag.magnetOffsetY,
+        width: activeDrag.width,
+        height: activeDrag.height,
+        tilt: tactileCarryTiltDegrees(pointerMotionSample(activeDrag)),
       };
       setReleaseGhost(pendingGhost);
       if (releaseTimer.current !== null) window.clearTimeout(releaseTimer.current);
@@ -509,18 +551,18 @@ export function TactileHand({
         releaseTimer.current = null;
         setReleaseGhost((current) => current?.card === pendingGhost.card ? null : current);
       }, TACTILE_AUTHORITY_TIMEOUT_MS);
-      onActivate(drag.card);
+      onActivate(activeDrag.card);
     } else if (outcome === 'return') {
       // Releasing from the shared table zone is a failed play attempt, not a hand
       // reorder. Only a release that is still in free-hand space may commit the
       // latest insertion preview.
-      const reordered = drag.phase === 'held' ? commitPreviewOrder(drag.card) : false;
+      const reordered = activeDrag.phase === 'held' ? commitPreviewOrder(activeDrag.card) : false;
       if (reordered) {
         window.requestAnimationFrame(() => {
-          window.requestAnimationFrame(() => animateReturnToHand(drag));
+          window.requestAnimationFrame(() => animateReturnToHand(activeDrag));
         });
       } else {
-        animateReturnToHand(drag);
+        animateReturnToHand(activeDrag);
       }
     }
 
@@ -528,6 +570,11 @@ export function TactileHand({
     latestPreview.current = null;
     stableTarget.current = null;
     setInsertionPreview(null);
+    if (dragFrame.current !== null) {
+      window.cancelAnimationFrame(dragFrame.current);
+      dragFrame.current = null;
+    }
+    liveDrag.current = null;
     setDrag(null);
   }
 
