@@ -261,17 +261,26 @@ export function GameTable({ projection, seatNames, events = [], message = '', on
       // that return first so staging measures the card's true hand geometry.
       slot.getAnimations().forEach((animation) => animation.cancel());
       const source = cardNode.getBoundingClientRect();
+      const slotRect = slot.getBoundingClientRect();
       const target = stageTarget.getBoundingClientRect();
       const sourceX = source.left + source.width / 2;
       const sourceY = source.top + source.height / 2;
+      const slotX = slotRect.left + slotRect.width / 2;
+      const slotY = slotRect.top + slotRect.height / 2;
       const targetX = target.left + target.width / 2;
       const targetY = target.top + target.height / 2;
       // Preserve roughly the proven staged-card footprint even when the private
       // hand becomes substantially taller on mobile. A fixed .70 scale would
       // make the larger Owner-directed hand explode over the recipient territory.
       const stageScale = Math.max(.44, Math.min(.70, 52 / Math.max(1, source.width), 76 / Math.max(1, source.height)));
-      slot.style.setProperty('--exchange-stage-x', `${targetX - sourceX}px`);
-      slot.style.setProperty('--exchange-stage-y', `${targetY - sourceY}px`);
+      // Individual CSS scale operates around the slot centre. The face may already
+      // be lifted/rotated by fan or selected state, so scaling changes the face
+      // centre relative to that slot. Translate the *scaled* face centre to the
+      // recipient rather than assuming source centre === slot centre.
+      const scaledSourceX = slotX + (sourceX - slotX) * stageScale;
+      const scaledSourceY = slotY + (sourceY - slotY) * stageScale;
+      slot.style.setProperty('--exchange-stage-x', `${targetX - scaledSourceX}px`);
+      slot.style.setProperty('--exchange-stage-y', `${targetY - scaledSourceY}px`);
       slot.style.setProperty('--exchange-stage-scale', stageScale.toFixed(3));
       slot.dataset.exchangeRecipient = String(seat);
       slot.classList.add('is-exchange-staged');
