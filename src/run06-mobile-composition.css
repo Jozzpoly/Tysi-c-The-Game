@@ -133,7 +133,7 @@
   }
 
   .app-shell:has(.tactile-hand > .hand-slot:nth-child(10)) {
-    --mobile-hand-reserve: 200px;
+    --mobile-hand-reserve: 230px;
   }
 
   /* Exchange and trick are the sustained physical-play phases. They should use
@@ -237,6 +237,10 @@
     background:
       radial-gradient(ellipse at 50% 100%, #0d3928d4 0%, transparent 68%),
       linear-gradient(180deg, transparent 0%, #04170fb0 20%, #03110bf8 100%);
+  }
+
+  .app-shell:has(.tactile-hand > .hand-slot:nth-child(10)) .hand-area {
+    bottom: max(32px, env(safe-area-inset-bottom));
   }
 
   /* This information remains available, but it no longer gets its own expensive
