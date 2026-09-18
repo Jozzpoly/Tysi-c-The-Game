@@ -114,8 +114,8 @@ function FloatingCard(props: FloatingCardProps) {
   if (props.dragging) {
     const ghost = props.ghost;
     magnetStrength = ghost.magnetStrength;
-    magnetOffsetX = ghost.magnetOffsetX;
-    magnetOffsetY = ghost.magnetOffsetY;
+    magnetOffsetX = ghost.magnetOffsetX + ghost.assistOffsetX;
+    magnetOffsetY = ghost.magnetOffsetY + ghost.assistOffsetY;
     left = ghost.x - ghost.offsetX + magnetOffsetX;
     top = ghost.y - ghost.offsetY + magnetOffsetY;
     tilt = tactileCarryTiltDegrees(pointerMotionSample(ghost));
@@ -153,6 +153,7 @@ function FloatingCard(props: FloatingCardProps) {
       data-magnet-strength={magnetStrength.toFixed(3)}
       data-magnet-offset-x={magnetOffsetX.toFixed(2)}
       data-magnet-offset-y={magnetOffsetY.toFixed(2)}
+      data-magnet-assist-strength={props.dragging ? props.ghost.assistStrength.toFixed(3) : '0.000'}
       aria-hidden="true"
     >
       <span className="rank" data-suit={symbol}>{rank}</span>
@@ -431,11 +432,20 @@ export function TactileHand({
       enterPaddingPx: TABLE_MAGNET_ENTER_PX,
       releasePaddingPx: TABLE_MAGNET_RELEASE_PX,
     }));
-    // One owner for table attraction. The same gesture path now supplies both the
-    // early visual pull and the stricter acceptance field, instead of a second
-    // document-level pointer listener mutating the same floating card.
-    const magnet = playRect
+    // Keep one gesture owner while preserving two different meanings:
+    // - assist: early visual attraction only;
+    // - magnet: bounded acceptance-field feedback used by the handoff contract.
+    // The old global bridge mixed these paths through a second pointer listener.
+    const acceptedMagnet = playRect && inPlayZone
       ? magneticOffsetToRect(cardCenter, playRect, fieldPadding, TABLE_MAGNET_MAX_PULL_PX)
+      : { x: 0, y: 0, strength: 0 };
+    const assistMagnet = playRect && !inPlayZone
+      ? magneticOffsetToRect(
+        { x: event.clientX, y: event.clientY },
+        playRect,
+        TABLE_MAGNET_ENTER_PX,
+        TABLE_MAGNET_MAX_PULL_PX,
+      )
       : { x: 0, y: 0, strength: 0 };
     const next = advanceTactilePointer(current, {
       x: event.clientX,
@@ -443,9 +453,12 @@ export function TactileHand({
       timeMs: event.timeStamp,
       canCommit: throwableCards.has(current.card),
       inPlayZone,
-      magnetOffsetX: magnet.x,
-      magnetOffsetY: magnet.y,
-      magnetStrength: magnet.strength,
+      magnetOffsetX: acceptedMagnet.x,
+      magnetOffsetY: acceptedMagnet.y,
+      magnetStrength: acceptedMagnet.strength,
+      assistOffsetX: assistMagnet.x,
+      assistOffsetY: assistMagnet.y,
+      assistStrength: assistMagnet.strength,
     });
 
     liveDrag.current = next;
@@ -468,8 +481,8 @@ export function TactileHand({
     if (reduced) return;
 
     const rect = slot.getBoundingClientRect();
-    const currentLeft = state.x - state.offsetX + state.magnetOffsetX;
-    const currentTop = state.y - state.offsetY + state.magnetOffsetY;
+    const currentLeft = state.x - state.offsetX + state.magnetOffsetX + state.assistOffsetX;
+    const currentTop = state.y - state.offsetY + state.magnetOffsetY + state.assistOffsetY;
     const dx = currentLeft - rect.left;
     const dy = currentTop - rect.top;
     const motion = tactileReturnMotion(pointerMotionSample(state));
