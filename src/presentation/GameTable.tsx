@@ -15,6 +15,7 @@ import {
   type Seat,
   type SeatProjection,
 } from '../core/index.js';
+import { FullscreenToggle } from './FullscreenToggle.js';
 import { RulesGuide } from './RulesGuide.js';
 import { ScoreSummary } from './ScoreSummary.js';
 import { chooseMagneticTarget } from './spatialMagnetism.js';
@@ -33,6 +34,13 @@ const EXCHANGE_MAGNET_TOUCH_ENTER_PX = 30;
 const EXCHANGE_MAGNET_TOUCH_RELEASE_PX = 48;
 type ExchangeDraft = Partial<Record<Seat, CardId>>;
 
+export interface GameTableChrome {
+  backLabel?: string;
+  onBack?: () => void;
+  status?: string;
+  statusState?: string;
+}
+
 export interface GameTableProps {
   projection: SeatProjection;
   seatNames: readonly [string, string, string];
@@ -40,6 +48,7 @@ export interface GameTableProps {
   message?: string;
   onCommand: (command: Command) => void | Promise<void>;
   onNewGame?: () => void;
+  chrome?: GameTableChrome;
 }
 
 function Card({ card, disabled, selected, onClick }: { card: CardId; disabled?: boolean; selected?: boolean; onClick?: () => void }) {
@@ -62,7 +71,7 @@ function Card({ card, disabled, selected, onClick }: { card: CardId; disabled?: 
   );
 }
 
-export function GameTable({ projection, seatNames, events = [], message = '', onCommand, onNewGame }: GameTableProps) {
+export function GameTable({ projection, seatNames, events = [], message = '', onCommand, onNewGame, chrome }: GameTableProps) {
   const view = projection.observation;
   const humanSeat = view.seat;
   const [exchangeDraft, setExchangeDraft] = useState<ExchangeDraft>({});
@@ -232,6 +241,7 @@ export function GameTable({ projection, seatNames, events = [], message = '', on
         delete slot.dataset.exchangeRecipient;
         slot.style.removeProperty('--exchange-stage-x');
         slot.style.removeProperty('--exchange-stage-y');
+        slot.style.removeProperty('--exchange-stage-scale');
       }
     };
 
@@ -256,8 +266,13 @@ export function GameTable({ projection, seatNames, events = [], message = '', on
       const sourceY = source.top + source.height / 2;
       const targetX = target.left + target.width / 2;
       const targetY = target.top + target.height / 2;
+      // Preserve roughly the proven staged-card footprint even when the private
+      // hand becomes substantially taller on mobile. A fixed .70 scale would
+      // make the larger Owner-directed hand explode over the recipient territory.
+      const stageScale = Math.max(.44, Math.min(.70, 52 / Math.max(1, source.width), 76 / Math.max(1, source.height)));
       slot.style.setProperty('--exchange-stage-x', `${targetX - sourceX}px`);
       slot.style.setProperty('--exchange-stage-y', `${targetY - sourceY}px`);
+      slot.style.setProperty('--exchange-stage-scale', stageScale.toFixed(3));
       slot.dataset.exchangeRecipient = String(seat);
       slot.classList.add('is-exchange-staged');
     }
@@ -322,6 +337,7 @@ export function GameTable({ projection, seatNames, events = [], message = '', on
   return (
     <main
       className={`app-shell ${exchangeMode ? 'exchange-mode' : ''}`}
+      data-phase={view.phase}
       data-exchange-submitting={exchangeSubmitting ? 'true' : 'false'}
       data-exchange-magnet-seat={exchangeHoverSeat ?? ''}
       onPointerDown={() => { exchangeTargetRects.current = null; }}
@@ -332,15 +348,26 @@ export function GameTable({ projection, seatNames, events = [], message = '', on
         setExchangeHoverSeat(null);
       }}
     >
-      <header className="topbar">
-        <div>
+      <header className={`topbar ${chrome ? 'has-room-chrome' : ''}`}>
+        <div className="topbar-title">
           <div className="eyebrow">Tysiąc The Game</div>
           <h1>{phaseLabel}</h1>
+          {chrome?.status && (
+            <div className={`connection-banner ${chrome.statusState ?? ''}`}>
+              {chrome.status}
+            </div>
+          )}
         </div>
         <div className="topbar-actions">
+          <FullscreenToggle />
           <RulesGuide />
           {onNewGame && <button className="ghost" onClick={onNewGame}>Nowa gra</button>}
         </div>
+        {chrome?.onBack && (
+          <button className="room-exit ghost" onClick={chrome.onBack}>
+            {chrome.backLabel ?? 'Wróć'}
+          </button>
+        )}
       </header>
 
       <section className="table">
