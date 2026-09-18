@@ -118,12 +118,14 @@
 }
 
 /* During a constrained play, keep legal cards fully present and softly push
- * currently illegal alternatives into the background. TactileHand only adds
- * this class when there is a real legal-vs-illegal choice, so waiting phases
- * never grey the entire hand. Keep this after hover/focus rules so an unusable
- * card cannot brighten merely because the pointer passes over its slot. */
+ * currently illegal alternatives into the background. Unavailable cards must
+ * remain fully opaque/material; legality contrast never uses alpha fading.
+ * TactileHand only adds this class when there is a real legal-vs-illegal choice,
+ * so waiting phases never grey the entire hand. Keep this after hover/focus
+ * rules so an unusable card cannot brighten merely because the pointer passes
+ * over its slot. */
 .tactile-hand .hand-slot.is-unavailable > .card:disabled {
-  opacity: .82;
+  opacity: 1;
   filter: saturate(.82) brightness(.88);
   border-color: color-mix(in srgb, var(--card-edge, #e2d9c7) 82%, #6b6861);
   box-shadow:
