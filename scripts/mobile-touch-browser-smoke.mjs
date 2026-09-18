@@ -494,6 +494,7 @@ async function run() {
     const exchangeCards = await cardGeometry(session);
     const exchangeViewport = await compactViewportGeometry(session);
     assertCompactPhysicalViewport('exchange compact composition', exchangeViewport);
+    await screenshot(session, 'mobile-touch-exchange');
     if (exchangeCards.length !== 10) throw new Error(`expected 10 exchange cards, got ${exchangeCards.length}`);
     for (const card of exchangeCards) {
       if (card.width < 47 || card.height < 124) throw new Error(`exchange card target too small ${JSON.stringify(card)}`);
@@ -556,6 +557,7 @@ async function run() {
     const playableCards = await cardGeometry(session);
     const trickViewport = await compactViewportGeometry(session);
     assertCompactPhysicalViewport('trick compact composition', trickViewport);
+    await screenshot(session, 'mobile-touch-trick');
     const playableCard = playableCards.find((card) => card.centerHitsSelf);
     if (!playableCard) throw new Error(`no physically hittable playable card after contract: ${JSON.stringify(playableCards)}`);
     const playZone = await playZoneGeometry(session);
