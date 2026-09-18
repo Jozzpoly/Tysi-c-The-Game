@@ -70,6 +70,7 @@ type SlotStyle = CSSProperties & {
   '--fan-lift': string;
   '--dense-fan-rotate': string;
   '--dense-fan-lift': string;
+  '--dense-fan-inset-x': string;
   '--hand-index': number;
   '--hand-preview-shift-x': string;
 };
@@ -579,12 +580,14 @@ export function TactileHand({
         // both geometries available so desktop and ordinary hands stay unchanged.
         const denseRotate = Math.max(-3.5, Math.min(3.5, offset * .78));
         const denseLift = Math.min(18, Math.abs(offset) * 3.8);
+        const denseInsetX = -Math.sign(offset) * Math.min(3, Math.abs(offset) * .7);
         const previewShiftX = insertionPreview?.shiftsPx[index] ?? 0;
         const slotStyle = {
           '--fan-rotate': `${rotate}deg`,
           '--fan-lift': `${lift}px`,
           '--dense-fan-rotate': `${denseRotate}deg`,
           '--dense-fan-lift': `${denseLift}px`,
+          '--dense-fan-inset-x': `${denseInsetX}px`,
           '--hand-index': index,
           '--hand-preview-shift-x': `${previewShiftX}px`,
         } as SlotStyle;
