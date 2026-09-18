@@ -72,7 +72,9 @@ export function FullscreenToggle() {
         void (active ? leaveFullscreen() : enterFullscreen()).catch(() => {});
       }}
     >
-      <span aria-hidden="true">⛶</span>
+      <svg className="fullscreen-icon" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M8 4H4v4M16 4h4v4M20 16v4h-4M8 20H4v-4" />
+      </svg>
     </button>
   );
 }
