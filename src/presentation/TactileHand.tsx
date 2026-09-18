@@ -577,7 +577,7 @@ export function TactileHand({
         // Ten-card mobile exchange needs a different physical fan: a tall hand
         // can read strongly with less angular spread and more vertical arc. Keep
         // both geometries available so desktop and ordinary hands stay unchanged.
-        const denseRotate = Math.max(-3, Math.min(3, offset * .66));
+        const denseRotate = Math.max(-2, Math.min(2, offset * .44));
         const denseLift = Math.min(10, Math.abs(offset) * 2.1);
         const previewShiftX = insertionPreview?.shiftsPx[index] ?? 0;
         const slotStyle = {
