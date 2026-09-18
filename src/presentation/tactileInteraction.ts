@@ -26,6 +26,9 @@ export interface TactilePointerState {
   magnetOffsetX: number;
   magnetOffsetY: number;
   magnetStrength: number;
+  assistOffsetX: number;
+  assistOffsetY: number;
+  assistStrength: number;
   moved: boolean;
   throwIntent: boolean;
   commitReady: boolean;
@@ -55,6 +58,9 @@ export interface AdvanceTactilePointerInput {
   magnetOffsetX?: number;
   magnetOffsetY?: number;
   magnetStrength?: number;
+  assistOffsetX?: number;
+  assistOffsetY?: number;
+  assistStrength?: number;
 }
 
 function clamp(value: number, min: number, max: number) {
@@ -81,6 +87,9 @@ export function beginTactilePointer(input: BeginTactilePointerInput): TactilePoi
     magnetOffsetX: 0,
     magnetOffsetY: 0,
     magnetStrength: 0,
+    assistOffsetX: 0,
+    assistOffsetY: 0,
+    assistStrength: 0,
     moved: false,
     throwIntent: false,
     commitReady: false,
@@ -118,6 +127,9 @@ export function advanceTactilePointer(state: TactilePointerState, input: Advance
     magnetOffsetX: input.magnetOffsetX ?? 0,
     magnetOffsetY: input.magnetOffsetY ?? 0,
     magnetStrength: input.magnetStrength ?? 0,
+    assistOffsetX: input.assistOffsetX ?? 0,
+    assistOffsetY: input.assistOffsetY ?? 0,
+    assistStrength: input.assistStrength ?? 0,
     moved,
     throwIntent,
     commitReady,
