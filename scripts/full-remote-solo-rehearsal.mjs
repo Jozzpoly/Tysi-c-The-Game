@@ -303,16 +303,53 @@ async function takeDecision(session, current, counters, mobile) {
   }
 
   if (heading === 'Oddaj po jednej karcie') {
+    const exchangeRevision = current.revision;
     await dragNextExchangeCard(session, 0, mobile);
     await waitFor('exchange physical assignment 1', () => execute(session, `
       return document.querySelectorAll('.hand-slot.is-exchange-staged').length === 1;
     `), 1_000);
     await dragNextExchangeCard(session, 1, mobile);
-    await waitFor('exchange physical commit', () => execute(session, `
-      const state = document.querySelector('.material-exchange-state')?.getAttribute('data-exchange-material-state');
-      const heading = document.querySelector('.decision-card h2')?.textContent?.trim() ?? '';
-      return state === 'active' || state === 'settled' || heading === 'Ile ostatecznie grasz?';
-    `), 2_000);
+
+    await waitFor('exchange physical handoff accepted', async () => {
+      const progress = await execute(session, `
+        const staged = document.querySelectorAll('.hand-slot.is-exchange-staged').length;
+        const shell = document.querySelector('.app-shell');
+        const submitting = shell?.getAttribute('data-exchange-submitting') === 'true';
+        const material = document.querySelector('.material-exchange-state')?.getAttribute('data-exchange-material-state') ?? '';
+        const heading = document.querySelector('.decision-card h2')?.textContent?.trim() ?? '';
+        const handCards = document.querySelectorAll('.hand .card').length;
+        const connection = document.querySelector('.connection-banner')?.textContent?.trim() ?? '';
+        return { staged, submitting, material, heading, handCards, connection };
+      `);
+      if (progress.staged >= 2 || progress.submitting || progress.material === 'active' || progress.material === 'settled' || progress.heading === 'Ile ostatecznie grasz?') {
+        return progress;
+      }
+      throw new Error(JSON.stringify(progress));
+    }, 5_000);
+
+    await waitFor('exchange authoritative commit', async () => {
+      const progress = await execute(session, `
+        const revText = [...document.querySelectorAll('.footer span')]
+          .map((node) => node.textContent?.trim() ?? '')
+          .find((text) => /^rev \\d+$/.test(text));
+        const revision = revText ? Number(revText.slice(4)) : null;
+        const material = document.querySelector('.material-exchange-state')?.getAttribute('data-exchange-material-state') ?? '';
+        const heading = document.querySelector('.decision-card h2')?.textContent?.trim() ?? '';
+        const handCards = document.querySelectorAll('.hand .card').length;
+        const connection = document.querySelector('.connection-banner')?.textContent?.trim() ?? '';
+        const submitting = document.querySelector('.app-shell')?.getAttribute('data-exchange-submitting') === 'true';
+        return { revision, material, heading, handCards, connection, submitting };
+      `);
+      const durableAuthorityProgress = exchangeRevision !== null
+        && progress.revision !== null
+        && progress.revision > exchangeRevision
+        && progress.heading !== 'Oddaj po jednej karcie';
+      if (progress.material === 'active' || progress.material === 'settled' || progress.heading === 'Ile ostatecznie grasz?' || durableAuthorityProgress) {
+        return progress;
+      }
+      throw new Error(JSON.stringify({ exchangeRevision, ...progress }));
+    }, 10_000);
+
     counters.exchanges += 1;
     return 'exchange';
   }

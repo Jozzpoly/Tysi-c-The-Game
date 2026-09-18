@@ -15,7 +15,6 @@ import {
   type HandInsertionPreview,
 } from './tactileHandLayout.js';
 import {
-  TACTILE_RELEASE_MS,
   advanceTactilePointer,
   beginTactilePointer,
   classifyTactileRelease,
@@ -286,8 +285,13 @@ export function TactileHand({
     const targetRect = targetCard.getBoundingClientRect();
     const startRect = ghost.getBoundingClientRect();
     const distance = Math.hypot(targetRect.left - startRect.left, targetRect.top - startRect.top);
-    const duration = Math.round(Math.max(TACTILE_RELEASE_MS, Math.min(280, 165 + distance * .16)));
+    // Keep pointer tracking immediate, then let the released card decelerate and
+    // physically settle into the authoritative table slot. Finish comfortably
+    // before the 300 ms ordinary presentation beat: completion is a local DOM
+    // bridge marker and must not race the next React-owned presentation update.
+    const duration = Math.round(Math.max(250, Math.min(280, 220 + distance * .16)));
     const startTransform = getComputedStyle(ghost).transform;
+    const settleTilt = releaseGhost.tilt * .08;
 
     ghost.dataset.authorityState = 'handoff';
     ghost.getAnimations().forEach((animation) => animation.cancel());
@@ -303,14 +307,24 @@ export function TactileHand({
         },
         {
           left: `${targetRect.left}px`,
+          top: `${targetRect.top - 1.5}px`,
+          width: `${targetRect.width}px`,
+          height: `${targetRect.height}px`,
+          transform: `rotate(${settleTilt}deg) scale(1.018)`,
+          opacity: 1,
+          offset: .84,
+        },
+        {
+          left: `${targetRect.left}px`,
           top: `${targetRect.top}px`,
           width: `${targetRect.width}px`,
           height: `${targetRect.height}px`,
           transform: 'none',
           opacity: 1,
+          offset: 1,
         },
       ],
-      { duration, easing: 'cubic-bezier(.17,.82,.25,1)', fill: 'forwards' },
+      { duration, easing: 'cubic-bezier(.17,.70,.20,1)', fill: 'forwards' },
     );
     handoffAnimation.current = animation;
 
@@ -526,6 +540,9 @@ export function TactileHand({
 
   const motionEnergy = drag?.moved ? tactileMotionEnergy(drag.velocityX, drag.velocityY) : 0;
   const neighborResponseMs = drag?.moved ? tactileNeighborResponseMs(drag.velocityX, drag.velocityY) : 82;
+  // Only contrast legality when the hand actually contains a choice between
+  // usable and unusable cards. Waiting phases should not grey the whole hand.
+  const showLegalityContrast = actionableCards.size > 0 && actionableCards.size < visibleOrder.length;
   const handStyle = {
     '--hand-spread-count': Math.max(0, visibleOrder.length - 1),
     '--tactile-neighbor-response-ms': `${neighborResponseMs}ms`,
@@ -548,6 +565,7 @@ export function TactileHand({
         const { suit, rank, symbol, red } = cardFace(card);
         const selected = selectedCards.includes(card);
         const actionable = actionableCards.has(card);
+        const unavailable = showLegalityContrast && !actionable;
         const throwable = throwableCards.has(card);
         const held = drag?.card === card;
         const awaitingAuthority = releaseGhost?.card === card;
@@ -565,7 +583,7 @@ export function TactileHand({
         return (
           <div
             key={card}
-            className={`hand-slot ${actionable ? 'is-actionable' : ''} ${throwable ? 'is-throwable' : ''} ${held ? 'is-held' : ''} ${held && drag?.moved ? 'is-dragging' : ''} ${awaitingAuthority ? 'is-awaiting-authority' : ''}`}
+            className={`hand-slot ${actionable ? 'is-actionable' : ''} ${unavailable ? 'is-unavailable' : ''} ${throwable ? 'is-throwable' : ''} ${held ? 'is-held' : ''} ${held && drag?.moved ? 'is-dragging' : ''} ${awaitingAuthority ? 'is-awaiting-authority' : ''}`}
             data-card={card}
             data-index={index}
             data-actionable={actionable ? 'true' : 'false'}
