@@ -349,7 +349,7 @@
   /* Recover the physical fan the Owner explicitly drew. Keep the synchronous
    * dense-mode transition contract from Run 05; only the settled geometry changes. */
   .tactile-hand:has(> .hand-slot:nth-child(10)) .hand-slot > .card {
-    transform: translateY(var(--dense-fan-lift)) rotate(var(--dense-fan-rotate));
+    transform: translateX(var(--dense-fan-inset-x)) translateY(var(--dense-fan-lift)) rotate(var(--dense-fan-rotate));
   }
 
   .tactile-hand .hand-slot:hover > .card,
