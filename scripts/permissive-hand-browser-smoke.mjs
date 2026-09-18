@@ -149,6 +149,26 @@ async function run() {
       throw new Error(`non-actionable cards are visually diminished: ${JSON.stringify(initial.cards)}`);
     }
 
+    // Owner visual contract: an unavailable card may be dimmed, but it remains
+    // a fully opaque/material card. Probe the unavailable presentation state
+    // directly without changing game truth.
+    const unavailableProbe = await execute(session, `
+      const slot = document.querySelector('.hand > .hand-slot');
+      const card = slot?.querySelector(':scope > .card');
+      if (!slot || !card) return null;
+      slot.classList.add('is-unavailable');
+      const style = getComputedStyle(card);
+      const result = { opacity: style.opacity, filter: style.filter };
+      slot.classList.remove('is-unavailable');
+      return result;
+    `);
+    if (!unavailableProbe || unavailableProbe.opacity !== '1') {
+      throw new Error(`unavailable card lost material opacity: ${JSON.stringify(unavailableProbe)}`);
+    }
+    if (unavailableProbe.filter === 'none') {
+      throw new Error(`unavailable card lost its non-alpha dimming cue: ${JSON.stringify(unavailableProbe)}`);
+    }
+
     const playCard = initial.cards[1];
     const freeThrowTarget = { x: playCard.x + 14, y: Math.max(28, playCard.y - 104) };
     await drag(session, { x: playCard.x, y: playCard.y }, freeThrowTarget, { hold: true });
