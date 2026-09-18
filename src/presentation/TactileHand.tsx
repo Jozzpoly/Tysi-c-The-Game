@@ -68,6 +68,9 @@ type FloatingCardProps =
 type SlotStyle = CSSProperties & {
   '--fan-rotate': string;
   '--fan-lift': string;
+  '--dense-fan-rotate': string;
+  '--dense-fan-lift': string;
+  '--dense-fan-inset-x': string;
   '--hand-index': number;
   '--hand-preview-shift-x': string;
 };
@@ -528,7 +531,7 @@ export function TactileHand({
     setDrag(null);
   }
 
-  function handleClick(event: ReactMouseEvent<HTMLButtonElement>, card: CardId) {
+  function handleClick(event: ReactMouseEvent<HTMLElement>, card: CardId) {
     if (suppressClick.current === card) {
       suppressClick.current = null;
       event.preventDefault();
@@ -572,10 +575,19 @@ export function TactileHand({
         const offset = index - (visibleOrder.length - 1) / 2;
         const rotate = Math.max(-5.5, Math.min(5.5, offset * 1.15));
         const lift = Math.min(6, Math.abs(offset) * 1.15);
+        // Ten-card mobile exchange needs a different physical fan: a tall hand
+        // can read strongly with less angular spread and more vertical arc. Keep
+        // both geometries available so desktop and ordinary hands stay unchanged.
+        const denseRotate = Math.max(-3.5, Math.min(3.5, offset * .78));
+        const denseLift = Math.min(18, Math.abs(offset) * 3.8);
+        const denseInsetX = -Math.sign(offset) * Math.min(3, Math.abs(offset) * .7);
         const previewShiftX = insertionPreview?.shiftsPx[index] ?? 0;
         const slotStyle = {
           '--fan-rotate': `${rotate}deg`,
           '--fan-lift': `${lift}px`,
+          '--dense-fan-rotate': `${denseRotate}deg`,
+          '--dense-fan-lift': `${denseLift}px`,
+          '--dense-fan-inset-x': `${denseInsetX}px`,
           '--hand-index': index,
           '--hand-preview-shift-x': `${previewShiftX}px`,
         } as SlotStyle;
@@ -609,6 +621,12 @@ export function TactileHand({
               <span className="rank" data-suit={symbol}>{rank}</span>
               <span className="suit">{symbol}</span>
             </button>
+            <span
+              className="hand-touch-target"
+              data-touch-card={card}
+              aria-hidden="true"
+              onClick={(event) => handleClick(event, card)}
+            />
           </div>
         );
       })}
