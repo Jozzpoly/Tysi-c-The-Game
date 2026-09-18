@@ -523,14 +523,20 @@ export function TactileHand({
       canCommit: throwableCards.has(activeDrag.card),
     });
 
-    if (activeDrag.moved && actionableCards.has(activeDrag.card)) {
+    // Pointer capture is allowed to retarget the browser's synthesized click to
+    // the slot instead of the nested card button. Treat a true pointer tap as
+    // the activation gesture itself, then suppress any trailing synthesized
+    // click. Keyboard/programmatic clicks still use handleClick below.
+    if ((activeDrag.moved || outcome === 'tap') && actionableCards.has(activeDrag.card)) {
       suppressClick.current = activeDrag.card;
       window.setTimeout(() => {
         if (suppressClick.current === activeDrag.card) suppressClick.current = null;
       }, 0);
     }
 
-    if (outcome === 'commit') {
+    if (outcome === 'tap' && actionableCards.has(activeDrag.card)) {
+      onActivate(activeDrag.card);
+    } else if (outcome === 'commit') {
       const pendingGhost: ReleaseGhost = {
         card: activeDrag.card,
         left: activeDrag.x - activeDrag.offsetX + activeDrag.magnetOffsetX,
