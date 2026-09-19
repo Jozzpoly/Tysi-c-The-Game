@@ -96,7 +96,14 @@ async function handState(session) {
     const hand = document.querySelector('.tactile-hand');
     const slots = [...document.querySelectorAll('.hand > .hand-slot')].map((slot, index) => {
       const card = slot.querySelector(':scope > .card');
+      const touchTarget = slot.querySelector(':scope > .hand-touch-target');
       const rect = slot.getBoundingClientRect();
+      const touchRect = touchTarget?.getBoundingClientRect() ?? null;
+      const touchX = touchRect ? touchRect.left + touchRect.width / 2 : null;
+      const touchY = touchRect ? touchRect.top + Math.min(touchRect.height - 8, Math.max(8, rect.height * .56)) : null;
+      const touchHitSlot = touchX === null || touchY === null
+        ? null
+        : document.elementFromPoint(touchX, touchY)?.closest?.('.hand-slot');
       return {
         index,
         label: card?.getAttribute('aria-label') ?? '',
@@ -104,6 +111,10 @@ async function handState(session) {
         right: rect.right,
         x: rect.left + rect.width / 2,
         y: rect.top + rect.height / 2,
+        touchX,
+        touchY,
+        touchWidth: touchRect?.width ?? 0,
+        touchHitsSelf: touchHitSlot === slot,
         shift: Number(slot.dataset.previewShiftX ?? 0),
       };
     });
@@ -156,15 +167,21 @@ async function run() {
     const source = initial.slots[0];
     const targetA = initial.slots[3];
     const targetB = initial.slots[4];
-    const boundaryX = (targetA.x + targetB.x) / 2;
-    const armTargetX = targetA.x + (targetB.x - targetA.x) * .75;
+    if (!source.touchHitsSelf || source.touchX === null || source.touchY === null || source.touchWidth < 32) {
+      throw new Error(`opening card has no independent exposed touch territory: ${JSON.stringify(source)}`);
+    }
+    const grabOffsetX = source.touchX - source.x;
+    const boundaryHeldX = (targetA.x + targetB.x) / 2;
+    const armTargetHeldX = targetA.x + (targetB.x - targetA.x) * .75;
+    const boundaryX = boundaryHeldX + grabOffsetX;
+    const armTargetX = armTargetHeldX + grabOffsetX;
 
-    await touch(session, 'touchStart', [{ x: source.x, y: source.y, radiusX: 7, radiusY: 7, force: 1 }]);
+    await touch(session, 'touchStart', [{ x: source.touchX, y: source.touchY, radiusX: 7, radiusY: 7, force: 1 }]);
     await sleep(35);
     const steps = 8;
     for (let step = 1; step <= steps; step += 1) {
       const ratio = step / steps;
-      await moveTouch(session, source.x + (boundaryX - source.x) * ratio, source.y);
+      await moveTouch(session, source.touchX + (boundaryX - source.touchX) * ratio, source.touchY);
       await sleep(28);
     }
 
@@ -192,8 +209,9 @@ async function run() {
     }
     await screenshot(session, 'mobile-living-hand-gap-open');
 
-    const reversalX = source.x + (initial.slots[1].x - source.x) * .35;
-    await moveTouch(session, reversalX, source.y);
+    const reversalHeldX = source.x + (initial.slots[1].x - source.x) * .35;
+    const reversalX = reversalHeldX + grabOffsetX;
+    await moveTouch(session, reversalX, source.touchY);
     await sleep(120);
     const reversed = await waitFor('reversible insertion preview', async () => {
       const state = await handState(session);
@@ -219,7 +237,7 @@ async function run() {
     for (let step = 1; step <= 6; step += 1) {
       const ratio = step / 6;
       const x = reversalX + (armTargetX - reversalX) * ratio;
-      await moveTouch(session, x, source.y);
+      await moveTouch(session, x, source.touchY);
       await sleep(60);
       reopenTrace.push({ step, ratio, x, ...compactHandState(await handState(session)) });
     }
@@ -256,7 +274,7 @@ async function run() {
     const jitterStates = [];
     for (const requestedPosition of jitterPositions) {
       const x = xForInsertionPosition(requestedPosition);
-      await moveTouch(session, x, source.y);
+      await moveTouch(session, x, source.touchY);
       await sleep(55);
       const state = await handState(session);
       if (state.phase !== 'held') throw new Error(`jitter left held phase: ${JSON.stringify(state)}`);
