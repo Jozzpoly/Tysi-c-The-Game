@@ -285,14 +285,27 @@
     aspect-ratio: auto;
   }
 
+  /* Mobile hand input owns the exposed strip independently from the visual
+   * card body. This keeps overlap free to serve composition without making hit
+   * ownership depend on whichever overlapping card happens to cover its centre. */
   .hand-touch-target {
     position: absolute;
     inset: 0 auto 0 0;
     z-index: 6;
     display: block;
-    width: 0;
-    pointer-events: none;
+    width: var(--hand-card-step);
+    pointer-events: auto;
+    cursor: grab;
+    touch-action: none;
     background: transparent;
+  }
+
+  .tactile-hand > .hand-slot:last-child > .hand-touch-target {
+    width: var(--hand-card-width);
+  }
+
+  .tactile-hand > .hand-slot.is-held > .hand-touch-target {
+    cursor: grabbing;
   }
 
   /* Ten cards keep the same material law as the ordinary hand. The visual body
