@@ -349,7 +349,9 @@ async function cardGeometry(session) {
         x, y,
         width: rect.width,
         height: rect.height,
-        aspectRatio: rect.height > 0 ? rect.width / rect.height : 0,
+        materialWidth: node.offsetWidth,
+        materialHeight: node.offsetHeight,
+        materialAspectRatio: node.offsetHeight > 0 ? node.offsetWidth / node.offsetHeight : 0,
         centerHitsSelf: hit === node,
         touchX,
         touchY,
@@ -499,7 +501,7 @@ async function run() {
     if (exchangeCards.length !== 10) throw new Error(`expected 10 exchange cards, got ${exchangeCards.length}`);
     for (const card of exchangeCards) {
       if (card.width < 47 || card.height < 124) throw new Error(`exchange card target too small ${JSON.stringify(card)}`);
-      if (card.aspectRatio < 0.66 || card.aspectRatio > 0.70) {
+      if (card.materialAspectRatio < 0.66 || card.materialAspectRatio > 0.70) {
         throw new Error(`exchange card material aspect distorted ${JSON.stringify(card)}`);
       }
       if (card.touchWidth < 32 || card.touchHeight < 120) {
@@ -579,8 +581,8 @@ async function run() {
       exchangeCards: exchangeCards.length,
       minCardWidth: Math.min(...exchangeCards.map((card) => card.width)),
       minCardHeight: Math.min(...exchangeCards.map((card) => card.height)),
-      minCardAspectRatio: Math.min(...exchangeCards.map((card) => card.aspectRatio)),
-      maxCardAspectRatio: Math.max(...exchangeCards.map((card) => card.aspectRatio)),
+      minCardMaterialAspectRatio: Math.min(...exchangeCards.map((card) => card.materialAspectRatio)),
+      maxCardMaterialAspectRatio: Math.max(...exchangeCards.map((card) => card.materialAspectRatio)),
       minSameRowCenterSpacing: minimumCenterSpacing(exchangeCards),
       exchangeTouchTerritoriesHitCorrectCard: exchangeCards.every((card) => card.touchHitsSelf),
       exchangeViewport,
