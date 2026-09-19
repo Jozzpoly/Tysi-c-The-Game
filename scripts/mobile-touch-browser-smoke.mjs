@@ -564,12 +564,21 @@ async function run() {
     const trickViewport = await compactViewportGeometry(session);
     assertCompactPhysicalViewport('trick compact composition', trickViewport);
     await screenshot(session, 'mobile-touch-trick');
-    const playableCard = playableCards.find((card) => card.centerHitsSelf);
-    if (!playableCard) throw new Error(`no physically hittable playable card after contract: ${JSON.stringify(playableCards)}`);
+    const playableCard = playableCards.find((card) =>
+      card.touchHitsSelf
+      && card.touchPointerEvents !== 'none'
+      && card.touchWidth >= 32
+      && card.touchHeight >= 120
+      && card.touchX !== null
+      && card.touchY !== null
+    );
+    if (!playableCard) {
+      throw new Error(`no independently hittable playable touch territory after contract: ${JSON.stringify(playableCards)}`);
+    }
     const playZone = await playZoneGeometry(session);
     if (!playZone?.withinViewport) throw new Error(`play zone unavailable in mobile viewport: ${JSON.stringify(playZone)}`);
     const beforePlay = (await uiState(session)).revision;
-    await dragTouch(session, { x: playableCard.x, y: playableCard.y }, { x: playZone.x, y: playZone.y });
+    await dragTouch(session, { x: playableCard.touchX, y: playableCard.touchY }, { x: playZone.x, y: playZone.y });
     await waitForRevisionAdvance(session, beforePlay, 'playable card touch throw accepted');
 
     const finalSelection = await execute(session, `return window.getSelection()?.toString() ?? '';`);
