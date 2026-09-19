@@ -262,8 +262,10 @@
   }
 
   .tactile-hand {
-    --hand-card-width: 76px !important;
-    --hand-card-height: clamp(148px, 22dvh, 162px);
+    --hand-card-width: 96px !important;
+    /* C2-A1: the visible card owns its material aspect. Layout may overlap it,
+     * but must not stretch the card body to fill vertical hand territory. */
+    --hand-card-height: calc(var(--hand-card-width) / .68);
     --hand-card-step: 40px !important;
     position: relative;
     z-index: 2;
@@ -292,13 +294,12 @@
     background: transparent;
   }
 
-  /* Ten cards are width-constrained by independent touch ownership. At ~372px
-   * usable width, 62px cards with ~34.2px centre spacing leave a transformed
-   * fan safety margin while staying near the geometric maximum before adjacent cards begin covering one another's centres. Owner
-   * prominence therefore comes from height and fan, not fake horizontal growth. */
+  /* Ten cards keep the same material law as the ordinary hand. The visual body
+   * stays proportional; density is paid for with overlap and an independent
+   * exposed touch strip rather than anisotropic stretching. */
   .tactile-hand:has(> .hand-slot:nth-child(10)) {
-    --hand-card-width: 62px !important;
-    --hand-card-height: clamp(152px, 22.3dvh, 164px);
+    --hand-card-width: 85px !important;
+    --hand-card-height: calc(var(--hand-card-width) / .68);
     display: flex;
     width: 100%;
     min-height: calc(var(--hand-card-height) + 12px);
@@ -309,15 +310,15 @@
   }
 
   .tactile-hand:has(> .hand-slot:nth-child(10)) > .hand-slot {
-    flex: 0 0 62px;
-    width: 62px;
-    min-width: 62px;
-    max-width: 62px;
+    flex: 0 0 85px;
+    width: 85px;
+    min-width: 85px;
+    max-width: 85px;
     height: var(--hand-card-height);
   }
 
   .tactile-hand:has(> .hand-slot:nth-child(10)) > .hand-slot + .hand-slot {
-    margin-left: -27.8px;
+    margin-left: -53px;
   }
 
 
@@ -332,14 +333,14 @@
   }
 
   .tactile-hand:has(> .hand-slot:nth-child(10)) > .hand-slot > .hand-touch-target {
-    width: 34.2px;
+    width: 32px;
     pointer-events: auto;
     cursor: grab;
     touch-action: none;
   }
 
   .tactile-hand:has(> .hand-slot:nth-child(10)) > .hand-slot:last-child > .hand-touch-target {
-    width: 62px;
+    width: 85px;
   }
 
   .tactile-hand:has(> .hand-slot:nth-child(10)) > .hand-slot.is-held > .hand-touch-target {
