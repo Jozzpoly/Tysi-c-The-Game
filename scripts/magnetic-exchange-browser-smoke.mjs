@@ -121,21 +121,29 @@ async function driveToExchange(session, label) {
   throw new Error(`${label}: exchange not reached`);
 }
 
-async function geometry(session) {
+async function geometry(session, mobile) {
   return execute(session, `
     const sourceSlot = [...document.querySelectorAll('.hand-slot[data-card]')]
       .find((slot) => !slot.classList.contains('is-exchange-staged'));
     const sourceCard = sourceSlot?.querySelector(':scope > .card');
+    const sourceTouch = sourceSlot?.querySelector(':scope > .hand-touch-target');
     const target = document.querySelector('[data-exchange-target-seat]');
     const backs = target?.querySelector('.card-backs');
     if (!sourceSlot || !sourceCard || !target || !backs) return null;
     const source = sourceCard.getBoundingClientRect();
+    const touchRect = sourceTouch?.getBoundingClientRect() ?? null;
     const targetRect = target.getBoundingClientRect();
     const backsRect = backs.getBoundingClientRect();
+    const from = ${mobile} && touchRect
+      ? {
+          x: touchRect.left + touchRect.width / 2,
+          y: touchRect.top + Math.min(touchRect.height - 8, Math.max(8, source.height * .56)),
+        }
+      : { x: source.left + source.width / 2, y: source.top + source.height / 2 };
     return {
       card: sourceSlot.getAttribute('data-card') ?? '',
       seat: target.getAttribute('data-exchange-target-seat') ?? '',
-      from: { x: source.left + source.width / 2, y: source.top + source.height / 2 },
+      from,
       release: { x: targetRect.left + targetRect.width / 2, y: targetRect.bottom + ${OUTSIDE_BY_PX} },
       target: { left: targetRect.left, right: targetRect.right, top: targetRect.top, bottom: targetRect.bottom },
       backs: { x: backsRect.left + backsRect.width / 2, y: backsRect.top + backsRect.height / 2 },
@@ -239,7 +247,7 @@ async function runViewport(label, width, height, mobile) {
     });
 
     await driveToExchange(session, label);
-    const drag = await waitFor(`${label}: exchange geometry`, () => geometry(session));
+    const drag = await waitFor(`${label}: exchange geometry`, () => geometry(session, mobile));
     if (!(drag.release.y > drag.target.bottom)) throw new Error(`${label}: probe is not outside canonical recipient rect`);
     if (Math.round(drag.release.y - drag.target.bottom) !== OUTSIDE_BY_PX) {
       throw new Error(`${label}: unexpected outside distance ${JSON.stringify(drag)}`);
