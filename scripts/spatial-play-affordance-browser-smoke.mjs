@@ -109,19 +109,27 @@ async function screenshot(session, name) {
   await writeFile(`${OUTPUT}/${name}.png`, Buffer.from(base64, 'base64'));
 }
 
-async function readPlayable(session) {
+async function readPlayable(session, mobile) {
   return execute(session, `
     if (document.querySelector('.decision-card h2')?.textContent?.trim() !== 'Twój ruch') return null;
     const slot = document.querySelector('.hand-slot.is-throwable');
     const card = slot?.querySelector(':scope > .card');
+    const touchTarget = slot?.querySelector(':scope > .hand-touch-target');
     const trick = document.querySelector('.trick');
     if (!slot || !card || !trick) return null;
     const rect = card.getBoundingClientRect();
+    const touchRect = touchTarget?.getBoundingClientRect() ?? null;
     const zone = trick.getBoundingClientRect();
+    const from = ${mobile} && touchRect
+      ? {
+          x: touchRect.left + touchRect.width / 2,
+          y: touchRect.top + Math.min(touchRect.height - 8, Math.max(8, rect.height * .56)),
+        }
+      : { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
     return {
       card: slot.dataset.card ?? '',
-      x: rect.left + rect.width / 2,
-      y: rect.top + rect.height / 2,
+      x: from.x,
+      y: from.y,
       width: rect.width,
       height: rect.height,
       zone: {
@@ -174,7 +182,7 @@ async function runViewport(label, width, height, mobile) {
       return document.querySelector('.decision-card h2')?.textContent?.trim() === 'Twoja licytacja';
     `));
     await clickButtonStartingWith(session, 'Pas');
-    const playable = await waitFor(`${label}: legal card`, () => readPlayable(session), 25_000);
+    const playable = await waitFor(`${label}: legal card`, () => readPlayable(session, mobile), 25_000);
 
     const outside = {
       x: playable.zone.x,
