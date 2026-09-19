@@ -91,9 +91,9 @@ function LocalGame() {
     const actor = actingSeat(authority);
     if (actor === null || actor === humanSeat) return;
 
-    // Trick actions should follow the material table instead of idling long after
-    // the 230 ms opponent-card flight. Auction/exchange pacing stays conservative.
-    const ordinaryDelay = authority.hand.phase === 'trick' ? 320 : 360;
+    // Readability beats raw throughput here: opponent trick actions must leave
+    // enough time to see what was played before the next automatic action.
+    const ordinaryDelay = authority.hand.phase === 'trick' ? 520 : 360;
     const delay = Math.max(ordinaryDelay, presentationFrameDuration(presentedEvents));
     const timer = window.setTimeout(() => {
       try {
