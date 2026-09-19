@@ -23,6 +23,7 @@ import './run05-marriage.css';
 import './run05-desktop-composition.css';
 import './run05-owner-magnetism.css';
 import './run05-seat-topology.css';
+import './run06-mobile-composition.css';
 
 installPerformanceProbe();
 installOwnerMagnetismBridge();
