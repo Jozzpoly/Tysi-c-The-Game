@@ -111,7 +111,37 @@ async function revision(session) {
   `);
 }
 
-async function readPlayable(session, mobile, cardId = '') {
+async function readPlayableDesktop(session, cardId = '') {
+  return execute(session, `
+    if (document.querySelector('.decision-card h2')?.textContent?.trim() !== 'Twój ruch') return null;
+    const slot = ${cardId ? `document.querySelector('.hand-slot.is-throwable[data-card="${cardId}"]')` : `document.querySelector('.hand-slot.is-throwable')`};
+    const card = slot?.querySelector(':scope > .card');
+    const trick = document.querySelector('.trick');
+    if (!slot || !card || !trick) return null;
+    const rect = card.getBoundingClientRect();
+    const zone = trick.getBoundingClientRect();
+    return {
+      card: slot.dataset.card ?? '',
+      x: rect.left + rect.width / 2,
+      y: rect.top + rect.height / 2,
+      width: rect.width,
+      height: rect.height,
+      zone: {
+        left: zone.left,
+        right: zone.right,
+        top: zone.top,
+        bottom: zone.bottom,
+        x: zone.left + zone.width / 2,
+        y: zone.top + zone.height / 2,
+        width: zone.width,
+        height: zone.height,
+      },
+    };
+  `);
+}
+
+
+async function readPlayableMobile(session, cardId = '') {
   return execute(session, `
     if (document.querySelector('.decision-card h2')?.textContent?.trim() !== 'Twój ruch') return null;
     const slot = ${cardId ? `document.querySelector('.hand-slot.is-throwable[data-card="${cardId}"]')` : `document.querySelector('.hand-slot.is-throwable')`};
@@ -148,6 +178,12 @@ async function readPlayable(session, mobile, cardId = '') {
   `);
 }
 
+
+async function readPlayable(session, mobile, cardId = '') {
+  return mobile
+    ? readPlayableMobile(session, cardId)
+    : readPlayableDesktop(session, cardId);
+}
 async function installTrace(session, card) {
   await execute(session, `
     window.__handoffCard = ${JSON.stringify(card)};
