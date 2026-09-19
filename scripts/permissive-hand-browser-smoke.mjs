@@ -96,7 +96,14 @@ async function handState(session) {
       .find((text) => /^rev \\d+$/.test(text));
     const cards = [...document.querySelectorAll('.hand > .hand-slot')].map((slot, index) => {
       const card = slot.querySelector(':scope > .card');
+      const touchTarget = slot.querySelector(':scope > .hand-touch-target');
       const rect = card.getBoundingClientRect();
+      const touchRect = touchTarget?.getBoundingClientRect() ?? null;
+      const touchX = touchRect ? touchRect.left + touchRect.width / 2 : null;
+      const touchY = touchRect ? touchRect.top + Math.min(touchRect.height - 8, Math.max(8, rect.height * .56)) : null;
+      const touchHitSlot = touchX === null || touchY === null
+        ? null
+        : document.elementFromPoint(touchX, touchY)?.closest?.('.hand-slot');
       const style = getComputedStyle(card);
       return {
         index,
@@ -110,6 +117,10 @@ async function handState(session) {
         y: rect.top + rect.height / 2,
         width: rect.width,
         height: rect.height,
+        touchX,
+        touchY,
+        touchWidth: touchRect?.width ?? 0,
+        touchHitsSelf: touchHitSlot === slot,
       };
     });
     return {
@@ -169,9 +180,14 @@ async function run() {
       throw new Error(`unavailable card lost its non-alpha dimming cue: ${JSON.stringify(unavailableProbe)}`);
     }
 
+    const missingTouchOwnership = initial.cards.filter((card) => !card.touchHitsSelf || card.touchX === null || card.touchY === null || card.touchWidth < 32);
+    if (missingTouchOwnership.length) {
+      throw new Error(`opening hand lacks independent touch ownership: ${JSON.stringify(missingTouchOwnership)}`);
+    }
+
     const playCard = initial.cards[1];
-    const freeThrowTarget = { x: playCard.x + 14, y: Math.max(28, playCard.y - 104) };
-    await drag(session, { x: playCard.x, y: playCard.y }, freeThrowTarget, { hold: true });
+    const freeThrowTarget = { x: playCard.touchX + 14, y: Math.max(28, playCard.touchY - 104) };
+    await drag(session, { x: playCard.touchX, y: playCard.touchY }, freeThrowTarget, { hold: true });
 
     const freeThrow = await waitFor('free held card body', () => execute(session, `
       const card = document.querySelector('.tactile-card-float[data-gesture-phase="held"]');
@@ -216,8 +232,8 @@ async function run() {
     const draggedLabel = afterFreeThrow.cards[0].label;
     await drag(
       session,
-      { x: afterFreeThrow.cards[0].x, y: afterFreeThrow.cards[0].y },
-      { x: afterFreeThrow.cards[4].x, y: afterFreeThrow.cards[4].y },
+      { x: afterFreeThrow.cards[0].touchX, y: afterFreeThrow.cards[0].touchY },
+      { x: afterFreeThrow.cards[4].touchX, y: afterFreeThrow.cards[4].touchY },
     );
 
     const reordered = await waitFor('free reorder', async () => {
