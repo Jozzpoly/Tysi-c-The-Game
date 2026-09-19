@@ -325,15 +325,28 @@ async function runViewport(label, width, height, mobile) {
 
     await touch(session, 'touchEnd', []);
 
+    // Completion is a durable material/authority state, not a race against the
+    // short-lived is-local-handoff-complete CSS marker. Wait for the final
+    // authoritative representation itself: source gone, bridge ghost gone,
+    // target present and visible.
     const final = await waitFor(`${label}: authoritative handoff completion`, () => execute(session, `
       const id = ${JSON.stringify(playable.card)};
       const target = document.querySelector('.played-self[data-card="' + id + '"]');
       const ghost = document.querySelector('.tactile-card-float.pending-handoff[data-card-id="' + id + '"]');
-      if (!target?.classList.contains('is-local-handoff-complete') || ghost) return null;
+      const source = document.querySelector('.hand-slot[data-card="' + id + '"]');
+      if (!target || ghost || source) return null;
+      const style = getComputedStyle(target);
+      const rect = target.getBoundingClientRect();
+      const targetVisible = style.display !== 'none'
+        && style.visibility !== 'hidden'
+        && Number(style.opacity) > .05
+        && rect.width > 1
+        && rect.height > 1;
+      if (!targetVisible) return null;
       return {
         targetCard: target.dataset.card ?? '',
-        targetVisible: Number(getComputedStyle(target).opacity) > .05,
-        sourceStillInHand: Boolean(document.querySelector('.hand-slot[data-card="' + id + '"]')),
+        targetVisible,
+        sourceStillInHand: false,
       };
     `), 5_000);
 
@@ -351,12 +364,9 @@ async function runViewport(label, width, height, mobile) {
     const ghostObserved = trace.some((entry) => entry.ghost && entry.ghostVisible);
     const authorityObserved = trace.some((entry) => entry.authority === 'handoff');
     const hiddenTargetObserved = trace.some((entry) => entry.targetHandoff && !entry.targetVisible && entry.ghostVisible);
-    // The direct final wait above is the durable completion observation: it
-    // requires the authoritative target's completion marker, visible target,
-    // absent pending ghost, and absent source card. An rAF trace is valuable for
-    // the bridge's intermediate states, but it can legitimately miss that short
-    // final marker window between animation finish and the next React render.
-    const completionTraceObserved = trace.some((entry) => entry.targetComplete && entry.targetVisible && !entry.ghost);
+    // Keep the transient completion marker as diagnostic evidence only. The
+    // material contract above is durable and must not depend on a 1–3 frame poll.
+    const completionTraceObserved = trace.some((entry) => entry.targetComplete && entry.targetVisible);
     const completionObserved =
       final.targetCard === playable.card
       && final.targetVisible
