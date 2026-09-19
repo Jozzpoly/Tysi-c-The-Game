@@ -111,19 +111,27 @@ async function revision(session) {
   `);
 }
 
-async function readPlayable(session, cardId = '') {
+async function readPlayable(session, mobile, cardId = '') {
   return execute(session, `
     if (document.querySelector('.decision-card h2')?.textContent?.trim() !== 'Twój ruch') return null;
     const slot = ${cardId ? `document.querySelector('.hand-slot.is-throwable[data-card="${cardId}"]')` : `document.querySelector('.hand-slot.is-throwable')`};
     const card = slot?.querySelector(':scope > .card');
+    const touchTarget = slot?.querySelector(':scope > .hand-touch-target');
     const trick = document.querySelector('.trick');
     if (!slot || !card || !trick) return null;
     const rect = card.getBoundingClientRect();
+    const touchRect = touchTarget?.getBoundingClientRect() ?? null;
     const zone = trick.getBoundingClientRect();
+    const from = ${mobile} && touchRect
+      ? {
+          x: touchRect.left + touchRect.width / 2,
+          y: touchRect.top + Math.min(touchRect.height - 8, Math.max(8, rect.height * .56)),
+        }
+      : { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
     return {
       card: slot.dataset.card ?? '',
-      x: rect.left + rect.width / 2,
-      y: rect.top + rect.height / 2,
+      x: from.x,
+      y: from.y,
       width: rect.width,
       height: rect.height,
       zone: {
@@ -199,7 +207,7 @@ async function runViewport(label, width, height, mobile) {
     `));
     await clickButtonStartingWith(session, 'Pas');
 
-    const playable = await waitFor(`${label}: legal throw`, () => readPlayable(session), 25_000);
+    const playable = await waitFor(`${label}: legal throw`, () => readPlayable(session, mobile), 25_000);
     if (!playable.card) throw new Error(`${label}: throwable card has no CardId`);
 
     // Negative falsification: magnetic assistance is bounded. Keep this probe
@@ -252,7 +260,7 @@ async function runViewport(label, width, height, mobile) {
 
     // Reacquire the same card after its physical return/reorder, then place its
     // centre in the real canonical trick area.
-    const valid = await waitFor(`${label}: same card returned`, () => readPlayable(session, playable.card), 3_000);
+    const valid = await waitFor(`${label}: same card returned`, () => readPlayable(session, mobile, playable.card), 3_000);
     await installTrace(session, playable.card);
     const beforeCommitRevision = await revision(session);
     const inside = { x: valid.zone.x, y: valid.zone.y };
