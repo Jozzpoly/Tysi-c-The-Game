@@ -122,25 +122,33 @@ async function dragPointer(session, from, to, mobile, steps = 8) {
   });
 }
 
-async function exchangeDragGeometry(session, targetIndex) {
+async function exchangeDragGeometry(session, targetIndex, mobile) {
   return execute(session, `
     const sourceSlot = [...document.querySelectorAll('.hand .hand-slot')]
       .find((slot) => !slot.classList.contains('is-exchange-staged'));
     const sourceCard = sourceSlot?.querySelector(':scope > .card');
+    const sourceTouch = sourceSlot?.querySelector(':scope > .hand-touch-target');
     const targets = [...document.querySelectorAll('[data-exchange-target-seat]')];
     const target = targets[${targetIndex}];
     if (!sourceSlot || !sourceCard || !target) return null;
     const sourceRect = sourceCard.getBoundingClientRect();
+    const touchRect = sourceTouch?.getBoundingClientRect() ?? null;
     const targetRect = target.getBoundingClientRect();
+    const from = ${mobile} && touchRect
+      ? {
+          x: touchRect.left + touchRect.width / 2,
+          y: touchRect.top + Math.min(touchRect.height - 8, Math.max(8, sourceRect.height * .56)),
+        }
+      : { x: sourceRect.left + sourceRect.width / 2, y: sourceRect.top + sourceRect.height / 2 };
     return {
-      from: { x: sourceRect.left + sourceRect.width / 2, y: sourceRect.top + sourceRect.height / 2 },
+      from,
       to: { x: targetRect.left + targetRect.width / 2, y: targetRect.top + targetRect.height / 2 },
     };
   `);
 }
 
 async function dragNextExchangeCard(session, targetIndex, mobile) {
-  const geometry = await exchangeDragGeometry(session, targetIndex);
+  const geometry = await exchangeDragGeometry(session, targetIndex, mobile);
   if (!geometry) throw new Error(`physical exchange geometry unavailable for target ${targetIndex}`);
   await dragPointer(session, geometry.from, geometry.to, mobile);
 }

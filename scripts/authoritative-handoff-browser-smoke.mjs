@@ -111,7 +111,7 @@ async function revision(session) {
   `);
 }
 
-async function readPlayable(session, cardId = '') {
+async function readPlayableDesktop(session, cardId = '') {
   return execute(session, `
     if (document.querySelector('.decision-card h2')?.textContent?.trim() !== 'Twój ruch') return null;
     const slot = ${cardId ? `document.querySelector('.hand-slot.is-throwable[data-card="${cardId}"]')` : `document.querySelector('.hand-slot.is-throwable')`};
@@ -140,6 +140,50 @@ async function readPlayable(session, cardId = '') {
   `);
 }
 
+
+async function readPlayableMobile(session, cardId = '') {
+  return execute(session, `
+    if (document.querySelector('.decision-card h2')?.textContent?.trim() !== 'Twój ruch') return null;
+    const slot = ${cardId ? `document.querySelector('.hand-slot.is-throwable[data-card="${cardId}"]')` : `document.querySelector('.hand-slot.is-throwable')`};
+    const card = slot?.querySelector(':scope > .card');
+    const touchTarget = slot?.querySelector(':scope > .hand-touch-target');
+    const trick = document.querySelector('.trick');
+    if (!slot || !card || !trick) return null;
+    const rect = card.getBoundingClientRect();
+    const touchRect = touchTarget?.getBoundingClientRect() ?? null;
+    const zone = trick.getBoundingClientRect();
+    const from = true && touchRect
+      ? {
+          x: touchRect.left + touchRect.width / 2,
+          y: touchRect.top + Math.min(touchRect.height - 8, Math.max(8, rect.height * .56)),
+        }
+      : { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+    return {
+      card: slot.dataset.card ?? '',
+      x: from.x,
+      y: from.y,
+      width: rect.width,
+      height: rect.height,
+      zone: {
+        left: zone.left,
+        right: zone.right,
+        top: zone.top,
+        bottom: zone.bottom,
+        x: zone.left + zone.width / 2,
+        y: zone.top + zone.height / 2,
+        width: zone.width,
+        height: zone.height,
+      },
+    };
+  `);
+}
+
+
+async function readPlayable(session, mobile, cardId = '') {
+  return mobile
+    ? readPlayableMobile(session, cardId)
+    : readPlayableDesktop(session, cardId);
+}
 async function installTrace(session, card) {
   await execute(session, `
     window.__handoffCard = ${JSON.stringify(card)};
@@ -199,7 +243,7 @@ async function runViewport(label, width, height, mobile) {
     `));
     await clickButtonStartingWith(session, 'Pas');
 
-    const playable = await waitFor(`${label}: legal throw`, () => readPlayable(session), 25_000);
+    const playable = await waitFor(`${label}: legal throw`, () => readPlayable(session, mobile), 25_000);
     if (!playable.card) throw new Error(`${label}: throwable card has no CardId`);
 
     // Negative falsification: magnetic assistance is bounded. Keep this probe
@@ -252,7 +296,7 @@ async function runViewport(label, width, height, mobile) {
 
     // Reacquire the same card after its physical return/reorder, then place its
     // centre in the real canonical trick area.
-    const valid = await waitFor(`${label}: same card returned`, () => readPlayable(session, playable.card), 3_000);
+    const valid = await waitFor(`${label}: same card returned`, () => readPlayable(session, mobile, playable.card), 3_000);
     await installTrace(session, playable.card);
     const beforeCommitRevision = await revision(session);
     const inside = { x: valid.zone.x, y: valid.zone.y };
@@ -281,15 +325,28 @@ async function runViewport(label, width, height, mobile) {
 
     await touch(session, 'touchEnd', []);
 
+    // Completion is a durable material/authority state, not a race against the
+    // short-lived is-local-handoff-complete CSS marker. Wait for the final
+    // authoritative representation itself: source gone, bridge ghost gone,
+    // target present and visible.
     const final = await waitFor(`${label}: authoritative handoff completion`, () => execute(session, `
       const id = ${JSON.stringify(playable.card)};
       const target = document.querySelector('.played-self[data-card="' + id + '"]');
       const ghost = document.querySelector('.tactile-card-float.pending-handoff[data-card-id="' + id + '"]');
-      if (!target?.classList.contains('is-local-handoff-complete') || ghost) return null;
+      const source = document.querySelector('.hand-slot[data-card="' + id + '"]');
+      if (!target || ghost || source) return null;
+      const style = getComputedStyle(target);
+      const rect = target.getBoundingClientRect();
+      const targetVisible = style.display !== 'none'
+        && style.visibility !== 'hidden'
+        && Number(style.opacity) > .05
+        && rect.width > 1
+        && rect.height > 1;
+      if (!targetVisible) return null;
       return {
         targetCard: target.dataset.card ?? '',
-        targetVisible: Number(getComputedStyle(target).opacity) > .05,
-        sourceStillInHand: Boolean(document.querySelector('.hand-slot[data-card="' + id + '"]')),
+        targetVisible,
+        sourceStillInHand: false,
       };
     `), 5_000);
 
@@ -307,12 +364,9 @@ async function runViewport(label, width, height, mobile) {
     const ghostObserved = trace.some((entry) => entry.ghost && entry.ghostVisible);
     const authorityObserved = trace.some((entry) => entry.authority === 'handoff');
     const hiddenTargetObserved = trace.some((entry) => entry.targetHandoff && !entry.targetVisible && entry.ghostVisible);
-    // The direct final wait above is the durable completion observation: it
-    // requires the authoritative target's completion marker, visible target,
-    // absent pending ghost, and absent source card. An rAF trace is valuable for
-    // the bridge's intermediate states, but it can legitimately miss that short
-    // final marker window between animation finish and the next React render.
-    const completionTraceObserved = trace.some((entry) => entry.targetComplete && entry.targetVisible && !entry.ghost);
+    // Keep the transient completion marker as diagnostic evidence only. The
+    // material contract above is durable and must not depend on a 1–3 frame poll.
+    const completionTraceObserved = trace.some((entry) => entry.targetComplete && entry.targetVisible);
     const completionObserved =
       final.targetCard === playable.card
       && final.targetVisible

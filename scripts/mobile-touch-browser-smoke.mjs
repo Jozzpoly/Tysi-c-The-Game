@@ -349,6 +349,9 @@ async function cardGeometry(session) {
         x, y,
         width: rect.width,
         height: rect.height,
+        materialWidth: node.offsetWidth,
+        materialHeight: node.offsetHeight,
+        materialAspectRatio: node.offsetHeight > 0 ? node.offsetWidth / node.offsetHeight : 0,
         centerHitsSelf: hit === node,
         touchX,
         touchY,
@@ -498,6 +501,9 @@ async function run() {
     if (exchangeCards.length !== 10) throw new Error(`expected 10 exchange cards, got ${exchangeCards.length}`);
     for (const card of exchangeCards) {
       if (card.width < 47 || card.height < 124) throw new Error(`exchange card target too small ${JSON.stringify(card)}`);
+      if (card.materialAspectRatio < 0.66 || card.materialAspectRatio > 0.70) {
+        throw new Error(`exchange card material aspect distorted ${JSON.stringify(card)}`);
+      }
       if (card.touchWidth < 32 || card.touchHeight < 120) {
         throw new Error(`exchange exposed touch territory too small ${JSON.stringify(card)}`);
       }
@@ -558,12 +564,21 @@ async function run() {
     const trickViewport = await compactViewportGeometry(session);
     assertCompactPhysicalViewport('trick compact composition', trickViewport);
     await screenshot(session, 'mobile-touch-trick');
-    const playableCard = playableCards.find((card) => card.centerHitsSelf);
-    if (!playableCard) throw new Error(`no physically hittable playable card after contract: ${JSON.stringify(playableCards)}`);
+    const playableCard = playableCards.find((card) =>
+      card.touchHitsSelf
+      && card.touchPointerEvents !== 'none'
+      && card.touchWidth >= 32
+      && card.touchHeight >= 120
+      && card.touchX !== null
+      && card.touchY !== null
+    );
+    if (!playableCard) {
+      throw new Error(`no independently hittable playable touch territory after contract: ${JSON.stringify(playableCards)}`);
+    }
     const playZone = await playZoneGeometry(session);
     if (!playZone?.withinViewport) throw new Error(`play zone unavailable in mobile viewport: ${JSON.stringify(playZone)}`);
     const beforePlay = (await uiState(session)).revision;
-    await dragTouch(session, { x: playableCard.x, y: playableCard.y }, { x: playZone.x, y: playZone.y });
+    await dragTouch(session, { x: playableCard.touchX, y: playableCard.touchY }, { x: playZone.x, y: playZone.y });
     await waitForRevisionAdvance(session, beforePlay, 'playable card touch throw accepted');
 
     const finalSelection = await execute(session, `return window.getSelection()?.toString() ?? '';`);
@@ -575,6 +590,8 @@ async function run() {
       exchangeCards: exchangeCards.length,
       minCardWidth: Math.min(...exchangeCards.map((card) => card.width)),
       minCardHeight: Math.min(...exchangeCards.map((card) => card.height)),
+      minCardMaterialAspectRatio: Math.min(...exchangeCards.map((card) => card.materialAspectRatio)),
+      maxCardMaterialAspectRatio: Math.max(...exchangeCards.map((card) => card.materialAspectRatio)),
       minSameRowCenterSpacing: minimumCenterSpacing(exchangeCards),
       exchangeTouchTerritoriesHitCorrectCard: exchangeCards.every((card) => card.touchHitsSelf),
       exchangeViewport,
