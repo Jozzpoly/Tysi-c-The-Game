@@ -262,7 +262,7 @@
   }
 
   .tactile-hand {
-    --hand-card-width: 96px !important;
+    --hand-card-width: 88px !important;
     /* C2-A1: the visible card owns its material aspect. Layout may overlap it,
      * but must not stretch the card body to fill vertical hand territory. */
     --hand-card-height: calc(var(--hand-card-width) / .68);
