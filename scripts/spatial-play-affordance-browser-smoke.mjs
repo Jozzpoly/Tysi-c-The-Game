@@ -145,7 +145,7 @@ async function readPlayableMobile(session) {
     const rect = card.getBoundingClientRect();
     const touchRect = touchTarget?.getBoundingClientRect() ?? null;
     const zone = trick.getBoundingClientRect();
-    const from = ${mobile} && touchRect
+    const from = true && touchRect
       ? {
           x: touchRect.left + touchRect.width / 2,
           y: touchRect.top + Math.min(touchRect.height - 8, Math.max(8, rect.height * .56)),
