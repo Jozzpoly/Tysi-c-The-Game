@@ -62,10 +62,10 @@ describe('Run 04 trick presentation planning', () => {
     });
   });
 
-  it('pins the responsive final-friend-build cadence while leaving material deal room intact', () => {
-    expect(NORMAL_PRESENTATION_MS).toBe(300);
-    expect(MARRIAGE_PRESENTATION_MS).toBe(500);
-    expect(TRICK_COMPLETION_PRESENTATION_MS).toBe(720);
+  it('pins the readable table cadence while leaving material deal room intact', () => {
+    expect(NORMAL_PRESENTATION_MS).toBe(480);
+    expect(MARRIAGE_PRESENTATION_MS).toBe(680);
+    expect(TRICK_COMPLETION_PRESENTATION_MS).toBe(900);
     expect(DEAL_PRESENTATION_MS).toBe(620);
   });
 
