@@ -109,7 +109,32 @@ async function screenshot(session, name) {
   await writeFile(`${OUTPUT}/${name}.png`, Buffer.from(base64, 'base64'));
 }
 
-async function readPlayable(session, mobile) {
+async function readPlayableDesktop(session) {
+  return execute(session, `
+    if (document.querySelector('.decision-card h2')?.textContent?.trim() !== 'Twój ruch') return null;
+    const slot = document.querySelector('.hand-slot.is-throwable');
+    const card = slot?.querySelector(':scope > .card');
+    const trick = document.querySelector('.trick');
+    if (!slot || !card || !trick) return null;
+    const rect = card.getBoundingClientRect();
+    const zone = trick.getBoundingClientRect();
+    return {
+      card: slot.dataset.card ?? '',
+      x: rect.left + rect.width / 2,
+      y: rect.top + rect.height / 2,
+      width: rect.width,
+      height: rect.height,
+      zone: {
+        left: zone.left, right: zone.right, top: zone.top, bottom: zone.bottom,
+        x: zone.left + zone.width / 2,
+        y: zone.top + zone.height / 2,
+      },
+    };
+  `);
+}
+
+
+async function readPlayableMobile(session) {
   return execute(session, `
     if (document.querySelector('.decision-card h2')?.textContent?.trim() !== 'Twój ruch') return null;
     const slot = document.querySelector('.hand-slot.is-throwable');
@@ -141,6 +166,12 @@ async function readPlayable(session, mobile) {
   `);
 }
 
+
+async function readPlayable(session, mobile, cardId = '') {
+  return mobile
+    ? readPlayableMobile(session, cardId)
+    : readPlayableDesktop(session, cardId);
+}
 async function affordanceState(session, card) {
   return execute(session, `
     const hand = document.querySelector('.tactile-hand');
