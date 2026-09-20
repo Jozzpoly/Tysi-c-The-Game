@@ -95,6 +95,28 @@ A product candidate may stay frozen while the validation harness improves. This 
 
 Public readiness evidence attaches to the pair: **product SHA + validation-harness SHA**. The validation-harness SHA does not replace product provenance, and the product SHA does not define the latest evidence contract.
 
+### Loaded-client identity is a third, separate runtime fact
+
+The public Worker's `buildSha` proves the currently serving server/deployment candidate. It does **not** retroactively prove which JavaScript bundle is already executing inside an older browser tab.
+
+A Tysiąc SPA tab can remain alive across a Worker redeploy. Its already-loaded frontend code continues running until a real navigation/reload replaces the document. WebSocket reconnect alone is not a client upgrade.
+
+The current `tysiac.v1` room protocol has no client-build/server-build handshake and `RoomSocketMessage` carries no build identity. Therefore an old frontend can currently reconnect to a newer server without the product detecting the version mismatch.
+
+Consequences for release evidence:
+
+- `/api/match buildSha=X` proves **serving origin identity**, not **loaded client identity**;
+- a fresh automated browser started after deployment is strong evidence for the newly served frontend, but it says nothing about a real user's pre-existing tab;
+- after replacing a stable candidate at the same canonical URL, real-human comparison evidence must establish that the compared client is freshly loaded, or the product must provide its own client-build identity/mismatch detection;
+- do not diagnose a pacing/UI regression from two same-URL tabs until loaded-client identity is controlled.
+
+Before the final friend release, satisfy at least one robust path:
+
+1. **preferred product hardening:** embed immutable frontend build identity and detect/report a client/server mismatch, with a safe refresh/update path; or
+2. **bounded release procedure:** explicitly start the Owner/friend gate from a newly loaded document after promotion and record that fresh-client condition.
+
+Do not silently promote option 2 into a permanent substitute if stale-client confusion recurs.
+
 ## Stable-deploy evidence ladder
 
 A single word such as `verified` is not sufficient. Evidence must be reported by property.
@@ -254,7 +276,8 @@ Forbidden promotion:
 - versioned preview URL -> canonical friend origin;
 - fresh redeploy -> evidence that the old origin survived elapsed time;
 - automation PASS -> `real-human test passed`;
-- current reachability -> `will remain available` without the non-temporary mechanism and later recheck.
+- current reachability -> `will remain available` without the non-temporary mechanism and later recheck;
+- server `buildSha` -> proof that an already-open browser tab is executing that same frontend build.
 
 ## Failure classification
 
@@ -270,6 +293,7 @@ Forbidden promotion:
 - owned deployment not listed after upload: stable-mechanism failure;
 - unexpected/versioned deployment target: canonical-origin failure;
 - public provenance mismatch: wrong product build/deployment-class failure;
+- server/client build mismatch or unknown loaded-client identity during a cross-version comparison: client-provenance blocker;
 - public health/assets failure: routing/runtime/deployment defect;
 - copied invite malformed/leaking credentials: product/security defect;
 - malformed recheck JSON/origin/SHA: recheck request failure;
