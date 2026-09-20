@@ -130,7 +130,9 @@ Foundation remote-playback measurements from the three checkpoints were:
 - B1 / #62: ~285.4 ms;
 - B2 / #63: ~298.1 ms.
 
-These values do not establish a material authoritative-playback speed regression.
+Important scope: this trace measures queued remote **revision playback in an auction transition**, not opponent trick-card dwell. It falsifies a broad claim that the whole remote revision queue became materially faster, but it does **not** directly measure the Owner-reported card cadence.
+
+The deterministic living-trick smoke shows the same semantic presentation sequence on B0/B1/B2 — `arrival → resolve → collect → consequence → settled` — but currently does not emit wall-clock timing for those stage boundaries. Therefore card-presentation cadence remains an explicit forensic gap rather than a measured PASS.
 
 PR #62 affects local human-card interaction/presentation ownership. It does not own automatic opponent-card playback.
 
@@ -190,7 +192,7 @@ Reconstruct the Owner-observed regression as an apples-to-apples comparison usin
 
 Capture separately:
 
-1. automatic table flow — opponent arrival, consecutive opponent actions, third-card dwell, resolution, collection, next initiative;
+1. automatic table flow — opponent arrival, consecutive opponent actions, third-card dwell, resolution, collection, next initiative; add explicit wall-clock stage timestamps because the current living-trick smoke checks sequence but not cadence;
 2. local interaction — pointer/touch down, carry, assist/magnet, release, command acceptance, authoritative handoff;
 3. geometry/object identity — hand → carried card → table, exchange, 7→10→8 transitions;
 4. frame/input behavior — only where actual runtime evidence implicates performance.
