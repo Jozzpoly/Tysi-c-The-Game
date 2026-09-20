@@ -52,6 +52,25 @@ Examples:
 
 When new evidence contradicts a previous claim, withdraw the previous claim explicitly before continuing.
 
+## Experimental control / Golden baseline law
+
+An Owner-evaluated build may be designated as the current **Golden control specimen** in `docs/EXECUTION_STATE.md`.
+
+Golden means "best current empirical control", not "perfect" or "final".
+
+Hard rules:
+
+- a newer branch, PR, commit, green CI run or successful preview does not supersede Golden by recency;
+- an experiment must state its exact `baseline_sha`, exact candidate SHA, product-runtime delta, machine evidence and current Owner experience status;
+- stack experiments only when the previous delta has earned promotion; otherwise branch new hypotheses from the control or treat prior work as a donor;
+- if Owner evidence reports regression in an existing valued property, the candidate fails the experience gate as a whole even when that property was nominally "out of scope";
+- do not tell the Owner to ignore a regression because it belongs to a later phase;
+- before implementing a regression fix, establish the causal boundary when reasonably possible; if causality is still uncertain, label the change as a diagnostic hypothesis rather than a fix;
+- when a hypothesis is falsified, quarantine or remove its derived work instead of letting green automation turn it into accidental authority;
+- distinguish repository/validation-harness identity from product identity. `main` may advance operational tooling while an older immutable product SHA remains the actual Golden/stable candidate.
+
+The current Golden SHA belongs only in `docs/EXECUTION_STATE.md`, not in this durable law.
+
 ## Verification-language contract
 
 Claims such as `verified`, `safe`, `stable`, `persistent`, `ready`, `production`, `friend-ready`, `complete` or `PASS` must name the property and direct evidence supporting it.
