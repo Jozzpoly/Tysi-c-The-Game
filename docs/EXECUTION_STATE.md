@@ -1,7 +1,7 @@
 # Execution state — live truth
 
 Date: 2026-09-20
-Status: **Regression recovery inside finalization. The stable Owner/Friend baseline is protected. Product development is frozen until the recent presentation regression is reproduced and causally localized.**
+Status: **Regression recovery inside finalization. The stable Owner/Friend baseline is protected. B0/B1/B2 automatic-card cadence has been causally localized; product development remains frozen until the final fresh-client Owner A/B resolves the historical perception discrepancy.**
 
 ## Authority order
 
@@ -110,13 +110,13 @@ The material-geometry changes are inside `@media (max-width: 760px)`. Other chan
 
 Therefore a reproducible **desktop** automatic-table-flow regression cannot be causally assigned to C2 mobile geometry.
 
-### Quarantined false-cause experiment — PR #64
+### Closed false-cause experiment — PR #64
 
 PR #64 was created after an incorrect diagnosis that older global card-cadence values had returned.
 
-That diagnosis is falsified: B0, B1 and B2 retain the same relevant product pacing/timer implementation. PR #64 may be mechanically green, but it has no causal authority and must not be treated as the current fix or roadmap.
+That diagnosis is falsified: B0, B1 and B2 retain the same relevant product pacing/timer implementation. PR #64 is now **closed, unmerged** and retained only as historical diagnostic evidence.
 
-Keep it quarantined unless later evidence independently justifies some part of it.
+Do not resurrect it as the current fix or roadmap unless later independent evidence justifies a specific reusable part.
 
 ## Regression forensics — evidence as of 2026-09-20
 
@@ -198,6 +198,8 @@ The exact slow→fast source transition is commit `7c5d9d2b2e31d5e2ee5f8772e3d46
 
 This resolves the earlier analytical contradiction: PR #55 is a real cadence transition, but it is **not** a B0→B2 regression cause because B0 already contains that transition. It matters here only because the previous stable client `52450baa...` predates the faster cadence while Golden B0 contains it.
 
+This is not source-only inference: preserved Foundation #672 for exact `52450baa...` measured remote playback spacing at **461.1 ms**, materially slower than the ~285–298 ms B0/B1/B2 remote revision traces. The old slow client therefore existed as executed behavior, not merely dormant constants.
+
 This yields a concrete new hypothesis for the apparent contradiction "friend link is slow while B0/B2 code is fast":
 
 > an already-open SPA tab from the previous stable `52450baa...` deployment could continue executing its already-loaded slow JavaScript bundle after the canonical Worker origin was redeployed to `fddeafbe...`.
@@ -216,11 +218,28 @@ This is materially stronger than a generic cache theory because the fresh `fddea
 
 Do not rewrite history and claim the Owner actually tested `52450baa...` unless direct evidence establishes that client identity. The stable server currently reports `fddeafbe...` and `deployClass=stable`, but server provenance alone cannot retroactively identify the bundle that was already loaded in a historical browser tab.
 
-### Temporary C2 origin
+### Fresh exact-B2 diagnostic preview
 
-The old `tysiac-the-game.secret-crater.workers.dev` C2 temporary origin now returns NXDOMAIN. This is expected temporary-preview lifecycle, not loss of the B2 source/evidence. Exact B2 Git SHA, CI logs and browser artifacts remain available.
+The original B2 Temporary Preview workflow was rerun without changing candidate identity.
 
-Do not recreate B2 by redeploy merely to keep an old temporary URL alive.
+Current bounded diagnostic origin:
+
+`https://tysiac-the-game.probable-medallion.workers.dev`
+
+Exact provenance:
+
+- product SHA: `5e348a3c9f85df16923ebccc606e8a42072c033f`;
+- deployment class: `temporary`;
+- original workflow run: `35475980671`, attempt 2;
+- pre-deploy Foundation: PASS;
+- public provenance: PASS;
+- public room-create readiness: PASS;
+- public desktop/mobile MatchRoom smoke: PASS;
+- exact copied-invite smoke: PASS.
+
+This URL is **temporary diagnostic infrastructure only** and may expire. It exists solely to provide a freshly loaded B2 client for the controlled Owner comparison.
+
+The earlier `tysiac-the-game.secret-crater.workers.dev` C2 temporary origin now returns NXDOMAIN, as expected for temporary preview lifecycle. Exact B2 source, logs and preserved browser artifacts remain available.
 
 ### Forensic harness provenance
 
@@ -267,7 +286,7 @@ Full remote solo rehearsal total elapsed times remain unsuitable as cadence benc
 Do not:
 
 - continue C2 merely because it is newer;
-- merge #62/#63/#64;
+- merge #62/#63 or reopen/merge closed #64;
 - tune cadence by intuition;
 - clean up presentation architecture while the control boundary is unresolved;
 - redeploy the stable friend origin;
@@ -300,18 +319,23 @@ Capture separately:
 
 Do not mix these clocks under one word such as "timing".
 
-### F2 — client/runtime identity reconstruction
+### F2 — final fresh-client perceptual gate
 
-B0/B1/B2 automatic cadence has been localized and is equivalent in the deterministic tested path.
+Historical loaded-client identity cannot be proven from the surviving evidence, but the competing product-timing hypothesis has been strongly falsified.
 
-The next causal question is therefore historical client identity and scenario identity:
+The remaining high-value test is deliberately narrow:
 
-- determine whether the slower friend-link observation could have come from an already-open `52450baa...` SPA client;
-- distinguish server deployment SHA from the JavaScript bundle already loaded in a browser tab;
-- recover any remaining evidence about reload/navigation timing around the stable promotion;
-- if necessary, reproduce the stale-client mechanism in a bounded diagnostic setup without changing the stable product.
+- open the canonical B0 stable origin as a **fresh document**: `https://tysiac-the-game.jozzpoly.workers.dev/`;
+- open the exact B2 temporary origin as a **fresh document**: `https://tysiac-the-game.probable-medallion.workers.dev`;
+- compare only the perceived rhythm/readability of automatic cards under equivalent desktop conditions.
 
-Only if direct evidence later points back to local human interaction should #62 be split into its rAF / magnet-owner / pointer-tap hypotheses.
+Machine evidence predicts no material automatic-card cadence difference between fresh B0 and fresh B2.
+
+Interpretation:
+- if Owner perception is also equivalent, close the historical timing-regression investigation as a client/provenance comparison problem; the exact historical stale-tab cause remains unprovable and does not need further excavation;
+- if a repeatable perceptual difference remains despite fresh clients, capture that exact scenario and reopen forensics around presentation/runtime conditions rather than changing global timers by intuition.
+
+Only if direct evidence later points to local human interaction should #62 be split into its rAF / magnet-owner / pointer-tap hypotheses.
 
 ### F3 — reconstruct the next candidate from Golden
 
@@ -360,4 +384,4 @@ A short `kontynuuj` means:
 4. do not advance an experiment merely because it is the newest branch;
 5. stop and update authority when new evidence falsifies the current model.
 
-Current next action: **finish F1/F2 regression forensics before any new product change.**
+Current next action: **run the single fresh-document Owner B0↔B2 cadence A/B. No product change before that judgement.**
