@@ -459,6 +459,19 @@ async function runViewport(label, width, height, mobile) {
 
     const completionEntries = lifecycleTrace.filter((entry) => entry.kind === 'trick-completion');
     const stages = completionEntries.map((entry) => entry.stage);
+    const firstPlayByIdentity = new Map();
+    for (const entry of lifecycleTrace) {
+      if (!entry.freshPlay || (entry.kind !== 'ordinary-play' && entry.kind !== 'trick-completion')) continue;
+      if (!firstPlayByIdentity.has(entry.freshPlay)) firstPlayByIdentity.set(entry.freshPlay, entry);
+    }
+    const playTimeline = [...firstPlayByIdentity.values()]
+      .sort((a, b) => a.t - b.t)
+      .map((entry, index, entries) => ({
+        freshPlay: entry.freshPlay,
+        kind: entry.kind,
+        t: Number(entry.t.toFixed(1)),
+        gapFromPreviousMs: index === 0 ? null : Number((entry.t - entries[index - 1].t).toFixed(1)),
+      }));
     for (const required of ['arrival', 'resolve', 'collect', 'consequence', 'settled']) {
       if (!stages.includes(required)) throw new Error(`${label}: missing ${required} in lifecycle trace ${JSON.stringify(stages)}`);
     }
@@ -514,6 +527,7 @@ async function runViewport(label, width, height, mobile) {
       ordinaryPlaySpacingMs,
       stages,
       stageTimingMs,
+      playTimeline,
     };
   } finally {
     try { await webdriver(`/session/${session}`, { method: 'DELETE' }); } catch {}
