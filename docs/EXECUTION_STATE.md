@@ -200,7 +200,15 @@ This yields a concrete new hypothesis for the apparent contradiction "friend lin
 
 This is technically plausible because an already-loaded SPA does not hot-swap its JavaScript when the server is redeployed.
 
-**Status: plausible, not yet proven as the exact Owner test condition.**
+The recovered Owner chronology is consistent with this mechanism:
+
+- on 2026-09-18 at ~14:43 UTC, the Owner tested a **fresh temporary preview of exact `fddeafbe...`** and reported that bots/cards advanced too quickly;
+- later on 2026-09-18 the same `fddeafbe...` product was promoted to the canonical stable origin, which had previously served `52450baa...`;
+- on 2026-09-19 at ~23:43 UTC the Owner explicitly stated that the **friend link had slower cards**.
+
+This is materially stronger than a generic cache theory because the fresh `fddeafbe...` observation itself was "too fast", while the canonical-origin observation was "slower". However no recovered evidence yet proves whether the later friend-link observation came from a full fresh navigation/reload or from an already-running SPA tab.
+
+**Status: strongest current causal hypothesis, still unproven.**
 
 Do not rewrite history and claim the Owner actually tested `52450baa...` unless direct evidence establishes that client identity. The stable server currently reports `fddeafbe...` and `deployClass=stable`, but server provenance alone cannot retroactively identify the bundle that was already loaded in a historical browser tab.
 
