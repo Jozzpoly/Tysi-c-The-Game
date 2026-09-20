@@ -86,11 +86,9 @@ The exact `Kopiuj link dla znajomego` path is now also rehearsed locally in ever
 
 See [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
 
-Current frozen external candidate remains:
+The mutable Golden/stable candidate is intentionally **not duplicated in this README**.
 
-`52450baa04f22646474bf4676f70b2df5ba6812f`
-
-Later `main` cleanup does not silently replace that candidate.
+Read the exact current product SHA, stable-origin state, experimental deltas and active gate from [`docs/EXECUTION_STATE.md`](docs/EXECUTION_STATE.md). Later `main` cleanup must not silently replace that candidate.
 
 ## Rules stance
 
