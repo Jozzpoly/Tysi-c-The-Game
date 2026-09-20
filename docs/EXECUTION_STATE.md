@@ -120,44 +120,133 @@ Keep it quarantined unless later evidence independently justifies some part of i
 
 ## Regression forensics — evidence as of 2026-09-20
 
-### What is established
+### B0/B1/B2 automatic-card cadence is now directly measured
 
-The relevant global table/pacing implementation did not change between B0 and B2 in the files previously suspected during the failed diagnosis.
+The previously suspected global table/pacing implementation is identical across B0/B1/B2 in the relevant product files. A dedicated test-only forensic campaign then exposed the timestamps already collected by the deterministic `living-trick` MutationObserver.
 
-Foundation remote-playback measurements from the three checkpoints were:
+Exact checkpoints:
 
-- B0 / #61: ~292.2 ms observed revision spacing;
-- B1 / #62: ~285.4 ms;
-- B2 / #63: ~298.1 ms.
+- B0 / Golden: `fddeafbe2ef9b416c52f98cc5c9814bb2fb84f89`;
+- B1 / #62: `4e01a29e483a7a3ebf7dfc55750ed5726e43739c`;
+- B2 / #63: `5e348a3c9f85df16923ebccc606e8a42072c033f`.
 
-Important scope: this trace measures queued remote **revision playback in an auction transition**, not opponent trick-card dwell. It falsifies a broad claim that the whole remote revision queue became materially faster, but it does **not** directly measure the Owner-reported card cadence.
+The same seeded desktop scenario measured ordinary automatic-play spacing as:
 
-The deterministic living-trick smoke shows the same semantic presentation sequence on B0/B1/B2 — `arrival → resolve → collect → consequence → settled` — but currently does not emit wall-clock timing for those stage boundaries. Therefore card-presentation cadence remains an explicit forensic gap rather than a measured PASS.
+- B0: **615.7 / 1055.7 / 332.6 ms**;
+- B1: **612.7 / 1057.2 / 331.2 ms**;
+- B2: **609.5 / 1059.8 / 331.5 ms**.
 
-PR #62 affects local human-card interaction/presentation ownership. It does not own automatic opponent-card playback.
+The trick-completion lifecycle measured `arrival → settled` as:
 
-PR #63 adds only mobile presentation CSS at runtime, scoped below 760 px.
+- desktop B0/B1/B2: **645.1 / 644.7 / 647.4 ms** in the final ordinary-play probe runs;
+- earlier dedicated stage probe: **645.3 / 644.8 / 648.1 ms**;
+- mobile dedicated stage probe: **645.2 / 645.0 / 646.8 ms**.
 
-Full remote solo rehearsal total elapsed times are **not** an apples-to-apples cadence benchmark: the rehearsal traverses different game paths and deliberately caps browser timeouts for fast automation. Do not use its total duration as feel evidence.
+Sub-stage deltas likewise differ only by normal browser scheduling jitter. The semantic sequence is the same: `arrival → resolve → collect → consequence → settled`.
 
-### What is not established
+This is strong evidence that **B1/#62 and B2/#63 did not introduce the reported automatic-card cadence regression in the deterministic local trick flow that was tested**.
 
-The Owner-observed regression is real experience evidence, but its exact technical cause is still **unproven**.
+It does not invalidate the Owner observation. It changes the question from "which B1/B2 timing change caused this?" to "what runtime/client/scenario made the compared experiences differ?"
 
-In particular, do not currently claim that the cause is:
+### Remote playback evidence
 
-- PR #55 cadence constants;
-- PR #63 mobile material geometry;
-- PR #62 as a whole;
-- Cloudflare/stable deployment;
+Foundation remote-playback measurements were:
+
+- B0: ~292.2 ms revision spacing;
+- B1: ~285.4 ms;
+- B2: ~298.1 ms.
+
+Scope remains important: this trace measures queued remote revision playback in an auction transition, not opponent trick-card dwell. It supports the absence of a broad remote-queue speed change but is not the primary automatic-card cadence measurement; the `living-trick` measurements above are stronger for the reported symptom.
+
+### Product-code causal boundary
+
+B1/#62 changes the human/private-hand interaction path:
+
+- `TactileHand.tsx`;
+- `ownerMagnetismBridge.ts`;
+- `tactileInteraction.ts`.
+
+It does not change opponent-card rendering, `App.tsx` bot scheduling, `RemoteRoom.tsx` playback or `trickPresentation.ts` cadence.
+
+B2/#63 adds only mobile presentation CSS at product runtime, inside the <=760 px composition layer.
+
+Therefore the current evidence strongly excludes B1/B2 as the source of a **desktop automatic-card scheduling/timeline** regression. B1 can still affect local human pickup/tap/drag/handoff feel and must be judged separately for that property.
+
+### Previous stable client is materially different
+
+A separate provenance check found that the earlier stable candidate served from the same canonical Worker lineage, commit:
+
+`52450baa04f22646474bf4676f70b2df5ba6812f`
+
+contains the genuinely slower cadence that the Owner remembered:
+
+- ordinary presentation: **480 ms**;
+- marriage presentation: **680 ms**;
+- trick completion: **900 ms**;
+- local trick bot delay: **520 ms**;
+- completion thresholds: **220 / 390 / 620 / 820 ms**.
+
+Golden B0 `fddeafbe...` contains the later faster cadence:
+
+- ordinary presentation: **300 ms**;
+- marriage presentation: **500 ms**;
+- trick completion: **720 ms**;
+- local trick bot delay: **320 ms**;
+- completion thresholds: **175 / 310 / 500 / 650 ms**.
+
+This yields a concrete new hypothesis for the apparent contradiction "friend link is slow while B0/B2 code is fast":
+
+> an already-open SPA tab from the previous stable `52450baa...` deployment could continue executing its already-loaded slow JavaScript bundle after the canonical Worker origin was redeployed to `fddeafbe...`.
+
+This is technically plausible because an already-loaded SPA does not hot-swap its JavaScript when the server is redeployed.
+
+**Status: plausible, not yet proven as the exact Owner test condition.**
+
+Do not rewrite history and claim the Owner actually tested `52450baa...` unless direct evidence establishes that client identity. The stable server currently reports `fddeafbe...` and `deployClass=stable`, but server provenance alone cannot retroactively identify the bundle that was already loaded in a historical browser tab.
+
+### Temporary C2 origin
+
+The old `tysiac-the-game.secret-crater.workers.dev` C2 temporary origin now returns NXDOMAIN. This is expected temporary-preview lifecycle, not loss of the B2 source/evidence. Exact B2 Git SHA, CI logs and browser artifacts remain available.
+
+Do not recreate B2 by redeploy merely to keep an old temporary URL alive.
+
+### Forensic harness provenance
+
+The three forensic branches were based exactly on B0/B1/B2 and contain only changes to `scripts/living-trick-browser-smoke.mjs`.
+
+Each branch currently has three test-only commits:
+
+1. `Forensic: expose living-trick stage timings`;
+2. `Forensic: expose ordinary opponent-play spacing`;
+3. `Forensic: expose consecutive card-play timing`.
+
+The middle commit was added concurrently by another active Tysiąc conversation while this investigation was running. It was applied equivalently to B0/B1/B2 and changes only diagnostic output, not product runtime. The resulting measurements are therefore useful, but the concurrency itself is recorded here so the branch history is not later mistaken for a single linear execution thread.
+
+The first full B0/B1 stage-probe Foundations later failed on the already-known `authoritative handoff completion timed out` flake after the `living-trick` probe had passed. The final ordinary-play probe Foundations for B0/B1/B2 all completed successfully. Do not treat the earlier unrelated handoff timeout as cadence evidence.
+
+### Screenshot evidence
+
+Preserved original Foundation browser artifacts provide an independent visual check. Deterministic desktop living-trick scenes remain extremely close across B0/B1/B2; the B0↔B2 desktop collect frame differs only at a tiny pixel fraction consistent with raster/timing noise. The large B2 differences are on mobile, where C2 intentionally changes hand/material geometry.
+
+Screenshot evidence supports the causal boundary above but does not replace timing traces.
+
+### Still unresolved
+
+The Owner-observed experience difference remains real evidence, but its exact historical client/runtime condition is still unproven.
+
+Do not currently claim as fact that the cause was:
+
+- PR #55 / the fast cadence commit;
+- PR #62;
+- PR #63;
+- PR #64;
+- Cloudflare;
 - browser performance;
-- bot scheduling.
+- or the stale `52450baa...` SPA hypothesis.
 
-Those remain candidates only if direct evidence connects them to the same reproduced scenario.
+The old-client hypothesis is now the strongest concrete explanation for the specific contradiction between a visibly slower friend-link tab and identical B0/B1/B2 timing behavior, but it still needs direct or reconstructed evidence before becoming causal truth.
 
-If the observed regression is specifically automatic `bot → bot → collect → next trick` flow on desktop, current code-delta evidence says the cause is not explained by B1/B2 product changes. The next comparison must therefore first rule out scenario/mode/state/environment mismatch before editing timing again.
-
-If the regression is specifically local human card pickup/tap/drag/handoff feel, B1 is a plausible causal boundary and its three interaction changes should be isolated separately.
+Full remote solo rehearsal total elapsed times remain unsuitable as cadence benchmarks because they traverse different game paths and intentionally cap browser timeouts.
 
 ## Current gate
 
@@ -192,28 +281,25 @@ Reconstruct the Owner-observed regression as an apples-to-apples comparison usin
 
 Capture separately:
 
-1. automatic table flow — opponent arrival, consecutive opponent actions, third-card dwell, resolution, collection, next initiative; add explicit wall-clock stage timestamps because the current living-trick smoke checks sequence but not cadence;
+1. automatic table flow — opponent arrival, consecutive opponent actions, third-card dwell, resolution, collection, next initiative; B0/B1/B2 deterministic timing is now measured and equivalent;
 2. local interaction — pointer/touch down, carry, assist/magnet, release, command acceptance, authoritative handoff;
 3. geometry/object identity — hand → carried card → table, exchange, 7→10→8 transitions;
 4. frame/input behavior — only where actual runtime evidence implicates performance.
 
 Do not mix these clocks under one word such as "timing".
 
-### F2 — B0/B1/B2 causal localization
+### F2 — client/runtime identity reconstruction
 
-Compare:
+B0/B1/B2 automatic cadence has been localized and is equivalent in the deterministic tested path.
 
-- B0 = `fddeafbe...`;
-- B1 = `4e01a29e...`;
-- B2 = `5e348a3c...`.
+The next causal question is therefore historical client identity and scenario identity:
 
-If B0 and B1 differ only in local interaction feel, split #62 into independently testable hypotheses:
+- determine whether the slower friend-link observation could have come from an already-open `52450baa...` SPA client;
+- distinguish server deployment SHA from the JavaScript bundle already loaded in a browser tab;
+- recover any remaining evidence about reload/navigation timing around the stable promotion;
+- if necessary, reproduce the stale-client mechanism in a bounded diagnostic setup without changing the stable product.
 
-- rAF drag coalescing;
-- magnet/assist ownership;
-- physical pointer-tap activation / handoff path.
-
-If automatic table flow differs despite identical relevant product code, investigate runtime/scenario/provenance first rather than inventing another timing patch.
+Only if direct evidence later points back to local human interaction should #62 be split into its rAF / magnet-owner / pointer-tap hypotheses.
 
 ### F3 — reconstruct the next candidate from Golden
 
