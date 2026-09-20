@@ -1,191 +1,263 @@
 # Execution state — live truth
 
-Date: 2026-09-17
-Status: **Finalization mode. Latest main is Owner-tested and close to acceptable; mobile performance/responsiveness is the remaining product-quality blocker before final stable promotion and the real friend session.**
+Date: 2026-09-20
+Status: **Regression recovery inside finalization. The stable Owner/Friend baseline is protected. Product development is frozen until the recent presentation regression is reproduced and causally localized.**
 
-## Current authority
+## Authority order
 
-1. this file — compact live project truth;
-2. `docs/PERFORMANCE_CAMPAIGN.md` — bounded final performance campaign;
-3. `docs/DEPLOYMENT.md` — deployment/evidence contract;
-4. `docs/INCIDENT_2026-09-15_FRIEND_LINK.md` — historical friend-link recovery;
-5. `AGENTS.md` — claim/evidence discipline;
-6. `docs/RUN05_PHYSICAL_TABLE_V2.md` — presentation direction/history.
+1. direct live evidence for the exact property being claimed;
+2. this file — compact current execution truth;
+3. `docs/DEPLOYMENT.md` — public/stable/friend-link evidence contract;
+4. `docs/INCIDENT_2026-09-15_FRIEND_LINK.md` — still-open release safety contract;
+5. `AGENTS.md` — project working/evidence laws;
+6. `docs/PROJECT.md` — durable product/architecture model.
 
-Historical Run01–Run04 material and old experiment branches are donor/history only unless explicitly reactivated.
+Historical run plans, stale PR descriptions and old handoffs are evidence/history only. A newer branch or green CI run does not become product authority by recency.
 
-## Truth tracks
+## Product / Owner intent that remains protected
 
-Keep three different kinds of evidence separate:
+Tysiąc is a browser-first digital table for real use, not a generic card-game framework.
 
-1. **Game truth** — rules, legality, scoring and bot behavior.
-2. **Experience truth** — visual, physical, motion, UI/UX and responsiveness quality.
-3. **Operations / external truth** — the exact deployed build, copied-link behavior, multiplayer/privacy/reconnect behavior and real-world availability.
+Protected experience direction:
 
-A PASS on one track does not silently promote another.
+- desktop and mobile are equal-quality product targets;
+- cards are material objects rather than buttons;
+- the private hand remains a living, permissive workspace;
+- manipulation is broader than authoritative play;
+- positive affordance is preferred over dead/disabled-card UX;
+- table actions should preserve causal/object continuity: source → carried card → shared table → winner → ownership/consequence;
+- presentation quality, tactile feel, pacing, responsiveness and visual coherence are Owner-led experience truth;
+- exact rules/legality/scoring/bot correctness are not inferred from Owner approval.
 
-## Finalization target
+The project remains intended to finish. It is not an open-ended presentation R&D branch.
 
-The project is no longer in open-ended feature development. The temporary project is considered ready to close when:
+## Current repository / product identities
 
-- solo and duo + bot are usable on desktop and mobile;
-- copied room invite, private hands, shared actions and reconnect work in real use;
-- presentation is sufficiently clear and pleasant for casual play;
-- mobile no longer feels materially laggy/under-responsive;
-- one exact final SHA is promoted to the account-owned stable origin;
-- Owner + real friend complete one bounded real session: create → copy link → join → shared action → reconnect;
-- the final state/evidence is recorded and the project is frozen.
-
-Non-blocking polish and speculative systems do not prevent closure.
-
-## Current main / release candidate baseline
+### Repository `main`
 
 Current `main`:
 
-`7c5d9d2b2e31d5e2ee5f8772e3d4664daac546ec`
+`6ad4a618820b3b7e01fbadc100abb4786ff8e300`
 
-This includes PR #55, `Release: tighten table cadence for final friend build`.
+The latest main commits are operational/deployment/recheck work. **Main is not the current product baseline.**
 
-Evidence:
+### Golden Owner/Friend baseline — B0
 
-- PR #55 head `48228ea7f79b6195847b742cd96bbc243d5d15fe` — Foundation #799 FULL GREEN;
-- post-merge main `7c5d9d2b...` — Foundation #800 FULL GREEN;
-- ordinary remote playback spacing measured ~285.4–285.7 ms after the cadence pass, down from the prior ~480 ms class;
-- full remote solo rehearsals desktop + mobile PASS;
-- reconnect exercised in both full rehearsals;
-- no open pull requests after #55 merge.
+Exact product SHA:
 
-Cadence currently keeps the full physical deal duration at 620 ms because the 21-card deal animation still needs that envelope. Frequent table flow was shortened instead of blindly accelerating every transition.
+`fddeafbe2ef9b416c52f98cc5c9814bb2fb84f89`
 
-## Final Owner Preview #16 — PASS at the automated boundary
+PR #61: `experiment/mobile-composition-v2-owner-hand-priority`
 
-Temporary Preview run:
+Why it is the Golden control specimen:
 
-- workflow run: `35229545651` / Preview #16;
-- exact SHA: `7c5d9d2b2e31d5e2ee5f8772e3d4664daac546ec`;
-- temporary URL used for Owner testing: `https://tysiac-the-game.similar-metal.workers.dev`;
-- deploy class: `temporary`;
-- complete Foundation before publishing: PASS;
-- public provenance exact SHA: PASS;
-- public desktop/mobile MatchRoom behavior: PASS;
-- copied invite session: PASS;
-- distinct/disjoint private hands: PASS;
-- synchronized legal action: PASS;
-- friend-browser reconnect in automation: PASS.
+- it is the last build with rich direct Owner evaluation;
+- experienced-friend feedback was gathered on this product state;
+- Foundation #860 passed;
+- Temporary Preview #24 served this exact SHA;
+- this exact SHA was later promoted to the canonical account-owned stable origin;
+- stable deploy provenance and copied-invite/multiplayer evidence passed;
+- later no-redeploy rechecks continued to report this same SHA and `deployClass=stable`.
 
-The temporary URL is bounded evidence only and may expire. It is not the final friend URL.
+Canonical stable origin:
 
-## Owner evidence — 2026-09-17
+`https://tysiac-the-game.jozzpoly.workers.dev/`
 
-Owner tested real multiplayer using **desktop + mobile + bot** and recorded both perspectives.
+Repository deployment selectors currently also point to `fddeafbe...`.
 
-Owner verdict:
+Golden does **not** mean perfect. It means: this is the last empirically evaluated control whose accepted qualities must not be silently lost.
 
-> `w sumie jest już całkiem spoko`
->
-> `najwiekszym problemem że na mobilce laguje, mohło by być też bardziej responsywnie`
->
-> `ogolnie taki stan jest już bliski bycia okej i do zakonczenia tymczasowego projektu`
+### Experimental delta — B1 / PR #62
 
-This changes project priority decisively:
+Exact SHA:
 
-- broad feature/presentation expansion: **STOP**;
-- stabilization/documentation/cleanup: **NOW**;
-- mobile performance + responsiveness campaign: **NEXT / primary engineering work**;
-- final Owner confirmation: after performance candidate;
-- stable promotion + real friend gate: only after that confirmation;
-- project freeze: immediately after successful final friend gate and closeout evidence.
+`4e01a29e483a7a3ebf7dfc55750ed5726e43739c`
 
-The Owner is not expected to validate exact Tysiąc rules. Automated game-truth evidence remains responsible for rules/legality/scoring regressions; Owner testing is primarily experience and real-use evidence.
+PR #62: `refactor/card-presentation-coherence`
 
-## Magnetic takeover experiment — intentionally closed
+Status: **experiment / not Owner-promoted**.
 
-PR #54 (`Run05: make magnetic card takeover visible and reversible`) was closed without merge after repeated executable failure in the table-takeover reversal contract.
+Runtime delta from B0 is limited to:
 
-The experiment produced useful harness fixes and diagnosis but was not allowed to block release. Current main therefore retains the already-qualified spatial/magnetic affordance behavior, not the stronger reversible visual takeover experiment.
+- `src/presentation/TactileHand.tsx`;
+- `src/presentation/ownerMagnetismBridge.ts`;
+- `src/presentation/tactileInteraction.ts`.
 
-Do not reopen this before project closure unless Owner evidence shows it is genuinely release-blocking.
+Its main hypotheses are:
 
-## Stable origin / historical recovery candidate
+- coalesce drag publication to at most one React update per animation frame;
+- make TactileHand the single owner of ordinary-table attraction;
+- separate early visual assist from accepted-table magnet feedback;
+- make a real desktop pointer tap activate the card directly rather than depending on the browser's synthesized click.
 
-Canonical account-owned origin remains:
+Important causal boundary: `TactileHand` is used for the human/private hand. This PR does not change opponent-card rendering, `RemoteRoom` playback, trick-presentation timers or bot scheduling.
 
-`https://tysiac-the-game.jozzpoly.workers.dev`
+### Experimental delta — B2 / PR #63
 
-It currently preserves the historical recovery candidate:
+Exact SHA:
 
-`52450baa04f22646474bf4676f70b2df5ba6812f`
+`5e348a3c9f85df16923ebccc606e8a42072c033f`
 
-That build remains valuable persistence/recovery evidence but is **not the final product candidate anymore**. Do not spend Owner/friend attention testing that old presentation build now.
+PR #63: `experiment/c2-a1-material-geometry`
 
-The real-human friend gate is intentionally deferred until the post-performance final candidate is selected and deployed to the same stable origin. Stable deployment must still use exact immutable product SHA + current validation-harness evidence per `docs/DEPLOYMENT.md`.
+Status: **machine-qualified, Owner experience FAIL as a whole**.
 
-### Friend-link incident OPEN / P0 BLOCKER
+Its only product-runtime delta from B1 is:
 
-This incident status remains open **only because the required real-human Owner + friend evidence has not yet happened**. Automated recovery/persistence evidence is strong; this heading is retained as an explicit release safety contract, not as a claim that copied links are currently known broken.
+`src/run06-mobile-composition.css`
 
-The bounded real-human gate is deliberately deferred until after the final mobile-performance candidate is Owner-approved and promoted to the canonical stable origin. The final session must still demonstrate create → exact copied invite → friend join → at least one shared legal action → refresh/reconnect. Until that happens, automation cannot close the incident or the final release gate.
+The material-geometry changes are inside `@media (max-width: 760px)`. Other changed files in PR #63 are diagnostic/test harnesses.
 
-## Protected foundation
+Therefore a reproducible **desktop** automatic-table-flow regression cannot be causally assigned to C2 mobile geometry.
 
-Strong current evidence exists for:
+### Quarantined false-cause experiment — PR #64
 
-- deterministic pure TypeScript core;
-- canonical legality/reducer path;
-- scoped events and scoring tests;
-- per-seat projection/privacy;
-- Worker + SQLite Durable Object `MatchRoom`;
-- hibernating WebSockets and reconnect;
-- opaque private seat credentials separate from room code;
-- same-origin WebSocket path;
-- shared human/bot command model;
-- exact copied-invite flow;
-- desktop/mobile browser scenarios;
-- physical deal/talon/exchange/marriage/trick presentation;
-- viewer-relative opponent seat topology;
-- causal opponent-card motion;
-- tactile/permissive hand and authoritative handoff behavior.
+PR #64 was created after an incorrect diagnosis that older global card-cadence values had returned.
 
-Final performance work may change implementation details, but must not silently weaken these boundaries.
+That diagnosis is falsified: B0, B1 and B2 retain the same relevant product pacing/timer implementation. PR #64 may be mechanically green, but it has no causal authority and must not be treated as the current fix or roadmap.
 
-## Active blocker
+Keep it quarantined unless later evidence independently justifies some part of it.
 
-### P0 experience blocker — mobile performance / responsiveness
+## Regression forensics — evidence as of 2026-09-20
 
-Owner reports real mobile lag and insufficient responsiveness even after the cadence improvement.
+### What is established
 
-Two Owner recordings exist from the same real multiplayer session:
+The relevant global table/pacing implementation did not change between B0 and B2 in the files previously suspected during the failed diagnosis.
 
-- desktop recording: ~176.7 s, 1918×906, fixed 30 FPS capture;
-- mobile recording: ~174.4 s, 576×1280, variable-frame-rate capture.
+Foundation remote-playback measurements from the three checkpoints were:
 
-The mobile recording contains highly variable frame timestamps, but many of the largest timestamp gaps occur while the image is effectively static. Therefore **screen-recording timestamps are not valid browser-FPS proof**. They justify investigation but do not identify the runtime bottleneck.
+- B0 / #61: ~292.2 ms observed revision spacing;
+- B1 / #62: ~285.4 ms;
+- B2 / #63: ~298.1 ms.
 
-The performance campaign must instrument the running game on the actual phone before making broad visual compromises.
+These values do not establish a material authoritative-playback speed regression.
 
-## Deferred / non-blocking debts
+PR #62 affects local human-card interaction/presentation ownership. It does not own automatic opponent-card playback.
 
-These do not block temporary project closure unless new evidence promotes them:
+PR #63 adds only mobile presentation CSS at runtime, scoped below 760 px.
 
-- distributed CSS ownership across historical visual layers;
-- many stale historical/experiment branches;
-- explicit Durable Object room expiry/cleanup policy;
-- Node action-version deprecation warnings;
-- Wrangler minor update availability;
-- stronger reversible magnetic takeover;
-- additional presentation polish beyond Owner's finish threshold.
+Full remote solo rehearsal total elapsed times are **not** an apples-to-apples cadence benchmark: the rehearsal traverses different game paths and deliberately caps browser timeouts for fast automation. Do not use its total duration as feel evidence.
 
-Branch cleanup should be conservative before freeze: delete only branches proven merged/obsolete; preserve historical branches when ancestry/value has not been checked.
+### What is not established
 
-## Immediate direction
+The Owner-observed regression is real experience evidence, but its exact technical cause is still **unproven**.
 
-1. finish this short stabilization/documentation pass;
-2. execute `docs/PERFORMANCE_CAMPAIGN.md` as the last substantial engineering campaign;
-3. publish one new temporary preview of the exact optimized candidate;
-4. Owner performs a short desktop/mobile feel test, with mobile primary;
-5. if Owner says the result is sufficiently good, select that exact SHA as the final candidate;
-6. deploy it through `Stable Multiplayer Deploy` to the canonical account-owned origin;
-7. Owner + real friend perform one bounded create → copied invite → join → shared action → refresh/reconnect session;
-8. record final PASS/known limitations, freeze project, and stop development.
+In particular, do not currently claim that the cause is:
 
-The governing principle now is **finishability**: fix measured blockers, preserve defended foundations, and refuse nonessential scope expansion.
+- PR #55 cadence constants;
+- PR #63 mobile material geometry;
+- PR #62 as a whole;
+- Cloudflare/stable deployment;
+- browser performance;
+- bot scheduling.
+
+Those remain candidates only if direct evidence connects them to the same reproduced scenario.
+
+If the observed regression is specifically automatic `bot → bot → collect → next trick` flow on desktop, current code-delta evidence says the cause is not explained by B1/B2 product changes. The next comparison must therefore first rule out scenario/mode/state/environment mismatch before editing timing again.
+
+If the regression is specifically local human card pickup/tap/drag/handoff feel, B1 is a plausible causal boundary and its three interaction changes should be isolated separately.
+
+## Current gate
+
+**STOP broad product development.**
+
+Do not:
+
+- continue C2 merely because it is newer;
+- merge #62/#63/#64;
+- tune cadence by intuition;
+- clean up presentation architecture while the control boundary is unresolved;
+- redeploy the stable friend origin;
+- replace the Golden stable candidate.
+
+Machine-green experiments remain experiments until the relevant experience evidence promotes them.
+
+## Active forensic campaign
+
+### F0 — preserve the control
+
+Keep `fddeafbe...` frozen and stable. No product mutation is required to preserve it.
+
+### F1 — exact scenario reconstruction
+
+Reconstruct the Owner-observed regression as an apples-to-apples comparison using the same:
+
+- mode / human-seat arrangement;
+- browser and device class;
+- viewport/fullscreen state;
+- game phase and action sequence;
+- network/local-vs-remote path where relevant.
+
+Capture separately:
+
+1. automatic table flow — opponent arrival, consecutive opponent actions, third-card dwell, resolution, collection, next initiative;
+2. local interaction — pointer/touch down, carry, assist/magnet, release, command acceptance, authoritative handoff;
+3. geometry/object identity — hand → carried card → table, exchange, 7→10→8 transitions;
+4. frame/input behavior — only where actual runtime evidence implicates performance.
+
+Do not mix these clocks under one word such as "timing".
+
+### F2 — B0/B1/B2 causal localization
+
+Compare:
+
+- B0 = `fddeafbe...`;
+- B1 = `4e01a29e...`;
+- B2 = `5e348a3c...`.
+
+If B0 and B1 differ only in local interaction feel, split #62 into independently testable hypotheses:
+
+- rAF drag coalescing;
+- magnet/assist ownership;
+- physical pointer-tap activation / handoff path.
+
+If automatic table flow differs despite identical relevant product code, investigate runtime/scenario/provenance first rather than inventing another timing patch.
+
+### F3 — reconstruct the next candidate from Golden
+
+Do not continue linearly from B2.
+
+The next candidate is:
+
+**Golden B0 + only individually qualified deltas that demonstrate a concrete improvement without losing accepted qualities.**
+
+Rejected or ambiguous deltas remain donors, not inherited state.
+
+## After regression recovery
+
+Only after the candidate is at least as good as Golden in the properties the Owner values, resume the remaining real feedback:
+
+- improve readability/dwell of fast opponent actions where evidence still says it is needed;
+- consider deliberate tap-to-accelerate/skip rather than globally rushing automatic flow;
+- preserve/extend the pleasant mobile tap-to-table interaction on desktop;
+- eliminate unnatural scale/aspect changes during transfers;
+- improve card object continuity and "mięsistość";
+- preserve material opacity;
+- address mobile jank only from measured runtime evidence;
+- clean presentation ownership/CSS debt only where it lowers actual regression or iteration risk.
+
+Then:
+
+1. focused Owner desktop/mobile test;
+2. select one exact final product SHA;
+3. promote that exact SHA through the stable deployment contract;
+4. perform the bounded real-human stable-origin friend gate;
+5. record known limitations and freeze the temporary project.
+
+## Friend-link incident status
+
+Operational recovery is strong: account-owned origin, exact SHA provenance, real copied-invite automation and no-redeploy rechecks exist.
+
+The incident/release gate remains formally open until the required real-human session is explicitly evidenced on the final stable candidate. Prior friend feedback on Golden is valuable experience/domain evidence but must not be silently promoted into a different operational claim.
+
+## Working rule for future `kontynuuj`
+
+A short `kontynuuj` means:
+
+1. recover this execution state and verify any mutable live facts that matter;
+2. identify the highest-value unresolved gate;
+3. take the safest reversible evidence-producing next action;
+4. do not advance an experiment merely because it is the newest branch;
+5. stop and update authority when new evidence falsifies the current model.
+
+Current next action: **finish F1/F2 regression forensics before any new product change.**
