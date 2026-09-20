@@ -101,6 +101,8 @@ Hard rules:
 - stable deployment uses the account-owned authenticated normal deploy path;
 - stable deployment must accept and checkout one exact immutable `candidate_sha` rather than relying on branch selection;
 - the public runtime must report that exact SHA and deployment class;
+- server/origin provenance and already-loaded browser-client provenance are different facts; a server `buildSha` must not be used to infer the code executing in a pre-existing SPA tab;
+- when comparing behavior across a stable redeploy at the same URL, control loaded-client identity through a fresh document or explicit client-build identity/mismatch detection;
 - public multiplayer behavior and exact UI-copied invite are separate evidence checks;
 - long-horizon evidence must recheck the same origin/SHA later **without redeploying**;
 - automation cannot close the friend milestone: real Owner+friend create/copy/open/join/play evidence is mandatory;
