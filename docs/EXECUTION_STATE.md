@@ -194,6 +194,10 @@ Golden B0 `fddeafbe...` contains the later faster cadence:
 - local trick bot delay: **320 ms**;
 - completion thresholds: **175 / 310 / 500 / 650 ms**.
 
+The exact slow→fast source transition is commit `7c5d9d2b2e31d5e2ee5f8772e3d4664daac546ec` / PR #55, `Release: tighten table cadence for final friend build`. Its diff explicitly changes `520→320`, `480→300`, `680→500`, `900→720` and `220/390/620/820→175/310/500/650`.
+
+This resolves the earlier analytical contradiction: PR #55 is a real cadence transition, but it is **not** a B0→B2 regression cause because B0 already contains that transition. It matters here only because the previous stable client `52450baa...` predates the faster cadence while Golden B0 contains it.
+
 This yields a concrete new hypothesis for the apparent contradiction "friend link is slow while B0/B2 code is fast":
 
 > an already-open SPA tab from the previous stable `52450baa...` deployment could continue executing its already-loaded slow JavaScript bundle after the canonical Worker origin was redeployed to `fddeafbe...`.
