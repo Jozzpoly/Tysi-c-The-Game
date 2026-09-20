@@ -207,12 +207,15 @@ requireMatch('deployment authority', deploymentDoc, /exact.*candidate.*SHA/isu);
 requireMatch('deployment authority', deploymentDoc, /validation harness/iu);
 requireMatch('deployment authority', deploymentDoc, /product.*SHA/isu);
 requireMatch('deployment authority', deploymentDoc, /canonical.*workers\.dev/isu);
+requireMatch('deployment authority', deploymentDoc, /Loaded-client identity is a third, separate runtime fact/u);
+requireMatch('deployment authority', deploymentDoc, /server.*buildSha.*loaded client/isu);
 requireMatch('deployment authority', deploymentDoc, /stable-candidate\.txt/u);
 requireMatch('deployment authority', deploymentDoc, /stable-recheck\.json/u);
 requireMatch('incident authority', incident, /FAIL \/ NOT COMPLETE \/ P0 BLOCKER/u);
 requireMatch('incident authority', incident, /Automation is necessary but is not sufficient/iu);
 requireMatch('incident authority', incident, /contradictory lifecycle evidence was known/iu);
-requireMatch('execution authority', executionState, /Friend-link incident OPEN \/ P0 BLOCKER/u);
-requireMatch('execution authority', executionState, /Operations \/ external truth/u);
+requireMatch('execution authority', executionState, /Regression recovery inside finalization/u);
+requireMatch('execution authority', executionState, /Golden Owner\/Friend baseline/u);
+requireMatch('execution authority', executionState, /Friend-link incident status/u);
 
 console.log('deployment contract smoke: PASS');
