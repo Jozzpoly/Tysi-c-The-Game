@@ -290,13 +290,16 @@ async function runViewport(label, width, height, mobile) {
       method: 'POST', body: JSON.stringify({ url: `${BASE_URL}?seed=1&seat=0` }),
     });
     await waitFor(`${label}: auction`, () => execute(session, `return document.querySelector('.decision-card h2')?.textContent?.trim() === 'Twoja licytacja';`));
+    // Start before auction resolution so the same trace also captures any
+    // ordinary opponent plays that happen before the first human trick action.
+    await installLifecycleTrace(session);
     await clickButtonStartingWith(session, 'Pas');
     await waitFor(`${label}: first human trick action`, () => execute(session, `
       return document.querySelector('.decision-card h2')?.textContent?.trim() === 'Twój ruch'
         && document.querySelector('.hand .card:not(:disabled)') !== null;
     `), 25_000);
 
-    await installLifecycleTrace(session);
+    const preHumanPlayed = await execute(session, `return document.querySelectorAll('.trick .played').length;`);
     await clickFirstPlayableCard(session);
 
     const resolve = await waitFor(`${label}: resolve`, () => stageState(session, 'resolve'), 8_000);
@@ -441,6 +444,19 @@ async function runViewport(label, width, height, mobile) {
     if (layout.scrollWidth > layout.width + 1) throw new Error(`${label}: horizontal overflow after settle`);
 
     const lifecycleTrace = await trace(session);
+    const ordinaryFreshEntries = [];
+    for (const entry of lifecycleTrace) {
+      if (entry.kind !== 'ordinary-play' || !entry.freshPlay) continue;
+      const previous = ordinaryFreshEntries.at(-1);
+      if (!previous || previous.freshPlay !== entry.freshPlay) ordinaryFreshEntries.push(entry);
+    }
+    const ordinaryPlaySpacingMs = ordinaryFreshEntries.slice(1).map((entry, index) =>
+      Number((entry.t - ordinaryFreshEntries[index].t).toFixed(1)));
+    const ordinaryPlayTrace = ordinaryFreshEntries.map((entry) => ({
+      freshPlay: entry.freshPlay,
+      playedCount: entry.played.length,
+    }));
+
     const completionEntries = lifecycleTrace.filter((entry) => entry.kind === 'trick-completion');
     const stages = completionEntries.map((entry) => entry.stage);
     for (const required of ['arrival', 'resolve', 'collect', 'consequence', 'settled']) {
@@ -493,6 +509,9 @@ async function runViewport(label, width, height, mobile) {
       initiativeSeat: consequence.markers.find((marker) => marker.initiative)?.seat ?? '',
       nextTrickCardsObserved: persistent.played,
       presentationExpired: persistent.presentationKind !== 'trick-completion',
+      preHumanPlayed,
+      ordinaryPlayTrace,
+      ordinaryPlaySpacingMs,
       stages,
       stageTimingMs,
     };
