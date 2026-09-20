@@ -454,6 +454,21 @@ async function runViewport(label, width, height, mobile) {
       throw new Error(`${label}: lifecycle out of order ${JSON.stringify(stages)}`);
     }
 
+    const firstEntry = (stage) => completionEntries.find((entry) => entry.stage === stage);
+    const arrivalEntry = firstEntry('arrival');
+    const resolveEntry = firstEntry('resolve');
+    const collectEntry = firstEntry('collect');
+    const consequenceEntry = firstEntry('consequence');
+    const settledEntry = firstEntry('settled');
+    const deltaMs = (from, to) => from && to ? Number((to.t - from.t).toFixed(1)) : null;
+    const stageTimingMs = {
+      arrivalToResolve: deltaMs(arrivalEntry, resolveEntry),
+      resolveToCollect: deltaMs(resolveEntry, collectEntry),
+      collectToConsequence: deltaMs(collectEntry, consequenceEntry),
+      consequenceToSettled: deltaMs(consequenceEntry, settledEntry),
+      arrivalToSettled: deltaMs(arrivalEntry, settledEntry),
+    };
+
     return {
       label,
       freshPlay: resolve.freshPlay,
@@ -479,6 +494,7 @@ async function runViewport(label, width, height, mobile) {
       nextTrickCardsObserved: persistent.played,
       presentationExpired: persistent.presentationKind !== 'trick-completion',
       stages,
+      stageTimingMs,
     };
   } finally {
     try { await webdriver(`/session/${session}`, { method: 'DELETE' }); } catch {}
