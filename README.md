@@ -6,30 +6,23 @@ Browser-first Tysiąc for desktop and mobile: private friend tables, bots, expli
 
 ## Current live state
 
-The project is currently under **P0 external-readiness recovery** after the 2026-09-15 friend-link incident.
+The account-owned canonical stable origin exists and is currently pinned to an immutable Owner/Friend control specimen. The project is in **finalization regression recovery**, not broad feature development.
 
-A temporary Cloudflare preview was incorrectly treated as if it satisfied the Owner's explicit requirement for a durable friend link even though the repository already identified that preview as unclaimed and expected to expire.
+The 2026-09-15 friend-link incident remains an important open acceptance contract until the final stable candidate passes the required real Owner+friend session. Operational recovery since that incident already established exact-SHA deployment, canonical account-owned origin, public provenance, copied-invite evidence and no-redeploy rechecks.
 
-Therefore:
+The active blocker is different: later presentation experiments were incorrectly treated as linear progress and an Owner-reported pacing regression was initially misdiagnosed. Current work therefore uses a Golden experimental-control model and separates serving-origin provenance from the JavaScript bundle already loaded in a browser tab.
 
-- old broad friend-link `ready/stable/verified` claims are invalidated;
-- external friend-test status is **FAIL / NOT COMPLETE**;
-- temporary previews are diagnostics only;
-- stable deployment must use an account-owned non-temporary origin and one exact immutable candidate SHA;
-- later no-redeploy evidence and a real Owner+friend session are required before PASS.
-
-Do not infer current readiness from an old green workflow or an old public URL.
+Do not infer current product authority from `main`, recency, a green PR or an old browser tab.
 
 ## Read current authority first
 
-1. [`docs/EXECUTION_STATE.md`](docs/EXECUTION_STATE.md) — compact live state.
-2. [`docs/INCIDENT_2026-09-15_FRIEND_LINK.md`](docs/INCIDENT_2026-09-15_FRIEND_LINK.md) — open P0 incident and acceptance gate.
-3. [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) — deployment classes and exact evidence contract.
-4. [`AGENTS.md`](AGENTS.md) — Owner/agent and verification rules.
-5. [`docs/RUN05_PHYSICAL_TABLE_V2.md`](docs/RUN05_PHYSICAL_TABLE_V2.md) — current presentation direction now integrated into `main`.
-6. [`docs/PROJECT.md`](docs/PROJECT.md) — durable product/architecture model.
+1. [`docs/EXECUTION_STATE.md`](docs/EXECUTION_STATE.md) — exact Golden SHA, live experimental state, measured regression evidence and next gate.
+2. [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) — deployment classes, serving-origin/client-provenance distinction and friend-release evidence contract.
+3. [`docs/INCIDENT_2026-09-15_FRIEND_LINK.md`](docs/INCIDENT_2026-09-15_FRIEND_LINK.md) — historical incident and still-required real-human closeout gate.
+4. [`AGENTS.md`](AGENTS.md) — durable Owner/agent, experimental-control and verification laws.
+5. [`docs/PROJECT.md`](docs/PROJECT.md) — durable product/architecture model.
 
-Historical run/handoff documents and closed donor PRs are context, not current authority.
+Run documents, handoffs and experiment PRs are context/donors unless `EXECUTION_STATE.md` explicitly grants them current authority.
 
 ## Product thesis
 
