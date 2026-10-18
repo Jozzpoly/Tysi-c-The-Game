@@ -152,37 +152,31 @@ If available evidence contradicts a critical required property, the stage is `FA
 
 Status language must be property-scoped rather than broad.
 
-## Development history / current sequence
+## Development history / execution boundary
 
-### Foundation Run 01 — historical defended foundation
+The durable development story is:
 
-Established deterministic core, candidate-rule scenarios, projection/privacy boundary, accountless room lifecycle, reconnect, bots, Worker/Durable Object authority and browser feasibility.
+- the foundation established deterministic game authority, hidden-state/privacy boundaries, accountless room lifecycle, reconnect, bots and browser feasibility;
+- later work split evidence into game truth, Owner-led experience truth and operations/external truth;
+- Run 04/05 evolved the presentation toward cards as material objects with causal spatial continuity;
+- the friend-link incident established the exact-SHA/stable-origin/no-redeploy evidence contract;
+- finalization work then produced an Owner/Friend-evaluated mobile/desktop baseline and subsequent presentation experiments.
 
-### Run 02 — historical evidence split
+**Do not encode the mutable current branch sequence in this durable document.**
 
-Established the useful distinction between game truth and Owner-led experience truth and hardened multiple rules/UX/browser slices.
+The current Golden baseline, experimental deltas, rejected/quarantined work, active blocker and next execution step live only in `docs/EXECUTION_STATE.md`.
 
-Its detailed execution plan is historical, not the current roadmap.
+This separation is deliberate: product/architecture intent should remain durable while execution authority can change quickly without turning stale history into a false roadmap.
 
-### Friend Preview campaign — gate failed/reopened
+The durable finalization model is:
 
-The campaign correctly required a stable public link and Owner acceptance before sending a candidate to a friend.
-
-That stable-link gate was not actually satisfied even though later reporting claimed readiness. The 2026-09-15 incident reopens external readiness as P0.
-
-### Run 05 — active presentation experiment
-
-Run 05 / PR #23 evolves the table toward a more physical digital-card language while preserving game authority.
-
-Current order:
-
-1. land the bounded recovery infrastructure into `main`;
-2. keep active Run 05 candidate green;
-3. deploy one exact Run 05 candidate SHA through the account-owned stable workflow;
-4. verify public provenance, runtime and exact copied invite;
-5. later recheck the same origin/SHA without redeploying;
-6. complete the real Owner+friend test;
-7. only then resume broad Owner-led presentation iteration and controlled technical-debt cleanup.
+1. preserve the strongest Owner-evaluated control specimen;
+2. test presentation changes as bounded evidence-producing deltas rather than assuming newer means better;
+3. promote only changes that preserve defended game/operations boundaries and improve the relevant experience property;
+4. select one immutable final product SHA;
+5. deploy that SHA through the account-owned stable contract;
+6. complete the real-human stable-origin friend gate;
+7. record limitations, freeze the project and stop nonessential development.
 
 ## Primary project risks
 
