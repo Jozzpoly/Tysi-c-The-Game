@@ -59,7 +59,7 @@ async function createSession() {
         alwaysMatch: {
           browserName: 'chrome',
           'goog:chromeOptions': {
-            args: ['--headless=new', '--no-sandbox', '--disable-dev-shm-usage', '--disable-gpu', '--window-size=390,844'],
+            args: ['--headless=new', '--no-sandbox', '--disable-dev-shm-usage', '--disable-gpu', '--window-size=384,718'],
           },
         },
       },
@@ -82,7 +82,7 @@ async function cdp(session, cmd, params = {}) {
 
 async function emulateMobile(session) {
   await cdp(session, 'Emulation.setDeviceMetricsOverride', {
-    width: 390, height: 844, screenWidth: 390, screenHeight: 844,
+    width: 384, height: 718, screenWidth: 384, screenHeight: 718,
     deviceScaleFactor: 1, mobile: true, positionX: 0, positionY: 0,
     dontSetVisibleSize: false,
   });
@@ -333,7 +333,16 @@ async function cardGeometry(session) {
       const x = rect.left + rect.width / 2;
       const y = rect.top + rect.height / 2;
       const hit = document.elementFromPoint(x, y)?.closest?.('button.card');
+      const slot = node.closest('.hand-slot');
+      const touchTarget = slot?.querySelector(':scope > .hand-touch-target');
+      const touchRect = touchTarget?.getBoundingClientRect() ?? null;
+      const touchX = touchRect ? touchRect.left + touchRect.width / 2 : null;
+      const touchY = touchRect ? touchRect.top + touchRect.height / 2 : null;
+      const touchHitSlot = touchX === null || touchY === null
+        ? null
+        : document.elementFromPoint(touchX, touchY)?.closest?.('.hand-slot');
       const style = getComputedStyle(node);
+      const touchStyle = touchTarget ? getComputedStyle(touchTarget) : null;
       return {
         index,
         label: node.getAttribute('aria-label'),
@@ -341,11 +350,75 @@ async function cardGeometry(session) {
         width: rect.width,
         height: rect.height,
         centerHitsSelf: hit === node,
+        touchX,
+        touchY,
+        touchWidth: touchRect?.width ?? 0,
+        touchHeight: touchRect?.height ?? 0,
+        touchHitsSelf: Boolean(slot && touchHitSlot === slot),
+        touchPointerEvents: touchStyle?.pointerEvents ?? '',
         userSelect: style.userSelect,
         touchAction: style.touchAction,
       };
     });
   `);
+}
+
+async function compactViewportGeometry(session) {
+  return execute(session, `
+    const app = document.querySelector('.app-shell');
+    const topbar = document.querySelector('.topbar');
+    const hand = document.querySelector('.tactile-hand');
+    const decision = document.querySelector('.decision-card');
+    const cards = [...document.querySelectorAll('.tactile-hand > .hand-slot > .card')];
+    const cardRects = cards.map((node) => node.getBoundingClientRect());
+    const handRect = hand?.getBoundingClientRect() ?? null;
+    const topbarRect = topbar?.getBoundingClientRect() ?? null;
+    const decisionRect = decision?.getBoundingClientRect() ?? null;
+    return {
+      phase: app?.getAttribute('data-phase') ?? '',
+      innerWidth,
+      innerHeight,
+      scrollHeight: document.documentElement.scrollHeight,
+      bodyScrollHeight: document.body.scrollHeight,
+      topbarHeight: topbarRect?.height ?? 0,
+      handTop: handRect?.top ?? null,
+      handBottom: handRect?.bottom ?? null,
+      cardTop: cardRects.length ? Math.min(...cardRects.map((rect) => rect.top)) : null,
+      cardBottom: cardRects.length ? Math.max(...cardRects.map((rect) => rect.bottom)) : null,
+      minCardHeight: cardRects.length ? Math.min(...cardRects.map((rect) => rect.height)) : 0,
+      decisionTop: decisionRect?.top ?? null,
+      decisionBottom: decisionRect?.bottom ?? null,
+      fullscreenControl: Boolean(document.querySelector('.fullscreen-toggle')),
+      fullscreenEnabled: Boolean(document.fullscreenEnabled || document.documentElement.requestFullscreen),
+    };
+  `);
+}
+
+function assertCompactPhysicalViewport(label, geometry) {
+  if (geometry.innerWidth !== 384 || geometry.innerHeight !== 718) {
+    throw new Error(`${label}: wrong compact viewport ${JSON.stringify(geometry)}`);
+  }
+  if (!['exchange', 'trick'].includes(geometry.phase)) {
+    throw new Error(`${label}: unexpected phase ${JSON.stringify(geometry)}`);
+  }
+  if (geometry.scrollHeight > geometry.innerHeight + 2 || geometry.bodyScrollHeight > geometry.innerHeight + 2) {
+    throw new Error(`${label}: physical play still vertically scrolls ${JSON.stringify(geometry)}`);
+  }
+  if (geometry.minCardHeight < 124) {
+    throw new Error(`${label}: private hand still visually undersized ${JSON.stringify(geometry)}`);
+  }
+  if (geometry.cardTop === null || geometry.cardBottom === null || geometry.cardTop < -2 || geometry.cardBottom > geometry.innerHeight + 2) {
+    throw new Error(`${label}: private cards escape compact viewport ${JSON.stringify(geometry)}`);
+  }
+  if (geometry.decisionBottom !== null && geometry.cardTop !== null && geometry.decisionBottom > geometry.cardTop + 8) {
+    throw new Error(`${label}: decision materially overlaps private cards ${JSON.stringify(geometry)}`);
+  }
+  if (geometry.topbarHeight > 58) {
+    throw new Error(`${label}: game chrome is too tall ${JSON.stringify(geometry)}`);
+  }
+  if (geometry.fullscreenEnabled && !geometry.fullscreenControl) {
+    throw new Error(`${label}: fullscreen is supported but compact control is missing ${JSON.stringify(geometry)}`);
+  }
 }
 
 async function playZoneGeometry(session) {
@@ -369,17 +442,19 @@ async function exchangeDragGeometry(session, targetIndex) {
     const sourceSlot = [...document.querySelectorAll('.hand .hand-slot')]
       .find((slot) => !slot.classList.contains('is-exchange-staged'));
     const sourceCard = sourceSlot?.querySelector(':scope > .card');
+    const sourceTouch = sourceSlot?.querySelector(':scope > .hand-touch-target');
     const targets = [...document.querySelectorAll('[data-exchange-target-seat]')];
     const target = targets[${targetIndex}];
-    if (!sourceSlot || !sourceCard || !target) return null;
+    if (!sourceSlot || !sourceCard || !sourceTouch || !target) return null;
     const sourceRect = sourceCard.getBoundingClientRect();
+    const touchRect = sourceTouch.getBoundingClientRect();
     const targetRect = target.getBoundingClientRect();
     const targetX = targetRect.left + targetRect.width / 2;
     const targetY = targetRect.top + targetRect.height / 2;
     return {
       card: sourceSlot.getAttribute('data-card'),
       seat: target.getAttribute('data-exchange-target-seat'),
-      from: { x: sourceRect.left + sourceRect.width / 2, y: sourceRect.top + sourceRect.height / 2 },
+      from: { x: touchRect.left + touchRect.width / 2, y: touchRect.top + Math.min(touchRect.height - 8, Math.max(8, sourceRect.height * .56)) },
       to: { x: targetX, y: targetY },
       targetWidth: targetRect.width,
       targetHeight: targetRect.height,
@@ -417,10 +492,18 @@ async function run() {
 
     assertTouchControls('exchange controls', await enabledControlGeometry(session));
     const exchangeCards = await cardGeometry(session);
+    const exchangeViewport = await compactViewportGeometry(session);
+    assertCompactPhysicalViewport('exchange compact composition', exchangeViewport);
+    await screenshot(session, 'mobile-touch-exchange');
     if (exchangeCards.length !== 10) throw new Error(`expected 10 exchange cards, got ${exchangeCards.length}`);
     for (const card of exchangeCards) {
-      if (card.width < 47 || card.height < 68) throw new Error(`exchange card target too small ${JSON.stringify(card)}`);
-      if (!card.centerHitsSelf) throw new Error(`exchange card center occluded ${JSON.stringify(card)}`);
+      if (card.width < 47 || card.height < 124) throw new Error(`exchange card target too small ${JSON.stringify(card)}`);
+      if (card.touchWidth < 32 || card.touchHeight < 120) {
+        throw new Error(`exchange exposed touch territory too small ${JSON.stringify(card)}`);
+      }
+      if (!card.touchHitsSelf || card.touchPointerEvents === 'none') {
+        throw new Error(`exchange exposed touch territory is not independently hittable ${JSON.stringify(card)}`);
+      }
       if (card.userSelect !== 'none') throw new Error(`exchange card text selectable ${JSON.stringify(card)}`);
       if (card.touchAction !== 'manipulation') throw new Error(`exchange card touch-action ${JSON.stringify(card)}`);
     }
@@ -472,6 +555,9 @@ async function run() {
     await waitFor('playable hand', () => execute(session, `return document.querySelectorAll('.hand .card:not(:disabled)').length > 0;`));
 
     const playableCards = await cardGeometry(session);
+    const trickViewport = await compactViewportGeometry(session);
+    assertCompactPhysicalViewport('trick compact composition', trickViewport);
+    await screenshot(session, 'mobile-touch-trick');
     const playableCard = playableCards.find((card) => card.centerHitsSelf);
     if (!playableCard) throw new Error(`no physically hittable playable card after contract: ${JSON.stringify(playableCards)}`);
     const playZone = await playZoneGeometry(session);
@@ -490,7 +576,9 @@ async function run() {
       minCardWidth: Math.min(...exchangeCards.map((card) => card.width)),
       minCardHeight: Math.min(...exchangeCards.map((card) => card.height)),
       minSameRowCenterSpacing: minimumCenterSpacing(exchangeCards),
-      exchangeCentersHitCorrectCard: exchangeCards.every((card) => card.centerHitsSelf),
+      exchangeTouchTerritoriesHitCorrectCard: exchangeCards.every((card) => card.touchHitsSelf),
+      exchangeViewport,
+      trickViewport,
       firstDrop,
       secondDrop,
       contractValue: contractTouch.target.value,

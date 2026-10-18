@@ -289,6 +289,36 @@ async function publicAssetsReady() {
   return true;
 }
 
+async function publicRoomCreateReady() {
+  const response = await fetch(`${BASE_URL}/api/rooms`, {
+    method: 'POST',
+    cache: 'no-store',
+    headers: {
+      'cache-control': 'no-cache',
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({ mode: 'duo' }),
+  }).catch(() => null);
+  if (!response) return false;
+
+  // Temporary workers.dev publication can expose health/assets a little before
+  // every API route is converged. Retry only deployment-readiness classes; any
+  // other response is a real contract failure.
+  if (response.status === 404 || response.status >= 500) return false;
+
+  const body = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new Error(`public room-create readiness returned HTTP_${response.status}: ${JSON.stringify(body)}`);
+  }
+  return Boolean(
+    body
+    && /^[0-9A-HJKMNP-TV-Z]{12}$/u.test(body.room ?? '')
+    && typeof body.token === 'string'
+    && body.token.startsWith('ts1_')
+    && body.state?.status === 'lobby'
+  );
+}
+
 async function logDiagnostic(label, session) {
   if (!session) return;
   try {
@@ -310,6 +340,8 @@ await waitFor('public worker health', async () => {
 }, 90_000);
 
 await waitFor('public SPA assets', publicAssetsReady, 90_000);
+await waitFor('public room-create API readiness', publicRoomCreateReady, 90_000);
+console.log('public room-create API readiness: PASS');
 
 const driver = startDriver();
 let host;
