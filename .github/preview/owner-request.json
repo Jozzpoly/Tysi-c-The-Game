@@ -1,0 +1,8 @@
+{
+  "intent": "one-owner-preview",
+  "operation": "deploy",
+  "preview_name": "owner-reentry-20261020",
+  "product_parent_sha": "f2b5baa72bfb16d376bf8bd4e9fe5f38709a1721",
+  "stable_sha_must_remain": "fddeafbe2ef9b416c52f98cc5c9814bb2fb84f89",
+  "note": "This opt-in is branch-scoped; NEVER promote or mutate stable. Set operation delete to clean up later."
+}
