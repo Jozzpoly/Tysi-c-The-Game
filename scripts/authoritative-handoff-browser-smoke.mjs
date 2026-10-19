@@ -281,7 +281,9 @@ async function runViewport(label, width, height, mobile) {
 
     await touch(session, 'touchEnd', []);
 
-    const final = await waitFor(`${label}: authoritative handoff completion`, () => execute(session, `
+    let final;
+    try {
+      final = await waitFor(`${label}: authoritative handoff completion`, () => execute(session, `
       const id = ${JSON.stringify(playable.card)};
       const target = document.querySelector('.played-self[data-card="' + id + '"]');
       const ghost = document.querySelector('.tactile-card-float.pending-handoff[data-card-id="' + id + '"]');
@@ -292,6 +294,29 @@ async function runViewport(label, width, height, mobile) {
         sourceStillInHand: Boolean(document.querySelector('.hand-slot[data-card="' + id + '"]')),
       };
     `), 5_000);
+    } catch (failure) {
+      const diagnostic = await execute(session, `
+        const id = ${JSON.stringify(playable.card)};
+        const target = document.querySelector('.played-self[data-card="' + id + '"]');
+        const ghost = document.querySelector('.tactile-card-float.pending-handoff[data-card-id="' + id + '"]');
+        const source = document.querySelector('.hand-slot[data-card="' + id + '"]');
+        const recent = (window.__handoffTrace || []).slice(-30);
+        return {
+          card: id,
+          target: target ? { className: target.className, opacity: getComputedStyle(target).opacity, visible: Boolean(target.getClientRects().length) } : null,
+          ghost: ghost ? { className: ghost.className, authority: ghost.dataset.authorityState, phase: ghost.dataset.gesturePhase } : null,
+          sourcePresent: Boolean(source),
+          decision: document.querySelector('.decision-card h2')?.textContent?.trim() ?? '',
+          revisionText: [...document.querySelectorAll('.footer span')].map(e => e.textContent?.trim()).find(t => /^rev \\d+$/.test(t)),
+          traceLength: (window.__handoffTrace || []).length,
+          everComplete: (window.__handoffTrace || []).some(e => e.targetComplete),
+          everAuthority: (window.__handoffTrace || []).some(e => e.authority === 'handoff'),
+          recent,
+        };
+      `).catch((error) => ({ diagnosticFailed: String(error) }));
+      console.error(`${label}: handoff forensic on failed exact wait: ${JSON.stringify(diagnostic)}`);
+      throw failure;
+    }
 
     await sleep(40);
     const afterRevision = await revision(session);
