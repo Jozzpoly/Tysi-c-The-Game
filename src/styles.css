@@ -16,6 +16,11 @@ button { touch-action: manipulation; }
 .home-card > p, .room-card > p { margin: 0 0 22px; color: #b9c9be; line-height: 1.55; }
 .home-guide-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: -6px 0 16px; padding: 10px 12px; border: 1px solid #ffffff17; border-radius: 12px; background: #ffffff08; color: #b9c9be; font-size: .88rem; }
 .home-guide-row > .rules-trigger { flex: 0 0 auto; }
+.recent-table { display: grid; gap: 7px; margin: 4px 0 16px; }
+.recent-table-button { width: 100%; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 5px 14px; padding: 13px 16px; background: #132f20; border-color: #8fbfa05b; text-align: left; }
+.recent-table-button strong { color: #f0f4e8; font-size: 1rem; }
+.recent-table-button span { color: #c7dfcc; font-size: .78rem; letter-spacing: .045em; overflow-wrap: anywhere; }
+.recent-table small { color: #a2b7a7; }
 .mode-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 22px 0; }
 .mode-card { min-height: 112px; display: grid; align-content: center; justify-items: start; gap: 5px; text-align: left; }
 .mode-card strong { font-size: 1rem; }
