@@ -6,6 +6,7 @@ import {
   assertCoreInvariants,
   createMatch,
   eventsForSeat,
+  type CardId,
   productBotCommand,
   projectSeat,
   type Command,
@@ -14,6 +15,7 @@ import {
   type Seat,
   type SeatProjection,
 } from '../src/core/index.js';
+import { secureShuffledDeck } from './secure-deck.js';
 
 const ROOM_KEY = 'room';
 const MAX_RECEIPTS = 256;
@@ -219,7 +221,8 @@ function settleBotTurns(initial: MatchState, seats: StoredSeats): Transition[] {
     const actor = actingSeat(state);
     if (actor === null || seats[actor].role !== 'bot') return transitions;
 
-    const applied = applyCommand(state, productBotCommand(state, actor));
+    const command = productBotCommand(state, actor);
+    const applied = applyCommand(state, command, command.type === 'request-redeal' ? secureShuffledDeck() : undefined);
     if (!applied.ok) throw new Error(`SERVER_BOT_REJECTED:${applied.reason ?? 'UNKNOWN'}`);
     assertCoreInvariants(applied.state);
     state = applied.state;
@@ -232,7 +235,7 @@ function settleBotTurns(initial: MatchState, seats: StoredSeats): Transition[] {
 function maybeStartRoom(room: StoredRoom, seed: number): { room: StoredRoom; startEvents: GameEvent[] } {
   if (room.state !== null || room.seats.some((seat) => seat.role === 'open')) return { room, startEvents: [] };
 
-  let state = createMatch(PLAYOK_3P_800_CANDIDATE, seed, 0);
+  let state = createMatch(PLAYOK_3P_800_CANDIDATE, seed, 0, secureShuffledDeck());
   assertCoreInvariants(state);
   const botTransitions = settleBotTurns(state, room.seats);
   if (botTransitions.length > 0) state = botTransitions.at(-1)!.state;
@@ -410,7 +413,10 @@ export class MatchRoom extends DurableObject<Env> {
         return { response: this.reject(room, seat, 'SEAT_COMMAND_MISMATCH') };
       }
 
-      const applied = applyCommand(room.state, envelope.command);
+      const deck: readonly CardId[] | undefined = envelope.command.type === 'next-hand' || envelope.command.type === 'request-redeal'
+        ? secureShuffledDeck()
+        : undefined;
+      const applied = applyCommand(room.state, envelope.command, deck);
       if (!applied.ok) return { response: this.reject(room, seat, applied.reason ?? 'COMMAND_REJECTED') };
       assertCoreInvariants(applied.state);
 
