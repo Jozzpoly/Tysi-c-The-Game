@@ -96,7 +96,7 @@ export function eventsForSeat(events: readonly GameEvent[], seat: Seat): GameEve
   return events.filter((event) => event.audience === 'public' || event.audience === seat);
 }
 
-export function applyCommand(original: MatchState, command: Command): ApplyResult {
+export function applyCommand(original: MatchState, command: Command, nextDeck?: readonly CardId[]): ApplyResult {
   if (original.status !== 'playing' && command.type !== 'next-hand') return failure(original, 'MATCH_COMPLETE');
   const state = cloneState(original);
   const hand = state.hand;
@@ -185,7 +185,7 @@ export function applyCommand(original: MatchState, command: Command): ApplyResul
     state.seed = shuffled.nextSeed;
     const dealer = fourNinesRules.redealKeepsDealer ? state.dealer : nextSeat(state.dealer);
     state.dealer = dealer;
-    state.hand = createHand(dealer, shuffled.deck, state.rules);
+    state.hand = createHand(dealer, nextDeck ?? shuffled.deck, state.rules);
     events.push({ type: 'four-nines-redeal', audience: 'public', seat: command.seat, handNumber: state.handNumber, dealer });
     return success(state, events);
   }
@@ -254,7 +254,7 @@ export function applyCommand(original: MatchState, command: Command): ApplyResul
     state.seed = shuffled.nextSeed;
     state.dealer = nextDealer;
     state.handNumber += 1;
-    state.hand = createHand(nextDealer, shuffled.deck, state.rules);
+    state.hand = createHand(nextDealer, nextDeck ?? shuffled.deck, state.rules);
     events.push({ type: 'hand-started', audience: 'public', handNumber: state.handNumber, dealer: nextDealer });
     return success(state, events);
   }

@@ -186,7 +186,7 @@ export function createHand(dealer: Seat, deck: readonly CardId[], rules: ThreePl
   };
 }
 
-export function createMatch(rules: ThreePlayerRules, seed = 1, dealer: Seat = 0): MatchState {
+export function createMatch(rules: ThreePlayerRules, seed = 1, dealer: Seat = 0, initialDeck?: readonly CardId[]): MatchState {
   const shuffled = shuffledDeck(seed);
   return {
     rules,
@@ -196,7 +196,7 @@ export function createMatch(rules: ThreePlayerRules, seed = 1, dealer: Seat = 0)
     bombsUsed: [0, 0, 0],
     dealer,
     handNumber: 1,
-    hand: createHand(dealer, shuffled.deck, rules),
+    hand: createHand(dealer, initialDeck ?? shuffled.deck, rules),
     status: 'playing',
     winner: null,
     draw: false,

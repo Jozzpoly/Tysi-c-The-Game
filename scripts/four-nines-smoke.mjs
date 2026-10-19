@@ -5,6 +5,7 @@ import {
   assertCoreInvariants,
   cardId,
   createDeck,
+  createHand,
   createMatch,
   eventsForSeat,
   legalCommands,
@@ -135,5 +136,14 @@ assert.deepEqual(redealt.events.map((event) => event.type), ['four-nines-redeal'
 assert.ok(eventsForSeat(redealt.events, 0).some((event) => event.type === 'four-nines-redeal'));
 assert.ok(eventsForSeat(redealt.events, 2).some((event) => event.type === 'four-nines-redeal'));
 assertCoreInvariants(redealt.state);
+
+// Production Worker injects an unpredictable deck even when redeal follows
+// four nines. Keep seeded default replayable, but prove override is honored.
+const secureRedealDeck = createDeck().reverse();
+const suppliedRedeal = applyCommand(optionState, { type: 'request-redeal', seat: 1 }, secureRedealDeck);
+assert.equal(suppliedRedeal.ok, true);
+assert.deepEqual(suppliedRedeal.state.hand.hands, createHand(beforeDealer, secureRedealDeck, optionState.rules).hands);
+assert.deepEqual(suppliedRedeal.state.hand.talon, secureRedealDeck.slice(21));
+assertCoreInvariants(suppliedRedeal.state);
 
 console.log('four-nines smoke: PASS');
