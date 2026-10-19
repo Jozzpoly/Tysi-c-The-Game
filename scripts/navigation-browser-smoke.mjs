@@ -1,4 +1,4 @@
-import { spawn } from 'node:child_process';
+import { execFileSync, spawn } from 'node:child_process';
 
 const BASE_URL = 'http://127.0.0.1:4176';
 const WEBDRIVER = 'http://127.0.0.1:9518';
@@ -89,6 +89,11 @@ try {
 
   await webdriver(`/session/${session}/url`, { method: 'POST', body: JSON.stringify({ url: BASE_URL }) });
   await waitText(session, 'Usiądź do stołu');
+  const sourceCommit = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
+  const loadedClientSource = await execute(session, 'return document.documentElement.dataset.tysiacClientSourceSha || null;');
+  if (loadedClientSource !== sourceCommit) {
+    throw new Error(`loaded client source does not match Git checkout: browser=${loadedClientSource}, source=${sourceCommit}`);
+  }
   await clickLeading(session, 'Zagraj sam');
 
   const room = await waitFor('remote game', async () => execute(session, `

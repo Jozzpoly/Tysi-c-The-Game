@@ -1,4 +1,7 @@
 import { StrictMode } from 'react';
+
+/** Source checkout seen by Vite at client bundle construction time. */
+declare const __TYSIAC_CLIENT_SOURCE_SHA__: string;
 import { createRoot } from 'react-dom/client';
 import App from './App.js';
 import { installPerformanceProbe } from './performance/performanceProbe.js';
@@ -28,6 +31,10 @@ import './run06-mobile-composition.css';
 installPerformanceProbe();
 installOwnerMagnetismBridge();
 installSeatPresentationBridge();
+
+// A cached SPA can outlive a Worker redeploy. This belongs to the JS currently
+// executing in this tab and intentionally differs from the server buildSha.
+document.documentElement.dataset.tysiacClientSourceSha = __TYSIAC_CLIENT_SOURCE_SHA__;
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
