@@ -4,6 +4,8 @@
 
 Browser-first Tysiąc for desktop and mobile: private friend tables, bots, explicit rule profiles, and a presentation layer rebuilt around a more physical digital-card language.
 
+**[Zagraj — stabilny Golden](https://tysiac-the-game.jozzpoly.workers.dev/)** · Exact public Worker/build identity `fddeafbe` rechecked **19 October 2026** with copied-invite, join and reconnect tests ([NO REDEPLOY evidence](https://github.com/Jozzpoly/Tysi-c-The-Game/actions/runs/39229733191)). New safety fixes are still **repo/candidate-only**, not live at this address.
+
 ## Current live state
 
 The account-owned canonical stable origin exists and is currently pinned to an immutable Owner/Friend control specimen. The project remains in **controlled release qualification**, not broad feature development. Golden is still the protected public candidate; 19 October code-safety fixes on main are not themselves a stable release.

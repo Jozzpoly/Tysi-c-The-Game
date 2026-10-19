@@ -51,6 +51,7 @@ const [
   deploymentDoc,
   incident,
   executionState,
+  historicalExecutionState,
   legacyStaticPreviewExists,
 ] = await Promise.all([
   text('.github/workflows/deploy-foundation.yml'),
@@ -66,6 +67,7 @@ const [
   text('docs/DEPLOYMENT.md'),
   text('docs/INCIDENT_2026-09-15_FRIEND_LINK.md'),
   text('docs/EXECUTION_STATE.md'),
+  text('docs/archive/EXECUTION_STATE_2026-09-20.md'),
   exists('.github/workflows/friend-preview-pages.yml'),
 ]);
 
@@ -214,8 +216,16 @@ requireMatch('deployment authority', deploymentDoc, /stable-recheck\.json/u);
 requireMatch('incident authority', incident, /FAIL \/ NOT COMPLETE \/ P0 BLOCKER/u);
 requireMatch('incident authority', incident, /Automation is necessary but is not sufficient/iu);
 requireMatch('incident authority', incident, /contradictory lifecycle evidence was known/iu);
-requireMatch('execution authority', executionState, /Regression recovery inside finalization/u);
-requireMatch('execution authority', executionState, /Golden Owner\/Friend baseline/u);
-requireMatch('execution authority', executionState, /Friend-link incident status/u);
+// A September-specific historical status is no longer valid as live authority.
+// Protect both the current October execution boundary and the verbatim archive
+// so housekeeping cannot silently erase forensic/release evidence.
+requireMatch('execution authority', executionState, /Current identities and boundaries/u);
+requireMatch('execution authority', executionState, /Golden.*Owner\/Friend control B0/u);
+requireMatch('execution authority', executionState, /Current gates — in order/u);
+requireMatch('execution authority', executionState, /archive\/EXECUTION_STATE_2026-09-20\.md/u);
+requireMatch('execution authority', executionState, /stable.*release/iu);
+requireMatch('historical September evidence', historicalExecutionState, /Regression recovery inside finalization/u);
+requireMatch('historical September evidence', historicalExecutionState, /Golden Owner\/Friend baseline/u);
+requireMatch('historical September evidence', historicalExecutionState, /Friend-link incident status/u);
 
 console.log('deployment contract smoke: PASS');
