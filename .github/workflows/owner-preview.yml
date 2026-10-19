@@ -1,0 +1,129 @@
+name: Isolated Owner Preview (NO STABLE DEPLOY)
+
+on:
+  push:
+    branches:
+      - ops/owner-reentry-preview-2026-10-20
+    paths:
+      - .github/preview/owner-request.json
+      - .github/workflows/owner-preview.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tysiac-isolated-owner-preview
+  cancel-in-progress: false
+
+jobs:
+  preview:
+    if: github.repository == 'Jozzpoly/Tysi-c-The-Game' && github.ref == 'refs/heads/ops/owner-reentry-preview-2026-10-20'
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+      - name: Validate isolated intent and exact product ancestor
+        id: intent
+        env:
+          EXACT_PARENT: f2b5baa72bfb16d376bf8bd4e9fe5f38709a1721
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const r=JSON.parse(fs.readFileSync('.github/preview/owner-request.json','utf8'));
+          const parent=process.env.EXACT_PARENT;
+          if(r.product_parent_sha!==parent||r.stable_sha_must_remain!=='fddeafbe2ef9b416c52f98cc5c9814bb2fb84f89'||r.preview_name!=='owner-reentry-20261020'||!['deploy','delete'].includes(r.operation)) throw Error('Refusing unexpected preview request');
+          fs.appendFileSync(process.env.GITHUB_OUTPUT,`action=${r.operation}\n`);
+          NODE
+          git merge-base --is-ancestor "$EXACT_PARENT" HEAD
+          changed=$(git diff --name-only "$EXACT_PARENT" HEAD)
+          printf '%s\n' "$changed"
+          unexpected=$(printf '%s\n' "$changed" | grep -Ev '^(.github/workflows/owner-preview.yml|.github/preview/owner-request.json)$' || true)
+          if [[ -n "$unexpected" ]]; then echo "::error::Unexpected product change in operations-only preview branch: $unexpected"; exit 1; fi
+          if [[ -z "${{ secrets.CLOUDFLARE_API_TOKEN }}" || -z "${{ secrets.CLOUDFLARE_ACCOUNT_ID }}" ]]; then echo '::error::Cloudflare credentials unavailable'; exit 1; fi
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install exact candidate dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Re-run full exact checkout Foundation (deploy only)
+        if: steps.intent.outputs.action == 'deploy'
+        run: npm run check
+      - name: Install preview-capable Wrangler in runner only (no lockfile changes)
+        run: |
+          npm install --no-save --package-lock=false --no-audit --no-fund wrangler@4.135.0
+          npx --no-install wrangler --version
+      - name: Configure isolated preview resources (runner only)
+        if: steps.intent.outputs.action == 'deploy'
+        env:
+          CHECKED_SHA: ${{ github.sha }}
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const file='wrangler.jsonc';
+          const c=JSON.parse(fs.readFileSync(file,'utf8'));
+          if(c.name!=='tysiac-the-game'||c.durable_objects?.bindings?.length!==1||c.durable_objects.bindings[0].name!=='MATCH_ROOM'||c.durable_objects.bindings[0].class_name!=='MatchRoom') throw Error('Unexpected Worker binding configuration; do not preview');
+          c.previews={
+            vars:{TYSIAC_BUILD_SHA:process.env.CHECKED_SHA,TYSIAC_DEPLOY_CLASS:'temporary'},
+            durable_objects:{bindings:[{name:'MATCH_ROOM',class_name:'MatchRoom'}]}
+          };
+          fs.writeFileSync(file,JSON.stringify(c,null,2)+'\n');
+          NODE
+      - name: Rebuild web assets for isolated preview with modern Wrangler
+        if: steps.intent.outputs.action == 'deploy'
+        run: npm run build:web
+      - name: Verify protected Golden provenance before operation
+        env:
+          GOLDEN: fddeafbe2ef9b416c52f98cc5c9814bb2fb84f89
+        run: |
+          node --input-type=module <<'NODE'
+          const u='https://tysiac-the-game.jozzpoly.workers.dev/api/match';
+          const d=await (await fetch(u,{headers:{'cache-control':'no-cache'},signal:AbortSignal.timeout(15000)})).json();
+          if(d.buildSha!==process.env.GOLDEN||d.deployClass!=='stable') throw Error('Refusing preview operation; Golden serving identity mismatched');
+          console.log('Golden stable identity before preview: PASS');
+          NODE
+      - name: Publish isolated Cloudflare Preview (never production)
+        if: steps.intent.outputs.action == 'deploy'
+        id: deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          output=$(npx --no-install wrangler preview --name owner-reentry-20261020 --json)
+          echo "$output" | jq -e .preview >/dev/null
+          url=$(printf '%s' "$output" | jq -er '.preview.urls[0]')
+          [[ "$url" =~ ^https://owner-reentry-20261020-tysiac-the-game\.[a-z0-9-]+\.workers\.dev/?$ ]] || { echo "::error::Wrong preview origin: $url"; exit 1; }
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "### Exact-commit, isolated Owner preview" >> "$GITHUB_STEP_SUMMARY"
+          echo "Candidate commit: $GITHUB_SHA" >> "$GITHUB_STEP_SUMMARY"
+          echo "Owner Preview: $url" >> "$GITHUB_STEP_SUMMARY"
+          echo "NEVER share as production/friend stable origin; preview rooms use separate Durable Object storage." >> "$GITHUB_STEP_SUMMARY"
+      - name: Probe exact public preview, multiplayer and actual copy-invite
+        if: steps.intent.outputs.action == 'deploy'
+        env:
+          TYSIAC_PUBLIC_URL: ${{ steps.deploy.outputs.url }}
+          TYSIAC_EXPECTED_SHA: ${{ github.sha }}
+          TYSIAC_EXPECTED_DEPLOY_CLASS: temporary
+        run: |
+          node scripts/public-provenance-smoke.mjs
+          node scripts/public-deploy-smoke.mjs
+          node scripts/public-share-link-smoke.mjs
+      - name: Delete this one isolated Preview on explicit request
+        if: steps.intent.outputs.action == 'delete'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx --no-install wrangler preview delete --name owner-reentry-20261020 --skip-confirmation
+      - name: Confirm original Golden still serving after preview operation
+        env:
+          GOLDEN: fddeafbe2ef9b416c52f98cc5c9814bb2fb84f89
+        run: |
+          node --input-type=module <<'NODE'
+          const d=await (await fetch('https://tysiac-the-game.jozzpoly.workers.dev/api/match',{headers:{'cache-control':'no-cache'},signal:AbortSignal.timeout(15000)})).json();
+          if(d.buildSha!==process.env.GOLDEN||d.deployClass!=='stable') throw Error('Golden changed during Preview operation');
+          console.log('Golden stable identity after preview: PASS');
+          NODE
