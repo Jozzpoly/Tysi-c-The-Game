@@ -6,7 +6,7 @@ Browser-first Tysiąc for desktop and mobile: private friend tables, bots, expli
 
 ## Current live state
 
-The account-owned canonical stable origin exists and is currently pinned to an immutable Owner/Friend control specimen. The project is in **finalization regression recovery**, not broad feature development.
+The account-owned canonical stable origin exists and is currently pinned to an immutable Owner/Friend control specimen. The project remains in **controlled release qualification**, not broad feature development. Golden is still the protected public candidate; 19 October code-safety fixes on main are not themselves a stable release.
 
 The 2026-09-15 friend-link incident remains an important open acceptance contract until the final stable candidate passes the required real Owner+friend session. Operational recovery since that incident already established exact-SHA deployment, canonical account-owned origin, public provenance, copied-invite evidence and no-redeploy rechecks.
 
@@ -16,7 +16,7 @@ Do not infer current product authority from `main`, recency, a green PR or an ol
 
 ## Read current authority first
 
-1. [`docs/EXECUTION_STATE.md`](docs/EXECUTION_STATE.md) — exact Golden SHA, live experimental state, measured regression evidence and next gate.
+1. [`docs/EXECUTION_STATE.md`](docs/EXECUTION_STATE.md) — 19 October current code/runtime identities, Golden derivative candidate, repair evidence and release gates (with September regression snapshot archived).
 2. [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) — deployment classes, serving-origin/client-provenance distinction and friend-release evidence contract.
 3. [`docs/INCIDENT_2026-09-15_FRIEND_LINK.md`](docs/INCIDENT_2026-09-15_FRIEND_LINK.md) — historical incident and still-required real-human closeout gate.
 4. [`AGENTS.md`](AGENTS.md) — durable Owner/agent, experimental-control and verification laws.
