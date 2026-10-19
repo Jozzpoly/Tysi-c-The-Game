@@ -145,6 +145,8 @@ async function installTrace(session, card) {
     window.__handoffCard = ${JSON.stringify(card)};
     window.__handoffTrace = [];
     window.__handoffTraceStop = false;
+    window.__handoffCompletionObserver?.disconnect();
+    window.__handoffCompletion = { marked: false, settled: false, card: null, markedAt: null, settledAt: null };
     let lastSignature = '';
     const visible = (node) => {
       if (!node) return false;
@@ -178,6 +180,29 @@ async function installTrace(session, card) {
       }
       if (!window.__handoffTraceStop) requestAnimationFrame(sample);
     };
+    // Record short-lived DOM changes at mutation time instead of relying on
+    // WebDriver polling or rAF to catch a temporary CSS completion marker.
+    const recordHandoff = () => {
+      const id = window.__handoffCard;
+      const target = document.querySelector('.played-self[data-card="' + id + '"]');
+      const ghost = document.querySelector('.tactile-card-float.pending-handoff[data-card-id="' + id + '"]');
+      const source = document.querySelector('.hand-slot[data-card="' + id + '"]');
+      const result = window.__handoffCompletion;
+      if (target?.classList.contains('is-local-handoff-complete')) {
+        result.marked = true;
+        result.markedAt ??= performance.now();
+      }
+      if (result.marked && !result.settled && target && visible(target) && !ghost && !source) {
+        result.settled = true;
+        result.card = target.dataset.card ?? '';
+        result.settledAt = performance.now();
+      }
+    };
+    window.__handoffCompletionObserver = new MutationObserver(recordHandoff);
+    window.__handoffCompletionObserver.observe(document.body, {
+      subtree: true, childList: true, attributes: true, attributeFilter: ['class', 'data-authority-state'],
+    });
+    recordHandoff();
     requestAnimationFrame(sample);
   `);
 }
@@ -281,21 +306,47 @@ async function runViewport(label, width, height, mobile) {
 
     await touch(session, 'touchEnd', []);
 
-    const final = await waitFor(`${label}: authoritative handoff completion`, () => execute(session, `
-      const id = ${JSON.stringify(playable.card)};
-      const target = document.querySelector('.played-self[data-card="' + id + '"]');
-      const ghost = document.querySelector('.tactile-card-float.pending-handoff[data-card-id="' + id + '"]');
-      if (!target?.classList.contains('is-local-handoff-complete') || ghost) return null;
+    let final;
+    try {
+      final = await waitFor(`${label}: authoritative handoff completion`, () => execute(session, `
+      const completion = window.__handoffCompletion;
+      if (!completion?.marked || !completion.settled) return null;
       return {
-        targetCard: target.dataset.card ?? '',
-        targetVisible: Number(getComputedStyle(target).opacity) > .05,
-        sourceStillInHand: Boolean(document.querySelector('.hand-slot[data-card="' + id + '"]')),
+        targetCard: completion.card,
+        targetVisible: true,
+        sourceStillInHand: false,
+        completionMarkedAt: completion.markedAt,
+        completionSettledAt: completion.settledAt,
       };
     `), 5_000);
+    } catch (failure) {
+      const diagnostic = await execute(session, `
+        const id = ${JSON.stringify(playable.card)};
+        const target = document.querySelector('.played-self[data-card="' + id + '"]');
+        const ghost = document.querySelector('.tactile-card-float.pending-handoff[data-card-id="' + id + '"]');
+        const source = document.querySelector('.hand-slot[data-card="' + id + '"]');
+        const recent = (window.__handoffTrace || []).slice(-30);
+        return {
+          card: id,
+          target: target ? { className: target.className, opacity: getComputedStyle(target).opacity, visible: Boolean(target.getClientRects().length) } : null,
+          ghost: ghost ? { className: ghost.className, authority: ghost.dataset.authorityState, phase: ghost.dataset.gesturePhase } : null,
+          sourcePresent: Boolean(source),
+          decision: document.querySelector('.decision-card h2')?.textContent?.trim() ?? '',
+          revisionText: [...document.querySelectorAll('.footer span')].map(e => e.textContent?.trim()).find(t => /^rev \\d+$/.test(t)),
+          traceLength: (window.__handoffTrace || []).length,
+          durable: window.__handoffCompletion ?? null,
+          everComplete: (window.__handoffTrace || []).some(e => e.targetComplete),
+          everAuthority: (window.__handoffTrace || []).some(e => e.authority === 'handoff'),
+          recent,
+        };
+      `).catch((error) => ({ diagnosticFailed: String(error) }));
+      console.error(`${label}: handoff forensic on failed exact wait: ${JSON.stringify(diagnostic)}`);
+      throw failure;
+    }
 
     await sleep(40);
     const afterRevision = await revision(session);
-    const trace = await execute(session, `window.__handoffTraceStop = true; return window.__handoffTrace ?? [];`);
+    const trace = await execute(session, `window.__handoffTraceStop = true; window.__handoffCompletionObserver?.disconnect(); return window.__handoffTrace ?? [];`);
 
     if (final.targetCard !== playable.card || !final.targetVisible || final.sourceStillInHand) {
       throw new Error(`${label}: authority ended on wrong physical representation ${JSON.stringify({ playable, final })}`);
@@ -307,16 +358,9 @@ async function runViewport(label, width, height, mobile) {
     const ghostObserved = trace.some((entry) => entry.ghost && entry.ghostVisible);
     const authorityObserved = trace.some((entry) => entry.authority === 'handoff');
     const hiddenTargetObserved = trace.some((entry) => entry.targetHandoff && !entry.targetVisible && entry.ghostVisible);
-    // The direct final wait above is the durable completion observation: it
-    // requires the authoritative target's completion marker, visible target,
-    // absent pending ghost, and absent source card. An rAF trace is valuable for
-    // the bridge's intermediate states, but it can legitimately miss that short
-    // final marker window between animation finish and the next React render.
     const completionTraceObserved = trace.some((entry) => entry.targetComplete && entry.targetVisible && !entry.ghost);
-    const completionObserved =
-      final.targetCard === playable.card
-      && final.targetVisible
-      && !final.sourceStillInHand;
+    const completionObserved = Number.isFinite(final.completionMarkedAt) && Number.isFinite(final.completionSettledAt)
+      && final.completionSettledAt >= final.completionMarkedAt;
     const duplicatedVisibleCard = trace.find((entry) => entry.ghostVisible && entry.targetVisible && entry.targetHandoff);
 
     if (!ghostObserved || !authorityObserved || !hiddenTargetObserved || !completionObserved) {
