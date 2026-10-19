@@ -262,7 +262,7 @@ async function runSoloReconnect(label, width, height, mobile) {
     // Adversarial refresh: a valid private seat survives a failed initial
     // session request, then automatically recovers after connectivity returns.
     // Block only this browser's /api/match/:room fetch; the Worker remains live.
-    await cdp(session, 'Page.addScriptToEvaluateOnNewDocument', {
+    const faultScript = await cdp(session, 'Page.addScriptToEvaluateOnNewDocument', {
       source: `(() => {
         const original = window.fetch.bind(window);
         window.__tysiacBlockSession = true;
@@ -294,6 +294,16 @@ async function runSoloReconnect(label, width, height, mobile) {
       || recoveredAfterOutage.revision < after.revision) {
       throw new Error(`${label}: recovery after transient outage lost seat or canonical revision`);
     }
+    // An explicit server-confirmed invalid credential is different: discard
+    // that token so the browser does not silently claim another player's seat.
+    await cdp(session, 'Page.removeScriptToEvaluateOnNewDocument', { identifier: faultScript.identifier });
+    await execute(session, `localStorage.setItem(${JSON.stringify(`tysiac:seat-token:${restored.room}`)},
+      'ts1_invalid-credential-probe'); return true;`);
+    await navigate(session, currentUrl);
+    await waitFor(`${label}: invalid-credential token revoked`, async () => {
+      const state = await remoteState(session);
+      return state.token === null ? true : false;
+    }, 12_000);
     await screenshot(session, `${label}-remote-solo-reconnected`);
 
     return { room: before.room, initialRevision, decision, afterRevision: after.revision, restoredRevision: restored.revision };
