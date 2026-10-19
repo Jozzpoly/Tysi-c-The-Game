@@ -259,6 +259,41 @@ async function runSoloReconnect(label, width, height, mobile) {
     if (restored.token !== stableToken) throw new Error(`${label}: reconnect token changed across refresh`);
     if (restored.room !== before.room) throw new Error(`${label}: room changed across refresh`);
     if (restored.revision < after.revision) throw new Error(`${label}: reconnect restored stale revision`);
+    // Adversarial refresh: a valid private seat survives a failed initial
+    // session request, then automatically recovers after connectivity returns.
+    // Block only this browser's /api/match/:room fetch; the Worker remains live.
+    await cdp(session, 'Page.addScriptToEvaluateOnNewDocument', {
+      source: `(() => {
+        const original = window.fetch.bind(window);
+        window.__tysiacBlockSession = true;
+        window.__tysiacBlockedSessionCount = 0;
+        window.fetch = (input, init) => {
+          const pathname = new URL(typeof input === 'string' ? input : input.url, location.href).pathname;
+          if (window.__tysiacBlockSession && /^\\/api\\/match\\/[0-9A-HJKMNP-TV-Z]{12}$/.test(pathname)
+            && (init?.method ?? 'GET') === 'GET') {
+            window.__tysiacBlockedSessionCount++;
+            return Promise.reject(new TypeError('simulated temporary network failure'));
+          }
+          return original(input, init);
+        };
+      })();`,
+    });
+    await navigate(session, currentUrl);
+    await waitFor(`${label}: injected session request failed`, () => execute(session,
+      'return window.__tysiacBlockedSessionCount > 0 ? window.__tysiacBlockedSessionCount : false;'), 12_000);
+    // Give the active StrictMode effect time to handle the failed request.
+    await sleep(350);
+    const duringOutage = await remoteState(session);
+    if (duringOutage.token !== stableToken) throw new Error(`${label}: transient network failure destroyed seat token`);
+    if (duringOutage.url.includes(stableToken) || duringOutage.body.includes(stableToken)) {
+      throw new Error(`${label}: private token leaked during transient session failure`);
+    }
+    await execute(session, 'window.__tysiacBlockSession = false; return true;');
+    const recoveredAfterOutage = await waitForGame(session, `${label}: recovery after transient request failure`);
+    if (recoveredAfterOutage.token !== stableToken || recoveredAfterOutage.room !== before.room
+      || recoveredAfterOutage.revision < after.revision) {
+      throw new Error(`${label}: recovery after transient outage lost seat or canonical revision`);
+    }
     await screenshot(session, `${label}-remote-solo-reconnected`);
 
     return { room: before.room, initialRevision, decision, afterRevision: after.revision, restoredRevision: restored.revision };

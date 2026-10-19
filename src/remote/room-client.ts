@@ -40,6 +40,15 @@ export type RoomSocketMessage =
   | { type: 'rejected'; clientCommandId: string; reason: string; revision: number | null; projection: SeatProjection | null }
   | { type: 'error'; reason: string };
 
+// Preserve transport/status identity: only an authoritative invalid-seat response
+// may discard the browser's private reconnect capability.
+export class RoomHttpError extends Error {
+  constructor(public readonly status: number, public readonly reason: string) {
+    super(reason);
+    this.name = 'RoomHttpError';
+  }
+}
+
 const STORAGE_PREFIX = 'tysiac:seat-token:';
 
 async function jsonRequest<T>(url: string, init?: RequestInit): Promise<T> {
@@ -51,7 +60,7 @@ async function jsonRequest<T>(url: string, init?: RequestInit): Promise<T> {
     },
   });
   const body = await response.json().catch(() => ({})) as T & { error?: string; reason?: string };
-  if (!response.ok) throw new Error(body.error ?? body.reason ?? `HTTP_${response.status}`);
+  if (!response.ok) throw new RoomHttpError(response.status, body.reason ?? body.error ?? `HTTP_${response.status}`);
   return body;
 }
 

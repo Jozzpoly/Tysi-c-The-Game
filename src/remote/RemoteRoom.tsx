@@ -6,6 +6,7 @@ import { presentationFrameDuration } from '../presentation/trickPresentation.js'
 import {
   commandEnvelope,
   forgetSeatToken,
+  RoomHttpError,
   getPublicRoom,
   getRoomSession,
   joinRemoteRoom,
@@ -131,14 +132,15 @@ export function RemoteRoom({ room, onLeave }: RemoteRoomProps) {
 
   useEffect(() => {
     let cancelled = false;
+    let recoveryAttempts = 0;
     socketRef.current?.close(1000, 'room changed');
     socketRef.current = null;
     if (reconnectTimerRef.current !== null) window.clearTimeout(reconnectTimerRef.current);
     cancelPlayback(false);
 
     async function load() {
-      setConnection('loading');
-      setMessage('Łączenie z pokojem…');
+      setConnection(recoveryAttempts === 0 ? 'loading' : 'reconnecting');
+      setMessage(recoveryAttempts === 0 ? 'Łączenie z pokojem…' : 'Odzyskuję połączenie z pokojem…');
       setProjection(null);
       setPresentedEvents([]);
       setSeat(null);
@@ -164,6 +166,7 @@ export function RemoteRoom({ room, onLeave }: RemoteRoomProps) {
       try {
         const session = await getRoomSession(room, token);
         if (cancelled) return;
+        recoveryAttempts = 0;
         setSeat(session.seat);
         replaceRoomState(session.state);
         setProjection(session.projection);
@@ -171,11 +174,25 @@ export function RemoteRoom({ room, onLeave }: RemoteRoomProps) {
         setConnection(session.projection ? 'reconnecting' : 'lobby');
       } catch (error) {
         if (cancelled) return;
-        forgetSeatToken(room);
-        setToken(null);
-        setConnection('error');
-        setInputLocked(false);
-        setMessage(`Nie udało się odzyskać miejsca: ${error instanceof Error ? error.message : String(error)}`);
+        // A failed fetch, temporary outage or 5xx is NOT evidence of a
+        // revoked seat. Clearing the token here would lose an occupied seat.
+        if (error instanceof RoomHttpError && error.status === 401 && error.reason === 'INVALID_CREDENTIAL') {
+          forgetSeatToken(room);
+          setToken(null);
+          setConnection('error');
+          setInputLocked(false);
+          setMessage('Dostęp do tego miejsca wygasł.');
+          return;
+        }
+        recoveryAttempts += 1;
+        const delay = Math.min(1000 * 2 ** Math.min(recoveryAttempts - 1, 3), 8000);
+        setConnection('reconnecting');
+        setInputLocked(true);
+        setMessage('Połączenie niedostępne. Twoje miejsce jest zachowane — ponawiam…');
+        reconnectTimerRef.current = window.setTimeout(() => {
+          reconnectTimerRef.current = null;
+          void load();
+        }, delay);
         return;
       }
 
