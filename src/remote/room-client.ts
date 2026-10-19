@@ -50,6 +50,7 @@ export class RoomHttpError extends Error {
 }
 
 const STORAGE_PREFIX = 'tysiac:seat-token:';
+const RECENT_ROOM_KEY = 'tysiac:recent-room';
 
 async function jsonRequest<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, {
@@ -73,12 +74,35 @@ export function storedSeatToken(room: string): string | null {
   try { return localStorage.getItem(`${STORAGE_PREFIX}${room}`); } catch { return null; }
 }
 
+/** A room code is shareable; its private seat capability always stays here. */
+export function storedRecentRoom(): string | null {
+  try {
+    const mostRecent = localStorage.getItem(RECENT_ROOM_KEY);
+    if (mostRecent && normalizedRoomCode(mostRecent) === mostRecent && storedSeatToken(mostRecent)) return mostRecent;
+    // Older Golden versions stored only seat tokens. Preserve their sessions
+    // without guessing a new room or creating a second source of authority.
+    for (let index = localStorage.length - 1; index >= 0; index -= 1) {
+      const key = localStorage.key(index);
+      if (!key?.startsWith(STORAGE_PREFIX)) continue;
+      const room = key.slice(STORAGE_PREFIX.length);
+      if (normalizedRoomCode(room) === room && localStorage.getItem(key)) return room;
+    }
+  } catch { /* unavailable or blocked storage must never block a new game */ }
+  return null;
+}
+
 export function rememberSeatToken(room: string, token: string): void {
-  try { localStorage.setItem(`${STORAGE_PREFIX}${room}`, token); } catch {}
+  try {
+    localStorage.setItem(`${STORAGE_PREFIX}${room}`, token);
+    if (normalizedRoomCode(room) === room) localStorage.setItem(RECENT_ROOM_KEY, room);
+  } catch { /* seat capability remains best effort in private local storage */ }
 }
 
 export function forgetSeatToken(room: string): void {
-  try { localStorage.removeItem(`${STORAGE_PREFIX}${room}`); } catch {}
+  try {
+    localStorage.removeItem(`${STORAGE_PREFIX}${room}`);
+    if (localStorage.getItem(RECENT_ROOM_KEY) === room) localStorage.removeItem(RECENT_ROOM_KEY);
+  } catch { /* a blocked storage operation must never crash navigation */ }
 }
 
 export async function createRemoteRoom(mode: RoomMode): Promise<RoomIdentity> {

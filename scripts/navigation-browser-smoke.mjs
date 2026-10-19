@@ -152,6 +152,46 @@ try {
   const rootRoom = await execute(session, `return new URLSearchParams(location.search).get('room');`);
   if (rootRoom !== null) throw new Error(`second history back did not restore root: ${rootRoom}`);
 
+  // Golden -> Jaskinia -> back to Tysiąc must recover an occupied seat
+  // without exposing its private credential in a link or opening a new room.
+  const firstResume = await execute(session, `
+    const button = document.querySelector('.recent-table-button');
+    return { text: button?.textContent ?? '', code: button?.querySelector('span')?.textContent ?? '',
+      scrollWidth: document.documentElement.scrollWidth, width: document.documentElement.clientWidth };
+  `);
+  if (!firstResume.text.includes('Wróć do stołu') || !firstResume.code.includes(room)) {
+    throw new Error(`stored room not discoverable from home: ${JSON.stringify(firstResume)}`);
+  }
+  if (firstResume.scrollWidth > firstResume.width + 1) throw new Error('resume control overflows mobile viewport');
+  // Golden originally stored only 'tysiac:seat-token:<room>'. Force
+  // that exact legacy condition to verify migration-free discovery.
+  await execute(session, `localStorage.removeItem('tysiac:recent-room'); return true;`);
+  await webdriver(`/session/${session}/url`, { method: 'POST', body: JSON.stringify({ url: BASE_URL }) });
+  await waitFor('legacy seat token exposes return entry', () => execute(session, `
+    return document.querySelector('.recent-table-button')?.textContent?.includes(${JSON.stringify(room)}) ?? false;
+  `));
+  await clickLeading(session, 'Wróć do stołu');
+  await waitFor('return to the exact occupied seat', () => execute(session, `
+    const code = new URLSearchParams(location.search).get('room');
+    const connected = document.querySelector('.connection-banner')?.textContent?.includes('online');
+    return code === ${JSON.stringify(room)} && connected && !!document.querySelector('.hand .card');
+  `));
+  const sameToken = await execute(session, `return localStorage.getItem('tysiac:seat-token:' + ${JSON.stringify(room)});`);
+  if (sameToken !== restoredToken) throw new Error('resume silently replaced the occupied seat credential');
+  const resumedUrl = await execute(session, 'return location.href;');
+  if (resumedUrl.includes(restoredToken)) throw new Error('resume URL leaked private capability');
+  await clickLeading(session, 'Wróć do startu');
+  await webdriver(`/session/${session}/url`, { method: 'POST', body: JSON.stringify({ url: BASE_URL }) });
+  await waitFor('return still available after reload', () => execute(session, `
+    return document.querySelector('.recent-table-button')?.textContent?.includes(${JSON.stringify(room)}) ?? false;
+  `));
+  // Removing the credential must remove the affordance after a fresh load.
+  await execute(session, `localStorage.removeItem('tysiac:seat-token:' + ${JSON.stringify(room)}); return true;`);
+  await webdriver(`/session/${session}/url`, { method: 'POST', body: JSON.stringify({ url: BASE_URL }) });
+  await waitFor('revoked local session does not advertise resume', () => execute(session, `
+    return !document.querySelector('.recent-table-button');
+  `));
+
   console.log(`navigation browser smoke: PASS room=${room}`);
 } finally {
   if (session) {

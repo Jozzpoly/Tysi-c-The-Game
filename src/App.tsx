@@ -18,7 +18,7 @@ import { LivingGameTable } from './presentation/LivingGameTable.js';
 import { RulesGuide } from './presentation/RulesGuide.js';
 import { presentationFrameDuration } from './presentation/trickPresentation.js';
 import { RemoteRoom } from './remote/RemoteRoom.js';
-import { createRemoteRoom, normalizedRoomCode, type RoomMode } from './remote/room-client.js';
+import { createRemoteRoom, normalizedRoomCode, storedRecentRoom, type RoomMode } from './remote/room-client.js';
 import './styles.css';
 
 function freshMatch(seed = Date.now() >>> 0): MatchState {
@@ -139,13 +139,18 @@ function localQaRequested(): boolean {
 
 function App() {
   const [room, setRoom] = useState<string | null>(roomFromUrl);
+  const [recentRoom, setRecentRoom] = useState<string | null>(storedRecentRoom);
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState<RoomMode | 'code' | null>(null);
   const [message, setMessage] = useState('');
 
   useEffect(() => {
     if (localQaRequested()) return;
-    const syncFromHistory = () => setRoom(roomFromUrl());
+    const syncFromHistory = () => {
+      const nextRoom = roomFromUrl();
+      setRoom(nextRoom);
+      if (!nextRoom) setRecentRoom(storedRecentRoom());
+    };
     window.addEventListener('popstate', syncFromHistory);
     return () => window.removeEventListener('popstate', syncFromHistory);
   }, []);
@@ -158,6 +163,7 @@ function App() {
     if (nextRoom) url.searchParams.set('room', nextRoom);
     window.history.pushState({}, '', url);
     setRoom(nextRoom);
+    if (!nextRoom) setRecentRoom(storedRecentRoom());
   }
 
   async function create(mode: RoomMode) {
@@ -184,7 +190,7 @@ function App() {
     setBusy(null);
   }
 
-  if (room) return <RemoteRoom room={room} onLeave={() => navigateRoom(null)} />;
+  if (room) return <RemoteRoom key={room} room={room} onLeave={() => navigateRoom(null)} />;
 
   return (
     <main className="home-shell">
@@ -197,6 +203,16 @@ function App() {
           <span>Pierwszy raz grasz w Tysiąca?</span>
           <RulesGuide label="Zasady w 60 sekund" />
         </div>
+
+        {recentRoom && (
+          <section className="recent-table" aria-label="Zapisany stół">
+            <button className="recent-table-button" onClick={() => navigateRoom(recentRoom)}>
+              <strong>Wróć do stołu</strong>
+              <span>Kod {recentRoom}</span>
+            </button>
+            <small>Twoje miejsce jest zapisane w tej przeglądarce.</small>
+          </section>
+        )}
 
         <div className="mode-grid">
           <button className="mode-card primary" disabled={busy !== null} onClick={() => void create('solo')}>
