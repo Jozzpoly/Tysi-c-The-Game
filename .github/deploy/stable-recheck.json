@@ -1,4 +1,6 @@
 {
   "origin": "https://tysiac-the-game.jozzpoly.workers.dev",
-  "sha": "fddeafbe2ef9b416c52f98cc5c9814bb2fb84f89"
+  "sha": "fddeafbe2ef9b416c52f98cc5c9814bb2fb84f89",
+  "recheck_reason": "2026-10-19: verify serving Golden and public copied-invite after repo code-safety recovery; no redeploy",
+  "requested_on": "2026-10-19"
 }
